@@ -119,7 +119,6 @@ void facets_face2face(tri_mem_list * acute_list){
   cube_points cube = gen_cube_points(acute_list->dim);
   size_t comb_len;
   Dindex * comb = combinations_list(cube.len, 2, &comb_len);
-  
   int changed = 1;
   size_t l,i,j,k;
   tri_index indices;
@@ -176,14 +175,12 @@ void test_multithread(void) {
 int main(void){
   test_multithread();
   //exit(00);
-  char filename[30];
-  arr3 dim =  {7,7,7};
-  clock_t start, diff;
-  int msec;
+  char filename[70];
+  //arr3 dim;// =  {7,7,7};
   tri_mem_list fund_list, face_list;
-  triangle_list tri_list;
-  tri_index_list idx_list;
-  tetra_list tet_list;
+  //triangle_list tri_list;
+  //tri_index_list idx_list;
+  //tetra_list tet_list;
   
   double time_start,time_end;
   
@@ -191,45 +188,20 @@ int main(void){
  // exit(0);
   int i;
   #ifdef LOOP
-  for (i = 1;i <3; i++) 
+  for (i = 1;i <21; i++) 
   #endif
   {
-    arr2 dim_mult = {(i+1)*(i+1), i+1};
-    dim[0] = i; dim[1] = i; dim[2] = i;
-    printf("\n\nFacets cube acute: %d\n", i);
-    time_start = omp_get_wtime();
-    fund_list = facets_cube_acute(i);
-    time_end = omp_get_wtime();
-    printf("Amount of sharp facets in fundamental domain:%zu\n", mem_list_count(&fund_list));
-    printf("Memory used by fundamental data: %zu\n", mem_list_memory(&fund_list));
-    printf("Time taken: %f\n", time_end-time_start);
-    sprintf(filename,"data/fund_data_%d.tet",i);
-    mem_list_to_file(&fund_list,filename); /* 
-    printf("Acute tetra triangle by file\n");
-    sprintf(filename,"data/fund_data_%d.tet",i);
-    mem_list_from_file(&fund_list,filename); 
-    printf("Amount of sharp facets in fundamental domain:%zu\n", mem_list_count(&fund_list));
-    //mem_list_free(&fund_list);
-    */
-    printf("Face2face:\n");
-    time_start = omp_get_wtime();
-    facets_face2face(&fund_list);
-    time_end = omp_get_wtime();
-    printf("Amount of sharp facets after face2face: %zu\n", mem_list_count(&fund_list));
-    printf("Time taken: %f\n", time_end-time_start);
-    mem_list_free(&fund_list);
-    
-    continue;
+    //arr2 dim_mult = {(i+1)*(i+1), i+1};
+    //dim[0] = i; dim[1] = i; dim[2] = i;
     printf("Dimension: %d. Gathering fundamental data.\n", i);
-    sprintf(filename,"data/fund_data_%d.tet",i);
+    sprintf(filename,"/local/rvveneti/fund_data_%d.tet",i);
     if (USE_FILE && mem_list_from_file(&fund_list, filename))
-      printf("Succesfully data from file\n", filename);
+      printf("Succesfully data from file%s\n", filename);
     else {
-      start = clock();
-      fund_list = acute_triangles_tetra(dim);
-      diff = clock() - start;
-      msec = diff * 1000 / CLOCKS_PER_SEC;
-      printf("Calculated data in %d seconds %d milliseconds\n", msec/1000, msec%1000);  
+      time_start = omp_get_wtime();
+      fund_list = facets_cube_acute(i);
+      time_end   = omp_get_wtime();
+      printf("Calculated data in %f seconds\n", time_end - time_start);  
       if (!mem_list_to_file(&fund_list, filename)) 
         printf("Failed to save to file %s\n", filename);      
     }
@@ -243,18 +215,17 @@ int main(void){
       exit(0);
       #endif
     }
+    sprintf(filename,"data/face_data_%d.tet",i);
     printf("\nFiltering fund data with the face2face property\n");
-    sprintf(filename,"data/face_data_%d.tet",dim[0]);
     if (USE_FILE && mem_list_from_file(&face_list,filename )) {
       mem_list_free(&fund_list);
       printf("Loaded face2face data from file: %s\n", filename);
     } else{ 
-      start = clock();
       face_list = fund_list;
-      mem_list_face2face(&face_list);
-      diff = clock() - start;
-      msec = diff * 1000 / CLOCKS_PER_SEC;
-      printf("Calculated face2face in %d seconds %d milliseconds\n", msec/1000, msec%1000);  
+      time_start = omp_get_wtime();
+      facets_face2face(&face_list);
+      time_end   = omp_get_wtime();
+      printf("Calculated data in %f seconds\n", time_end   - time_start);  
       printf("Memory before clean up: %zu\n", mem_list_memory(&face_list));
       mem_list_clean(&face_list);
       if (!mem_list_to_file(&face_list, filename))
