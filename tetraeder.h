@@ -1,0 +1,47 @@
+#ifndef TETRAEDER_H
+#define TETRAEDER_H
+
+#include "vector.h"
+#include "triangle.h"
+#include "stdlib.h"
+#include "mem_list.h"
+/*
+ * Tetraeder has 4 vertices, each consists of 3 coordinates.
+ */
+typedef struct tetra
+{
+    arr3 vertices[4];
+} tetra,*ptetra;
+
+/*
+ * Struct holds a list of all acute tetraeders for a given dimension
+ */
+typedef struct 
+{
+  ptetra t_arr;
+  size_t len;
+  arr3 dim;   
+} tetra_list;
+
+/*
+ * Struct holds whether this triangle has atleast one acute tetrahedron "above"
+ * and "below". Where above/below is defined by the normal on this triangle.
+ * Furthermore holds whether this triangle is on the boundary of the cube.
+ */
+typedef struct
+{
+  int acute_above, acute_below;
+  int boundary_above, boundary_below;
+} triang_tetra_result, *ptriang_tetra_result;
+
+void tetra_normals(ptetra tet, arr3 * normals);
+int tetra_acute(ptetra tetra);
+tetra_list acute_tetrahedra(arr3 dim);
+tetra_list acute_tetrahedra_recur(arr3 dim);
+tri_mem_list acute_triangles_tetra(arr3 dim);
+triangle_list acute_triangles_tetra_old(arr3 dim);
+int triangle_tetra_acute(ptriangle triang, cube_points * cube, ptriang_tetra_result res  , tri_mem_list *acute_list);
+void print_tetra(ptetra tet);
+void mem_list_face2face_old(tri_mem_list * acute_list, int sym);
+void mem_list_face2face(tri_mem_list * acute_list);
+#endif
