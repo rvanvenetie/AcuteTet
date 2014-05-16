@@ -194,7 +194,7 @@ int main(void){
     //arr2 dim_mult = {(i+1)*(i+1), i+1};
     //dim[0] = i; dim[1] = i; dim[2] = i;
     printf("Dimension: %d. Gathering fundamental data.\n", i);
-    sprintf(filename,"/local/rvveneti/fund_data_%d.tet",i);
+    sprintf(filename,"/var/scratch/rvveneti/fund_data_%d.tet",i);
     if (USE_FILE && mem_list_from_file(&fund_list, filename))
       printf("Succesfully data from file%s\n", filename);
     else {
