@@ -7,6 +7,7 @@
 #include "tetraeder.h"
 #include "mem_list.h"
 #include "triangulate.h"
+#include "combinations.h"
 
 void test_sym(void){
   for (int i = 1; i < 100; i++) {
@@ -30,6 +31,7 @@ void test_sym(void){
     free(points);
   }
 }
+
 triangle rand_triangle(int dim) {
   triangle result;
   result.vertices[0][0] = rand() % dim;
@@ -102,7 +104,7 @@ void randomize_triangle(ptriangle triang) {
 }
 void test_mem_list_fund(void){
   int dim = 15;
-  tri_mem_list mem_list = mem_list_init_fund(dim);
+  tri_mem_list mem_list = mem_list_init_fund(dim,MEM_LIST_FALSE);
   triangle * triang_list = malloc(sizeof(triangle)  * 750);
   for (int i = 0; i < 750; i++) {
     triang_list[i] = rand_triangle(dim);
@@ -198,8 +200,8 @@ void test_tetra_disjunct(void) {
 }
 
 int main(void){
-  //test_sym();
+  test_sym();
   //test_triangle_indices();
   //
-  test_tetra_disjunct();
+  //test_tetra_disjunct();
 }

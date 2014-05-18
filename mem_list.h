@@ -15,6 +15,7 @@ typedef struct tri_mem_list
 } tri_mem_list;
 
 typedef unsigned short tri_index[3];
+typedef unsigned short tet_index[4];
 
 typedef struct tri_index_list
 {
@@ -56,8 +57,11 @@ triangle_list mem_list_to_triangle_list(tri_mem_list * list);
 size_t mem_list_count(tri_mem_list * list);
 size_t mem_list_memory(tri_mem_list * list);
 size_t mem_list_indices(tri_mem_list * list, tri_index_list * index_list);
+
+#define MEM_LIST_FALSE 0
+#define MEM_LIST_TRUE 1
 tri_mem_list mem_list_init(arr3 dim, arr3 dim_size);
-tri_mem_list mem_list_init_fund(int dim);
+tri_mem_list mem_list_init_fund(int dim, int init_value);
 void mem_list_free(tri_mem_list * list);
 void mem_list_clean(tri_mem_list * list);
 

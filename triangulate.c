@@ -1,3 +1,9 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+
+
 #include "limits.h"
 #include "triangle.h"
 #include "tetraeder.h"
@@ -80,7 +86,68 @@ int tetra_tetra_disjoint(ptetra t1, ptetra t2) {
   return 0; //No separation axis found, thus we are not disjoint
 }
 
+int tetra_triangulation_disjoint(ptetra tet, ptriangulation triang) {
+  for (size_t i = 0; i < triang->len_tetra; i++)
+    if (tetra_tetra_disjoint(tet, &triang->tetraeders[i]))
+      return 1;
+  return 0;
+}
+
+void filter_tetra_list_disjoint(ptetra *  list, size_t * list_len, ptriangulation triang) {
+  size_t c = 0;
+  for (size_t i = 0; i< *list_len; i++)
+    if (tetra_triangulation_disjoint(&(*list)[i], triang)) {
+      *list[c] = (*list)[i];
+      c++;
+    }
+  *list_len = c;
+  *list = realloc(*list, c * sizeof(tetra));  
+}
+void add_boundary(ptriangle triang, ptriangulation result) {
+  result->len_bound++;
+  result->boundaries = realloc(result->boundaries,result->len_bound);
+  result->boundaries[result->len_bound - 1] = *triang;
+}
+
 ptriangulation triangulate_cube_random(arr3 dim) {
-  //ptriangulation result = calloc(sizeof(triangulation), 1);
+  /*
+  ptriangulation result = calloc(sizeof(triangulation), 1);
+  facet_acute_data parameters;
+  cube_points cube = gen_cube_points(dim);
+  parameters.cube = &cube;
   
+  //Start triangle (0,0,0), (rand,0,0), (rand,rand,0)
+  ptriangle      start_facet = calloc(sizeof(triangulation), 1);
+  int start_acute = 0;
+  while (!start_acute) { //Find start facet on z=0 plane
+    start_facet->vertices[1][0] = rand() % dim[0];
+    start_facet->vertices[2][0] = rand() % dim[0];
+    start_facet->vertices[2][1] = rand() % dim[1];
+    start_acute = facet_cube_acute(start_facet, &parameters, FACET_ACUTE);
+  }
+  printf("Found acute facet:\n");
+  print_triangle(start_facet);
+  add_boundary(start_facet, result);
+  free(start_facet);
+  while (result->bound_len > 0) {
+    int rand_bound = rand() % result->bound_len;
+    facet_cube_acute(&result->boundaries[rand_bound], &parameters, FACET_ACUTE_TETRA); 
+    
+    size_t list_size = parameters.tetra_above_len + parameters.tetra_below_len;
+    ptetra tet_list = malloc(list_size * sizeof(tetra));
+    memcpy(tet_list                             , parameters.tetra_above, parameters.tetra_above_len * sizeof(tetra));
+    memcpt(tet_list + parameters.tetra_above_len, parameters.tetra_below, parameters.tetra_below_len * sizeof(tetra));
+    free(parameters.tetra_below); free(parameters.tetra_above);
+    filter_tetra_list_disjoint(&tet_list, &list_size,result);
+    if (list_size == 0) {
+      printf("Dead end, helaas pindakaas\n");
+      break;
+    }
+    
+    
+    
+  }
+  free(cube.points);
+  */
+  return NULL;
 }

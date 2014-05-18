@@ -2,9 +2,12 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <limits.h>
 #include "vector.h"
 #include "triangle.h"
+#include "tetraeder.h"
 #include "mem_list.h"
+#include "combinations.h"
 
 /*
  * Mem_list is a memory list used to store triangles inside the cube. 
@@ -86,7 +89,7 @@ int mem_list_from_file(tri_mem_list * result, char * filename) {
   if (fread(result, sizeof(tri_mem_list), 1, stream) < 1)
     return 0;
   if (result->fund)
-    *result = mem_list_init_fund(result->dim[0]);
+    *result = mem_list_init_fund(result->dim[0],MEM_LIST_FALSE);
   else
     *result = mem_list_init(result->dim,result->dim_size);
   for (int i = 0; i < result->dim_size[0]; i++) {
@@ -95,7 +98,7 @@ int mem_list_from_file(tri_mem_list * result, char * filename) {
     for (int j = 0; j < result->dim_size[1]; j++) {
       if (fgetc(stream)) {
         result->t_arr[i][j] = calloc(result->dim_size[2], sizeof(unsigned char));
-        if (fread(result->t_arr[i][j], sizeof(unsigned char), result->dim_size[2], stream) < result->dim_size[2])
+        if (fread(result->t_arr[i][j], sizeof(unsigned char), result->dim_size[2], stream) < (unsigned int) result->dim_size[2])
           return 0;
       }
     }
@@ -121,24 +124,67 @@ tri_mem_list mem_list_init(arr3 dim, arr3 dim_size) {
   return result;
 }
 
-tri_mem_list mem_list_init_fund(int dim) { 
+
+tri_mem_list mem_list_init_fund(int dim, int init_value) { 
   tri_mem_list result = {NULL,
                          NULL,
                         {(dim+1)*(dim+1)*(dim+1), (dim+1)*(dim+1)*(dim+1), (dim+1)*(dim+1)*(dim+1) / 8 + 1}, \
                         {(dim+1)*(dim+1),  (dim+1)}, \
                         {dim,dim,dim},
                         1};
+  
+  
+    
   cube_points fund_points = gen_fund_points(dim);                      
   unsigned char *** t_arr = calloc(result.dim_size[0], sizeof(unsigned char **));
- 
+  result.t_arr = t_arr;
+  
+  /* Initalize first dimension */
   for (size_t i = 0; i < fund_points.len; i++) {
     int index = vertex_to_index(fund_points.points[i], result.dim_mult);
     t_arr[index] = calloc(result.dim_size[1], sizeof(unsigned char *));  
-    for (size_t j = 0; j < result.dim_size[1]; j++)
+  }  
+  /* Initalize second and third dimension */
+  for (size_t i = 0; i < fund_points.len; i++) {
+    int index = vertex_to_index(fund_points.points[i], result.dim_mult);
+    for (int j = 0; j < result.dim_size[1]; j++) {
       t_arr[index][j] = calloc(result.dim_size[2], sizeof(unsigned char));
+      if (init_value == MEM_LIST_TRUE) {
+        if (index == j) //Same points are not valid triangles
+          continue;
+        for (int k = 0; k < result.dim_size[1]; k++) {
+          if (index ==k || j == k)  //Double points -> not valid triangles
+            continue;
+          tri_index indices;
+          vertices_unique_fund(index,j,k,&result,indices);
+          if (indices[0] == index && indices[1] == j && indices[2] == k) {
+            SMI(t_arr,indices);
+          }
+        }
+      }
+    }
   }
-  result.t_arr = t_arr;
+     
   
+  /*
+  size_t len = 0;
+  Dindex * comb = combinations_list(result.dim_size[1],2,&len);
+  for (size_t l = 0; l < len; l++) {//Loop through all combinations
+    int j = comb[l*2];
+    int k = comb[l*2+1];
+    for (size_t i = 0; i < fund_points.len; i++){
+      int index = vertex_to_index(fund_points.points[i],result.dim_mult);
+      if (j == index || k == index)
+        continue;
+      tri_index indices;    
+      vertices_unique_fund(index,j,k,&result,indices);
+      
+      if (!GMI(t_arr,indices))
+        printf("%d,%d,%d\n", indices[0],indices[1],indices[2]);
+      SMI(t_arr,indices);
+    }
+  }
+  */
   unsigned short ** sym_vertex_index = malloc((result.dim_size[0]) * sizeof(unsigned short *));
   for (unsigned short i = 0; i < result.dim_size[0]; i++)
   {
@@ -166,6 +212,11 @@ void mem_list_free(tri_mem_list * list) {
     free(list->t_arr[i]);
   }
   free(list->t_arr);
+  
+  for (unsigned short i = 0; i < list->dim_size[0]; i++)
+    free(list->sym_index[i]);
+  free(list->sym_index);
+  
 }
 //Frees up rows that are entirely zero
 void mem_list_clean(tri_mem_list * list) {
@@ -270,7 +321,7 @@ tri_mem_list mem_list_from_index_list(tri_index_list * list) {
 
 //Only adds triangles with one vertex in the fundamental domain (filters symmetries)
 tri_mem_list mem_list_from_index_list_fund(tri_index_list * list) {
-  tri_mem_list result = mem_list_init_fund(list->dim[0]);
+  tri_mem_list result = mem_list_init_fund(list->dim[0],MEM_LIST_FALSE);
   //Now lets set all the nodes, exciting!
   for (size_t i = 0; i < list->len; i++) {
     triangle cur_triang = triangle_from_index(list->index_list[i], list->dim);
@@ -520,4 +571,23 @@ int index_in_array(int index, int * indices, size_t len) {
     if (index == indices[i])
       return 1;
   return 0;
+}
+
+
+
+void tetra_to_index(ptetra tet, arr2 dim_mult, tet_index indices) {
+  int t;
+  indices[0] = vertex_to_index(tet->vertices[0], dim_mult);
+  indices[1] = vertex_to_index(tet->vertices[1], dim_mult);
+  indices[2] = vertex_to_index(tet->vertices[2], dim_mult);
+  indices[3] = vertex_to_index(tet->vertices[3], dim_mult);
+  int swapped = 1;
+  while (swapped) {
+    swapped = 0;
+    for (int i = 1; i < 4; i++)
+      if (indices[i-1] > indices[i]) {
+        swap(indices[i-1], indices[i])
+        swapped = 1;
+      }
+  }
 }

@@ -131,4 +131,6 @@ vec3 mat3Col(mat3 mat, int col);
 vec3 mat3Row(mat3 mat, int row);
 cube_points gen_cube_points(arr3 dim);
 cube_points gen_fund_points(int dim);
+
+void randomArr3(arr3 dim, arr3 result);
 #endif

@@ -362,3 +362,9 @@ cube_points gen_fund_points(int dim){
   
   return result;
 }
+
+void randomArr3(arr3 dim, arr3 result) {
+  result[0] = rand() % dim[0];
+  result[1] = rand() % dim[1];
+  result[2] = rand() % dim[2];
+}

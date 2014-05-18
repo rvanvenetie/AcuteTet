@@ -9,8 +9,8 @@ typedef struct triangulation {
   ptetra    tetraeders;
   size_t    len_bound, len_tetra;  
   arr3 dim;
-} triangulation, ptriangulation;
+} triangulation, * ptriangulation;
 
 int tetra_tetra_disjoint(ptetra t1, ptetra t2);
-
+ptriangulation triangulate_cube_random(arr3 dim);
 #endif
