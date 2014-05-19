@@ -36,7 +36,7 @@ void test_multithread(void) {
   }
 }
 
-int main(void){
+int main(int argc, char *argv[]) {
   //test_multithread();
   //omp_set_num_threads(4);
   //exit(00);
@@ -55,10 +55,16 @@ int main(void){
  // tet_list = acute_tetrahedra_recur(dim);
  // exit(0);
   int i;
+  int c = 0;
   #ifdef LOOP
-  for (i = 10;i < 11; i++) 
+  for (i = 10;i < 11; i++, c++) 
   #endif
   {
+    if (argc == 2) {
+      if (c== 1)
+        exit(0); 
+      i = atoi(argv[1]);
+    }
     sprintf(log_file, "output_%d.log",i);
     if (REDIRECT_OUTPUT) {
       freopen(log_file,"a",stdout);
