@@ -50,8 +50,13 @@ tri_mem_list mem_list_from_triangle_list(triangle_list * list);
 tri_mem_list mem_list_from_index_list(tri_index_list * list);
 tri_mem_list mem_list_from_index_list_fund(tri_index_list * list);
 
+
+
+#define MEM_LIST_SAVE_FULL 0
+#define MEM_LIST_SAVE_CLEAN 1
+int mem_list_row_empty(tri_mem_list * list, int i, int j);
 int mem_list_from_file(tri_mem_list * result, char * filename);
-int mem_list_to_file(tri_mem_list * list, char * filename);
+int mem_list_to_file(tri_mem_list * list, char * filename, int mode);
 triangle_list mem_list_to_triangle_list(tri_mem_list * list);
 
 size_t mem_list_count(tri_mem_list * list);

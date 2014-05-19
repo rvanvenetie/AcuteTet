@@ -13,8 +13,9 @@
 #include "triangulate.h"
 
 
-#define USE_FILE 0
+#define USE_FILE 1
 #define FACE2FACE 0
+#define REDIRECT_OUTPUT 1
 #define LOOP
 
 
@@ -37,45 +38,59 @@ void test_multithread(void) {
 
 int main(void){
   //test_multithread();
-  omp_set_num_threads(4);
+  //omp_set_num_threads(4);
   //exit(00);
   char filename[70];
+  char log_file[70];
   arr3 dim =  {40,40,40};
-  ptriangulation opdeling = triangulate_cube_random(dim);
+  //ptriangulation opdeling = triangulate_cube_random(dim);
   
   //exit(0);
   tri_mem_list fund_list, face_list;
-  triangle_list tri_list;
+  //triangle_list tri_list;
   tri_index_list idx_list;
   //tetra_list tet_list;
   
   double time_start,time_end;
-  
  // tet_list = acute_tetrahedra_recur(dim);
  // exit(0);
   int i;
   #ifdef LOOP
-  for (i = 1;i <15; i++) 
+  for (i = 10;i < 11; i++) 
   #endif
   {
+    sprintf(log_file, "output_%d.log",i);
+    if (REDIRECT_OUTPUT) {
+      freopen(log_file,"a",stdout);
+      setvbuf(stdout, NULL,_IOLBF, 1024);
+    }
     printf("\n\n\nGenerating the gezellige verzameling for dimension %d\n\n\n\n", i);
+    
     time_start = omp_get_wtime();
-    face_list = mem_list_init_fund(i, MEM_LIST_TRUE); 
+    sprintf(filename,"/var/scratch/rvveneti/gez_verz_%d.tet",i);
+    if (USE_FILE && mem_list_from_file(&face_list, filename)) {
+      printf("Continuing previous data-set.\n");
+    } else {
+      printf("Initalizing new data-set.\n");
+      face_list = mem_list_init_fund(i, MEM_LIST_TRUE); 
+    }    
     time_end   = omp_get_wtime();
     printf("Took %f seconds to init the memory list.\n", time_end - time_start);
     time_start = omp_get_wtime();
     printf("Start filtering triangles not acute or not gezellig.\n\n");
-    facets_face2face(&face_list); //Start filtering
+    facets_face2face(&face_list, filename); //Start filtering
     time_end = omp_get_wtime();
     printf("\nAmount of sharp facets after face2face filter: %zu\n", mem_list_count(&face_list));    
     printf("Total calculation gezellige verzameling took %f seconds\n\n",time_end - time_start);
     
     sprintf(filename,"data/gez_verz_%d.tet",i);
     printf("Memory before clean up: %zu\n", mem_list_memory(&face_list));
-    mem_list_clean(&face_list);
-    if (!mem_list_to_file(&face_list, filename))
+    if (!mem_list_to_file(&face_list, filename, MEM_LIST_SAVE_CLEAN))
       printf("Failed to save face2face data to file: %s\n", filename);
     printf("Total memory used: %zu\n\n", mem_list_memory(&face_list));
+    
+    mem_list_free(&face_list);
+    fclose(stdout);
     continue;
     
     
@@ -88,7 +103,7 @@ int main(void){
       fund_list = facets_cube_acute(i);
       time_end   = omp_get_wtime();
       printf("Calculated data in %f seconds\n", time_end - time_start);  
-      if (!mem_list_to_file(&fund_list, filename)) 
+      if (!mem_list_to_file(&fund_list, filename,MEM_LIST_SAVE_CLEAN)) 
         printf("Failed to save to file %s\n", filename);      
     }
     printf("Amount of sharp facets in fundamental domain:%zu\n", mem_list_count(&fund_list));
@@ -109,12 +124,12 @@ int main(void){
     } else{ 
       face_list = fund_list;
       time_start = omp_get_wtime();
-      facets_face2face(&face_list);
+      facets_face2face(&face_list,NULL);
       time_end   = omp_get_wtime();
       printf("Calculated data in %f seconds\n", time_end   - time_start);  
       printf("Memory before clean up: %zu\n", mem_list_memory(&face_list));
       mem_list_clean(&face_list);
-      if (!mem_list_to_file(&face_list, filename))
+      if (!mem_list_to_file(&face_list, filename, MEM_LIST_SAVE_CLEAN))
         printf("Failed to save face2face data to file: %s\n", filename);
     }
     printf("Amount of sharp facets after face2face filter: %zu\n", mem_list_count(&face_list));    

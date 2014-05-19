@@ -874,8 +874,10 @@ tri_mem_list facets_cube_acute(int dim) {
   return result;
 }
 
+//if save_file is set. The acute_list is saved to this file every hour
+#define save_interval 60*60
 
-void facets_face2face(tri_mem_list * acute_list){
+void facets_face2face(tri_mem_list * acute_list, char * save_file){
   cube_points fund = gen_fund_points(acute_list->dim[0]);
   cube_points cube = gen_cube_points(acute_list->dim);
   size_t comb_len;
@@ -883,15 +885,19 @@ void facets_face2face(tri_mem_list * acute_list){
   int changed = 1;
   size_t l,i,j,k;
   tri_index indices;
+  char tmp_file[100];
+  if (save_file) 
+    sprintf(tmp_file,"%s_tmp", save_file);
+          
   unsigned short idx2, idx3;
   triangle cur_tri;
   facet_acute_data parameters;
   parameters.cube = &cube;
   parameters.acute_list = acute_list;
-  double time_start =0 , time_end = 0;;
+  double time_start =0 , time_end = 0, time_save = save_interval;
   while (changed) {
     changed = 0;
-    printf("Face2face loop with %zu acute triangles from thread %d."
+    printf("Face2face loop with %zu acute triangles from thread %d.\n"
           , mem_list_count(acute_list), omp_get_thread_num());
     time_start = omp_get_wtime();
     #pragma omp parallel for schedule(guided) private(l,j,k,i,cur_tri, idx2,idx3,indices)  firstprivate(parameters)
@@ -913,9 +919,20 @@ void facets_face2face(tri_mem_list * acute_list){
           mem_list_clear_sym_fund(acute_list, &cur_tri);
         }
       }
+      if (save_file && //Do we want to save the file?
+          omp_get_thread_num() == 0 && //Only let master save to the file
+        ((omp_get_wtime() - time_start) > time_save)) { //Time to save current progress
+        
+        printf("Saving tmp file with +/- %zu facets.\n", mem_list_count(acute_list));
+        mem_list_to_file(acute_list, tmp_file, MEM_LIST_SAVE_CLEAN); //Save as tmp
+        remove(save_file); //Remove the old progress file
+        rename(tmp_file, save_file); //Rename tmp to new   
+        time_save += save_interval;
+      }
     } 
     time_end   = omp_get_wtime();
-    printf(" Took %f seconds.\n", time_end-time_start);
+    printf("Loop took %f seconds.\n\n", time_end-time_start);
+    
   }
   free(comb); 
   free(cube.points);

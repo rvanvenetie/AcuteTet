@@ -53,9 +53,8 @@ int index_list_to_file(tri_index_list * list, char * filename) {
   return 1;  
 }
 
-
 //Writes mem_list to a file
-int mem_list_to_file(tri_mem_list * list, char * filename) {
+int mem_list_to_file(tri_mem_list * list, char * filename, int mode) {
   FILE * stream;
   stream = fopen(filename, "wb");
   if (stream == NULL)
@@ -68,7 +67,9 @@ int mem_list_to_file(tri_mem_list * list, char * filename) {
     if (!list->t_arr[i])
       continue;
     for (int j = 0; j < list->dim_size[1]; j++) {
-      if (list->t_arr[i][j]) { //Initalized
+      if (list->t_arr[i][j] &&  //Initalized
+         ((mode == MEM_LIST_SAVE_FULL) || //Save any way
+         ((mode == MEM_LIST_SAVE_CLEAN) && !mem_list_row_empty(list,i,j)))) {
         fputc(1, stream); //Write 1 to indicate content is comming
         fwrite(list->t_arr[i][j],sizeof(unsigned char), list->dim_size[2], stream); //Write the contents
       } else { 
@@ -92,12 +93,14 @@ int mem_list_from_file(tri_mem_list * result, char * filename) {
     *result = mem_list_init_fund(result->dim[0],MEM_LIST_FALSE);
   else
     *result = mem_list_init(result->dim,result->dim_size);
+  
   for (int i = 0; i < result->dim_size[0]; i++) {
     if (!result->t_arr[i])
       continue;
     for (int j = 0; j < result->dim_size[1]; j++) {
       if (fgetc(stream)) {
-        result->t_arr[i][j] = calloc(result->dim_size[2], sizeof(unsigned char));
+        if (!result->t_arr[i][j])
+          result->t_arr[i][j] = calloc(result->dim_size[2], sizeof(unsigned char));
         if (fread(result->t_arr[i][j], sizeof(unsigned char), result->dim_size[2], stream) < (unsigned int) result->dim_size[2])
           return 0;
       }
@@ -218,26 +221,25 @@ void mem_list_free(tri_mem_list * list) {
   free(list->sym_index);
   
 }
+
+//Returwns whether the row t_arr[i][j] is emppty, meaning that
+//t_arr[i][j][k] == 0 for all k
+int mem_list_row_empty(tri_mem_list * list, int i, int j) {
+  for (int k = 0; k < list->dim_size[2]; k++)
+    if (list->t_arr[i][j][k])
+      return 0;
+  return 1;
+}
 //Frees up rows that are entirely zero
 void mem_list_clean(tri_mem_list * list) {
   for (int i = 0; i < list->dim_size[0]; i++) { 
     if (!list->t_arr[i])
       continue;
     for (int j = 0; j < list->dim_size[1]; j++) 
-      if (list->t_arr[i][j]) {
-        int row_zero = 1;
-        for (int k = 0; k < list->dim_size[2]; k++) {
-          if (list->t_arr[i][j][k]) {
-            row_zero = 0;
-            break;
-          }
-        }
-        if (row_zero)  {
-          free(list->t_arr[i][j]);
-          list->t_arr[i][j] = NULL;
-        }
-      }
-  
+      if (list->t_arr[i][j] && mem_list_row_empty(list,i,j)) {
+        free(list->t_arr[i][j]);
+        list->t_arr[i][j] = NULL;
+      }          
   }
 }
 /*

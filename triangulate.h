@@ -7,7 +7,7 @@
 typedef struct triangulation {
   ptriangle boundaries;
   ptetra    tetraeders;
-  size_t    len_bound, len_tetra;  
+  size_t    bound_len, tetra_len;  
   arr3 dim;
 } triangulation, * ptriangulation;
 
