@@ -875,7 +875,7 @@ tri_mem_list facets_cube_acute(int dim) {
 }
 
 //if save_file is set. The acute_list is saved to this file every hour
-#define save_interval 60*60
+#define save_interval 30*60
 
 void facets_face2face(tri_mem_list * acute_list, char * save_file){
   cube_points fund = gen_fund_points(acute_list->dim[0]);
