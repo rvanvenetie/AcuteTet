@@ -924,10 +924,14 @@ void facets_face2face(tri_mem_list * acute_list, char * save_file){
         ((omp_get_wtime() - time_start) > time_save)) { //Time to save current progress
         
         printf("Saving tmp file with +/- %zu facets.\n", mem_list_count(acute_list));
-        mem_list_to_file(acute_list, tmp_file, MEM_LIST_SAVE_CLEAN); //Save as tmp
-        remove(save_file); //Remove the old progress file
-        rename(tmp_file, save_file); //Rename tmp to new   
-        time_save += save_interval;
+        if (!mem_list_to_file(acute_list, tmp_file, MEM_LIST_SAVE_CLEAN)) { //Save as tmp
+          remove(tmp_file);
+          time_save += save_interval / 2;
+        } else {
+          remove(save_file); //Remove the old progress file
+          rename(tmp_file, save_file); //Rename tmp to new   
+          time_save += save_interval;
+        }
       }
     } 
     time_end   = omp_get_wtime();

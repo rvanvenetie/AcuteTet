@@ -42,10 +42,13 @@ int main(int argc, char *argv[]) {
   //exit(00);
   char filename[70];
   char log_file[70];
-  arr3 dim =  {40,40,40};
-  //ptriangulation opdeling = triangulate_cube_random(dim);
-  
-  //exit(0);
+  arr3 dim =  {35,35,35};
+  /*
+  ptriangulation opdeling = triangulate_cube_random(dim);
+  while (!opdeling)
+    opdeling = triangulate_cube_random(dim);
+  exit(0);
+  */
   tri_mem_list fund_list, face_list;
   //triangle_list tri_list;
   tri_index_list idx_list;

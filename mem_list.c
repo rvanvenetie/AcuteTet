@@ -60,7 +60,8 @@ int mem_list_to_file(tri_mem_list * list, char * filename, int mode) {
   if (stream == NULL)
     return 0;
   //Write the struct to the file
-  fwrite(list,sizeof(tri_mem_list), 1,stream);
+  if (fwrite(list,sizeof(tri_mem_list), 1,stream) < 1)
+    return 0;
   //Now the final structure is given by <c><last_dimension>
   //It consist of bytes. A 1 is followed by that dimensions value
   for (int i = 0; i < list->dim_size[0]; i++) {
@@ -71,7 +72,8 @@ int mem_list_to_file(tri_mem_list * list, char * filename, int mode) {
          ((mode == MEM_LIST_SAVE_FULL) || //Save any way
          ((mode == MEM_LIST_SAVE_CLEAN) && !mem_list_row_empty(list,i,j)))) {
         fputc(1, stream); //Write 1 to indicate content is comming
-        fwrite(list->t_arr[i][j],sizeof(unsigned char), list->dim_size[2], stream); //Write the contents
+        if (fwrite(list->t_arr[i][j],sizeof(unsigned char), list->dim_size[2], stream) < (unsigned int) list->dim_size[2]) //Write the contents
+          return 0;
       } else { 
         fputc(0, stream); //No content is comming
       }
