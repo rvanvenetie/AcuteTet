@@ -20,7 +20,7 @@ void test_sym(void){
       for (int k = 0; k < 48; k++) {//Apply symmetry
         arr3 sym_fund;
         apply_symmetry(k,i, fund.points[j], sym_fund);
-        points[vertex_to_index(sym_fund, dim_mult)] = 1;
+        points[vertex_to_index_cube(sym_fund, dim_mult)] = 1;
       }
     for (size_t j = 0; j < dim_size; j++) {
       if (points[j] == 0) {
@@ -116,8 +116,7 @@ void test_mem_list_fund(void){
     if (!mem_list_get_sym_fund(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
       printf("Triangle not fount!!");
     }
-
-  }
+  } //Check for additional 
   free(triang_list);
 }
 
@@ -178,7 +177,7 @@ void test_tetra_normals(void) {
       else
         neg = 1;
     }
-    if (neg && pos) {
+    if (pos) {
       printf("Inconsistent normals on tetra!\n");
       print_tetra(&tet);
     }
@@ -201,6 +200,7 @@ void test_tetra_disjunct(void) {
 
 int main(void){
   test_sym();
+  test_tetra_normals();
   //test_triangle_indices();
   //
   //test_tetra_disjunct();

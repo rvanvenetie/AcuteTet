@@ -39,6 +39,12 @@ int zeroArr3(arr3 u) {
 }
 #endif
 
+void negArr3(arr3 result) {
+  result[0] = -result[0];
+  result[1] = -result[1];
+  result[2] = -result[2];
+}
+
 void printVector(vec3 u){
   printf("[%d,%d,%d]\n",u.pt[0],u.pt[1],u.pt[2]);
 }
@@ -311,7 +317,41 @@ void symmetries_old(int sym,int dim,arr3 pt, arr3 result) {
 #endif  
 
 
-
+/*
+ * Generates all points inside the unit tetrahedra.
+ * Total amount of points is given by:
+ *  - For triangle of dim k = \sum_{n=0}^k (k - n + 1) = 1/2(1+k)(2+k)
+ *  - For all triangles = \sum_{k=0}^dim 1/2(1+k)(2+k) = 1/6 (n+1)(n+2)(n+3)
+ * vertex_index will hold an array used to reverse a point to it's index.
+ * vertex_index[x][y][z] will give it's index in the points array.
+ */
+cube_points gen_tet_points(int dim, vert_index **** vertex_index) {
+  cube_points result = {NULL, 
+                        {dim,dim,dim},
+                        (dim+1)*(dim+2)*(dim+3)/6};
+  result.points = malloc(result.len *sizeof(arr3));
+  int c = 0;
+  
+  if (vertex_index)
+    *vertex_index = malloc((dim+1) * sizeof(unsigned short **));
+  for (int x = 0; x <= dim; x++) {
+    if (vertex_index)
+      (*vertex_index)[x] = malloc( (dim-x + 1) * sizeof(unsigned short *));
+    for (int y = 0; y <= dim - x; y++) {
+      if (vertex_index)
+        (*vertex_index)[x][y] = malloc( (dim - x - y + 1) * sizeof(unsigned short));
+      for (int z = 0; z <= dim - x -y; z++) {
+        result.points[c][0] = x;
+        result.points[c][1] = y;
+        result.points[c][2] = z;
+        if (vertex_index)
+          (*vertex_index)[x][y][z] = c;
+        c++;
+      }
+    }
+  }
+  return result;
+}
 
 cube_points gen_cube_points(arr3 dim) {
   cube_points result = {NULL, 
@@ -367,4 +407,11 @@ void randomArr3(arr3 dim, arr3 result) {
   result[0] = rand() % dim[0];
   result[1] = rand() % dim[1];
   result[2] = rand() % dim[2];
+}
+
+void copyArr3(arr3 dest, arr3 source) {
+  dest[0] = source[0];
+  dest[1] = source[1];
+  dest[2] = source[2];
+  
 }

@@ -136,13 +136,13 @@ void rem_boundary_triangulation(int rem_bound, ptriangulation result) {
 
 int facet_boundary_triangulation(arr3 v1, arr3 v2, arr3 v3, ptriangulation result, ptriangle search_tri) {
   *search_tri = (triangle) {{{v1[0],v1[1],v1[2]}, {v2[0],v2[1],v2[2]}, {v3[0],v3[1],v3[2]}}};
-  if (triangle_boundary(search_tri, result->dim))
+  if (triangle_boundary_cube(search_tri, result->dim))
     return 1;
   tri_index search_facet;
-  triangle_to_index(search_tri, result->dim_mult, search_facet);
+  triangle_to_index_cube((*search_tri), result->dim_mult, search_facet);
   for (size_t i = 0; i < result->bound_len; i++) {
     tri_index bound_facet;
-    triangle_to_index(&result->boundaries[i],result->dim_mult, bound_facet);
+    triangle_to_index_cube(result->boundaries[i],result->dim_mult, bound_facet);
     if (bound_facet[0] == search_facet[0] && bound_facet[1] == search_facet[1] &&
         bound_facet[2] == search_facet[2])
       return 1;

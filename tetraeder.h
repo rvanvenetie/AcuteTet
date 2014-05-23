@@ -39,6 +39,7 @@ typedef struct
 typedef struct facet_acute_data {
   cube_points * cube;
   tri_mem_list * acute_list;
+
   
  //Store the actual tetrahedrons acute above and acute below
   ptetra tetra_above;
@@ -48,7 +49,10 @@ typedef struct facet_acute_data {
   
   //Store whether facet has one tetra acute above, acute below
   int acute_above, acute_below;
+  
   //Store whether this triangle lies on a boundary (thus only is acute_above or acute_below)
+  int (*boundary_func)(ptriangle, arr3);
+
   int boundary_triangle;
 } facet_acute_data;
 
@@ -70,8 +74,8 @@ void mem_list_face2face(tri_mem_list * acute_list);
 #define FACET_ACUTE_LIST 1
 #define FACET_ACUTE_TETRA 2
 
-
-void facets_face2face(tri_mem_list * acute_list, char * save_file);
+void facets_face2face_tet(tri_mem_list * acute_list, char * save_file);
+void facets_face2face_fund(tri_mem_list * acute_list, char * save_file);
 tri_mem_list facets_cube_acute(int dim);
 int facet_cube_acute(ptriangle triang, facet_acute_data * data, int mode);
 #endif

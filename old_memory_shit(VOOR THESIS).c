@@ -337,3 +337,23 @@ void test_lists() {
 
 tri_int triangle_to_int(ptriangle tri);
 triangle int_to_triangle(tri_int tri);
+
+/*
+ * Convert a memory list from the triangle list. 
+ * 
+ * NOT USED ANYMORE?
+ */
+tri_mem_list mem_list_from_triangle_list(triangle_list * list) {
+  printf("Not implemented, mem_list_from_triangle_list");
+  /*
+  arr3 dim_size;
+  dim_size[0] = (list->dim[0] + 1) * (list->dim[1] + 1) * (list->dim[2] + 1);
+  dim_size[1] = dim_size[0];
+  dim_size[2] = dim_size[1]/8 + 1;  
+  tri_mem_list result = mem_list_init(list->dim,dim_size);
+  //Now lets set all the nodes, exciting!
+  for (int i = 0; i < list->len; i++) 
+    mem_list_set_sym(&result, &list->t_arr[i]);
+  return result;  
+  */
+}

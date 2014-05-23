@@ -42,13 +42,18 @@ int main(int argc, char *argv[]) {
   //exit(00);
   char filename[70];
   char log_file[70];
-  arr3 dim =  {35,35,35};
+  arr3 dim =  {35,30,30};
+  size_t len;
   /*
   ptriangulation opdeling = triangulate_cube_random(dim);
   while (!opdeling)
     opdeling = triangulate_cube_random(dim);
   exit(0);
   */
+  //unsigned short *** vertex_index;
+  //cube_points tet = gen_tet_points(dim[0], &vertex_index);
+  //printf("%zu\n", tet.len);
+ // exit(0);
   tri_mem_list fund_list, face_list;
   //triangle_list tri_list;
   tri_index_list idx_list;
@@ -60,7 +65,7 @@ int main(int argc, char *argv[]) {
   int i;
   int c = 0;
   #ifdef LOOP
-  for (i = 10;i < 11; i++, c++) 
+  for (i = 23;i < 25; i++, c++) 
   #endif
   {
     if (argc == 2) {
@@ -68,7 +73,7 @@ int main(int argc, char *argv[]) {
         exit(0); 
       i = atoi(argv[1]);
     }
-    sprintf(log_file, "output_%d.log",i);
+    sprintf(log_file, "output_tet_%d.log",i);
     if (REDIRECT_OUTPUT) {
       freopen(log_file,"a",stdout);
       setvbuf(stdout, NULL,_IOLBF, 1024);
@@ -76,23 +81,23 @@ int main(int argc, char *argv[]) {
     printf("\n\n\nGenerating the gezellige verzameling for dimension %d\n\n\n\n", i);
     
     time_start = omp_get_wtime();
-    sprintf(filename,"/var/scratch/rvveneti/gez_verz_%d.tet",i);
+    sprintf(filename,"/var/scratch/rvveneti/tet_verz_%d.tet",i);
     if (USE_FILE && mem_list_from_file(&face_list, filename)) {
       printf("Continuing previous data-set.\n");
     } else {
       printf("Initalizing new data-set.\n");
-      face_list = mem_list_init_fund(i, MEM_LIST_TRUE); 
+      face_list = mem_list_init_tet(i, MEM_LIST_TRUE); 
     }    
     time_end   = omp_get_wtime();
     printf("Took %f seconds to init the memory list.\n", time_end - time_start);
     time_start = omp_get_wtime();
     printf("Start filtering triangles not acute or not gezellig.\n\n");
-    facets_face2face(&face_list, filename); //Start filtering
+    facets_face2face_tet(&face_list, filename); //Start filtering
     time_end = omp_get_wtime();
     printf("\nAmount of sharp facets after face2face filter: %zu\n", mem_list_count(&face_list));    
     printf("Total calculation gezellige verzameling took %f seconds\n\n",time_end - time_start);
     
-    sprintf(filename,"data/gez_verz_%d.tet",i);
+    sprintf(filename,"data/tet_verz_%d.tet",i);
     printf("Memory before clean up: %zu\n", mem_list_memory(&face_list));
     if (!mem_list_to_file(&face_list, filename, MEM_LIST_SAVE_CLEAN))
       printf("Failed to save face2face data to file: %s\n", filename);
@@ -133,7 +138,7 @@ int main(int argc, char *argv[]) {
     } else{ 
       face_list = fund_list;
       time_start = omp_get_wtime();
-      facets_face2face(&face_list,NULL);
+      facets_face2face_fund(&face_list,NULL);
       time_end   = omp_get_wtime();
       printf("Calculated data in %f seconds\n", time_end   - time_start);  
       printf("Memory before clean up: %zu\n", mem_list_memory(&face_list));

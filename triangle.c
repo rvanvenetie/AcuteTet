@@ -82,10 +82,26 @@ void print_triangle(ptriangle tet) {
  */
  
 #define mat3_col_equal(mat,col,val) (mat[0][col] == val && mat[1][col] == val && mat[2][col] == val)
-int triangle_boundary(ptriangle triang, arr3 dim) {
+int triangle_boundary_cube(ptriangle triang, arr3 dim) {
   return (mat3_col_equal(triang->vertices,0,0) || mat3_col_equal(triang->vertices,0,dim[0]) ||
           mat3_col_equal(triang->vertices,1,0) || mat3_col_equal(triang->vertices,1,dim[1]) ||
           mat3_col_equal(triang->vertices,2,0) || mat3_col_equal(triang->vertices,2,dim[2]));
+}
+
+#define arr3_sum(arr) (arr[0] + arr[1] + arr[2])
+int triangle_boundary_tet(ptriangle triang, arr3 dim) {
+  return (mat3_col_equal(triang->vertices,0,0) || //X = 0 plane
+          mat3_col_equal(triang->vertices,1,0) || //Y = 0 plane
+          mat3_col_equal(triang->vertices,2,0) || //Z = 0 plane
+         (arr3_sum(triang->vertices[0]) == dim[0] &&
+          arr3_sum(triang->vertices[1]) == dim[0] &&
+          arr3_sum(triang->vertices[2]) == dim[0])); //X + Y + Z = dim plane
+  
+}
+void triangle_symmetry(ptriangle triang, int sym,int dim, ptriangle res) {
+  apply_symmetry(sym, dim, triang->vertices[0], res->vertices[0]);
+  apply_symmetry(sym, dim, triang->vertices[1], res->vertices[1]);
+  apply_symmetry(sym, dim, triang->vertices[2], res->vertices[2]);
 }
 
 triangle_list acute_triangle_recur(arr3 dim){
@@ -182,10 +198,4 @@ triangle_list acute_triangle_recur(arr3 dim){
   printf("  Fraction sharp: %f\n", (float) result.len / combination(len,3));
   printf("  Total triangles: %d\n\n", result.len);
   return result;  
-}
-
-void triangle_symmetry(ptriangle triang, int sym,int dim, ptriangle res) {
-  apply_symmetry(sym, dim, triang->vertices[0], res->vertices[0]);
-  apply_symmetry(sym, dim, triang->vertices[1], res->vertices[1]);
-  apply_symmetry(sym, dim, triang->vertices[2], res->vertices[2]);
 }
