@@ -1,6 +1,6 @@
 CC=gcc -fopenmp 
-WARNING_FLAGS=-Wall -Wextra -Werror-implicit-function-declaration -Wshadow -Wstrict-prototypes -pedantic-errors
-CFLAGS=  -g -O3 -std=c11 $(WARNING_FLAGS) -DINLINE_MACROS
+WARNING_FLAGS=-Wall -Wextra -Werror-implicit-function-declaration -Wshadow -Wstrict-prototypes -pedantic
+CFLAGS=  -g -O3 -std=gnu99 $(WARNING_FLAGS) -DINLINE_MACROS
 LDFLAGS= 
 .c.o:
 	$(CC) -c $(CFLAGS) $<
