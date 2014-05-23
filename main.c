@@ -91,6 +91,7 @@ int main(int argc, char *argv[]) {
     time_end   = omp_get_wtime();
     printf("Took %f seconds to init the memory list.\n", time_end - time_start);
     time_start = omp_get_wtime();
+    printf("Size of the memory list is %zu bytes.\n", mem_list_count(&face_list));
     printf("Start filtering triangles not acute or not gezellig.\n\n");
     facets_face2face_tet(&face_list, filename); //Start filtering
     time_end = omp_get_wtime();
