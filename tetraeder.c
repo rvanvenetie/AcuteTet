@@ -124,8 +124,8 @@ void tetra_add_array(tetra tetra_to_add, ptetra  * tetra_array, int * len) {
 
 /*
  * Returns whether the facet given by triang is acute. A acute facet is defined
- * to be a facet which has a acute tetrahedron on each "side" of it's plane. (Boundary
- * planes only need an acute tetrahedron on the inside).
+ * to be a facet which is part of an acute tetrahedron on each "side" of it's plane. (Boundary
+ * planes only need an acute tetrahedron on the inside). 
  * 
  * Different modes:
  *   -FACET_ACUTE:   Just checks if this facet has at least one acute tetrahedron on each side.
@@ -136,10 +136,15 @@ void tetra_add_array(tetra tetra_to_add, ptetra  * tetra_array, int * len) {
  * 
  */
 int facet_cube_acute(ptriangle triang, facet_acute_data * data, int mode) {
-  //Check if triangle is acute..
-  if (!mat3_triangle_acute(triang->vertices)) //Can replace with code below
+  /*
+   * Every facet of an acute tetrahedron needs to be acute. If this facet is not even acute
+   * we may directly stop checking this facet as it's never going to be part of an acute tetrahedron
+   */
+  if (!mat3_triangle_acute(triang->vertices)) 
     return 0;
+    
   mat3 P;
+  //Calculate the three edges of this triangle
   triangle_sides(triang->vertices[0], triang->vertices[1], triang->vertices[2],P);
   arr3 tri_normal;
   crossArr3(P[1], P[0], tri_normal); //Calculate normal on the triangle plane
@@ -360,17 +365,20 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
         for (k = j + 1;k < tet.len; k++) //All combinations of three vertices in the tet
         {
           //printf("%d", omp_get_thread_num());
+          //Below is the same as indices_unique_tet(i,j,k,indices) because i < j < k, already sorted
+          
           indices[0] = i;
           indices[1] = j - i - 1;
           indices[2] = k - j - 1;
           if (!GMI(acute_list->t_arr,indices)) //Check if this index is still acute
             continue;
+            
           cur_tri = (triangle) {{{tet.points[i][0],tet.points[i][1],tet.points[i][2]},
                                 {tet.points[j][0],tet.points[j][1],tet.points[j][2]},
                                 {tet.points[k][0],tet.points[k][1],tet.points[k][2]}}};
         if (!facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE_LIST)) { //remove from list
           changed = 1;
-          CMI(acute_list->t_arr,indices);
+          CMI(acute_list->t_arr,indices); 
         }
       }
       if (save_file && //Do we want to save the file?

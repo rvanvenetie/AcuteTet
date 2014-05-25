@@ -37,6 +37,7 @@ typedef unsigned short vert_index;
   #define dotArr3(u,v) (u[0]*v[0] + u[1]*v[1] + u[2]*v[2])
   
   #define zeroArr3(u) (u[0] ==0 && u[1] == 0 && u[2] == 0)
+  #define equalArr3(u,v) (u[0] == v[0] && u[1] == v[1] && u[2] == v[2])
  
   #define mirror_sym {t = x;x = y;y = t;}    
   #define face0 {}

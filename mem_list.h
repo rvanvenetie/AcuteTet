@@ -168,8 +168,8 @@ int mem_list_get_fund(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
  * mem_list set/get/clear tet functions
  */
 int mem_list_get_tet(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
-
-
+void mem_list_set_tet(tri_mem_list * list, ptriangle triang);
+void mem_list_clear_tet(tri_mem_list * list, ptriangle triang);
 /*
  * old
  */

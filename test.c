@@ -46,6 +46,24 @@ triangle rand_triangle(int dim) {
   return result;
 }
 
+void rand_vertex_tet(int dim, arr3 vertex) {
+  vertex[0] = rand() % dim;
+  vertex[1] = rand() % (dim - vertex[0]);
+  vertex[2] = rand() % (dim - vertex[0] - vertex[1]);
+}
+triangle rand_triangle_tet(int dim) {
+  triangle result;
+  rand_vertex_tet(dim, result.vertices[0]);
+  rand_vertex_tet(dim, result.vertices[1]);
+  rand_vertex_tet(dim, result.vertices[2]);
+  if (equalArr3(result.vertices[0], result.vertices[1]) ||
+      equalArr3(result.vertices[1], result.vertices[2]) ||
+      equalArr3(result.vertices[0], result.vertices[2]))
+    return rand_triangle_tet(dim);
+  return result;
+}
+
+
 tetra rand_tetra(int dim) {
   tetra result;
   result.vertices[0][0] = rand() % dim;
@@ -72,9 +90,9 @@ void test_triangle_indices(void){
   for (int i = 0; i < 500; i++){
     triangle origin = rand_triangle(dim);
     tri_index ori,v1,v2;
-    triangle_to_index(&origin, dim_mult, ori);
-    vertices_to_index(origin.vertices[1], origin.vertices[2], origin.vertices[0], dim_mult, v1);
-    vertices_to_index(origin.vertices[1], origin.vertices[0], origin.vertices[2], dim_mult, v2);
+    triangle_to_index_cube(origin, dim_mult, ori);
+    vertices_to_index_cube(origin.vertices[1], origin.vertices[2], origin.vertices[0], dim_mult, v1);
+    vertices_to_index_cube(origin.vertices[1], origin.vertices[0], origin.vertices[2], dim_mult, v2);
     if (!tri_index_same(ori,v1) || !tri_index_same(v1,v2)) {
       printf("UNIQUE INDEX NOT THE SAME!!\n");
       print_triangle(&origin);
@@ -108,18 +126,41 @@ void test_mem_list_fund(void){
   triangle * triang_list = malloc(sizeof(triangle)  * 750);
   for (int i = 0; i < 750; i++) {
     triang_list[i] = rand_triangle(dim);
-    mem_list_set_sym_fund(&mem_list,triang_list + i);
+    mem_list_set_fund(&mem_list,triang_list + i);
   } //Inserted all the triangles.
   for (int i = 0; i < 750; i++) {
     randomize_triangle(triang_list + i);
     triangle_symmetry(triang_list + i, rand() % 48,dim, triang_list + i); 
-    if (!mem_list_get_sym_fund(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
+    if (!mem_list_get_fund(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
       printf("Triangle not fount!!");
     }
   } //Check for additional 
   free(triang_list);
 }
 
+void test_mem_list_tet(void) {
+  int dim = 15;
+  int len = 2500;
+  tri_mem_list mem_list = mem_list_init_tet(dim,MEM_LIST_FALSE);
+  triangle * triang_list = malloc(sizeof(triangle)  * len);
+  for (int i = 0; i < len; i++) {
+    triang_list[i] = rand_triangle_tet(dim);
+    mem_list_set_tet(&mem_list,triang_list + i);
+  } //Inserted all the triangles
+  printf("Amount of unique triangles: %zu\n", mem_list_count(&mem_list));
+  for (int i = 0; i < len; i++) {
+    randomize_triangle(triang_list + i);
+    if (!mem_list_get_tet(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
+      printf("Triangle not fount!!");
+    }
+  } 
+  for (int i = 0; i < len; i++)  {
+    mem_list_clear_tet(&mem_list, triang_list + i);
+  }
+  printf("Amount of triangles left : %zu\n", mem_list_count(&mem_list));
+  mem_list_free(&mem_list);
+  free(triang_list);
+}
 
 int tetra_acute_normal(ptetra tet) {
   arr3 P[5]; //Edges
@@ -177,7 +218,7 @@ void test_tetra_normals(void) {
       else
         neg = 1;
     }
-    if (pos) {
+    if (pos && neg) {
       printf("Inconsistent normals on tetra!\n");
       print_tetra(&tet);
     }
@@ -199,8 +240,9 @@ void test_tetra_disjunct(void) {
 }
 
 int main(void){
-  test_sym();
-  test_tetra_normals();
+  //test_sym();
+  //test_tetra_normals();
+  test_mem_list_tet();
   //test_triangle_indices();
   //
   //test_tetra_disjunct();

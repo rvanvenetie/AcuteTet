@@ -13,8 +13,9 @@
 #include "triangulate.h"
 /*
  * Loops from dimension 1 to 25 by default.
- * Parameters are "<type> <dim_1> <dim_2>". Where type is either fund or tet and dimensio
- * is the dimension to test. If parameters given, the program only runs that dimension.
+ * Parameters are "<type> <dim_1>" or "<type> <dim_1> <dim_2>".
+ * Where type is either tet or fund (tetrahedron or fundamental region cube).
+ * If <dim_2> is also specified, it loops from dim_1 to dim_2.
  */
  
 #define USE_FILE 1
@@ -86,14 +87,22 @@ int main(int argc, char *argv[]) {
       printf("Continuing previous data-set.\n");
     } else {
       printf("Initalizing new data-set.\n");
-      face_list = mem_list_init_tet(i, MEM_LIST_TRUE); 
+      if (loop_tet)
+        face_list = mem_list_init_tet(i, MEM_LIST_TRUE);
+      else 
+        face_list = mem_list_init_fund(i, MEM_LIST_TRUE);
     }    
     time_end   = omp_get_wtime();
     printf("Took %f seconds to init the memory list.\n", time_end - time_start);
     time_start = omp_get_wtime();
     printf("Size of the memory list is %zu bytes.\n", mem_list_memory(&face_list));
     printf("Start filtering triangles not acute or not gezellig.\n\n");
-    facets_face2face_tet(&face_list, filename); //Start filtering
+    
+    if (loop_tet)
+      facets_face2face_tet(&face_list, filename); //Start filtering
+    else
+      facets_face2face_fund(&face_list, filename);
+      
     time_end = omp_get_wtime();
     printf("\nAmount of sharp facets after face2face filter: %zu\n", mem_list_count(&face_list));    
     printf("Total calculation gezellige verzameling took %f seconds\n\n",time_end - time_start);

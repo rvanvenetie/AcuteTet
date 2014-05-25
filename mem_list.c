@@ -31,6 +31,9 @@
  *    if index is inside the fundamental area.
  *  
  *  -a tet mem_list. Creates a mem_list that allows storage of triangles in the unit tetrahedron.
+ * 
+ * 
+ * TODO: Convert system using a combinatorial number system.
  */
 
 /*
@@ -619,6 +622,18 @@ int mem_list_get_tet(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3){
   return GMI(list->t_arr, index);
 }
 
+
+void mem_list_set_tet(tri_mem_list * list, ptriangle triang){
+  tri_index index;
+  vertices_to_index_tet(triang->vertices[0],triang->vertices[1],triang->vertices[2], list->mem_tet.vert_to_index, index);
+  SMI(list->t_arr, index);
+}
+
+void mem_list_clear_tet(tri_mem_list * list, ptriangle triang){
+  tri_index index;
+  vertices_to_index_tet(triang->vertices[0],triang->vertices[1],triang->vertices[2], list->mem_tet.vert_to_index, index);
+  CMI(list->t_arr, index);
+}
 
 /*
  * BELOW is not used code. Delete?
