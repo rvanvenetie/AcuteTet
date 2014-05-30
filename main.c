@@ -19,7 +19,7 @@
  */
  
 #define USE_FILE 1
-#define REDIRECT_OUTPUT 0
+#define REDIRECT_OUTPUT 1
 
 #define FUND_LOG "output_fund_%d.log"
 #define TET_LOG "output_tet_%d.log"
