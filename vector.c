@@ -325,31 +325,22 @@ void symmetries_old(int sym,int dim,arr3 pt, arr3 result) {
  * vertex_index will hold an array used to reverse a point to it's index.
  * vertex_index[x][y][z] will give it's index in the points array.
  */
-cube_points gen_tet_points(int dim, vert_index **** vertex_index) {
+cube_points gen_tet_points(int dim) {
   cube_points result = {NULL, 
                         {dim,dim,dim},
                         (dim+1)*(dim+2)*(dim+3)/6};
   result.points = malloc(result.len *sizeof(arr3));
   int c = 0;
   
-  if (vertex_index)
-    *vertex_index = malloc((dim+1) * sizeof(unsigned short **));
-  for (int x = 0; x <= dim; x++) {
-    if (vertex_index)
-      (*vertex_index)[x] = malloc( (dim-x + 1) * sizeof(unsigned short *));
-    for (int y = 0; y <= dim - x; y++) {
-      if (vertex_index)
-        (*vertex_index)[x][y] = malloc( (dim - x - y + 1) * sizeof(unsigned short));
+  for (int x = 0; x <= dim; x++)
+    for (int y = 0; y <= dim - x; y++) 
       for (int z = 0; z <= dim - x -y; z++) {
         result.points[c][0] = x;
         result.points[c][1] = y;
         result.points[c][2] = z;
-        if (vertex_index)
-          (*vertex_index)[x][y][z] = c;
         c++;
       }
-    }
-  }
+
   return result;
 }
 

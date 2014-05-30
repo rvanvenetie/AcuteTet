@@ -20,6 +20,7 @@ typedef struct cube_points
 
 
 typedef unsigned short vert_index;
+typedef vert_index ***vert_index_array;
 
 #ifdef INLINE_MACROS
   #define subArr3(u,v, result) {\
@@ -133,7 +134,7 @@ vec3 mat3Vector(mat3 mat, vec3 v);
 vec3 mat3Col(mat3 mat, int col);
 vec3 mat3Row(mat3 mat, int row);
 
-cube_points gen_tet_points(int dim, vert_index **** vertex_index);
+cube_points gen_tet_points(int dim);
 cube_points gen_cube_points(arr3 dim);
 cube_points gen_fund_points(int dim);
 

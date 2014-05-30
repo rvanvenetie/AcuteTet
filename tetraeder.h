@@ -74,8 +74,8 @@ void mem_list_face2face(tri_mem_list * acute_list);
 #define FACET_ACUTE_LIST 1
 #define FACET_ACUTE_TETRA 2
 
-void facets_face2face_tet(tri_mem_list * acute_list, char * save_file);
-void facets_face2face_fund(tri_mem_list * acute_list, char * save_file);
+void facets_face2face(tri_mem_list * acute_list, char * save_file);
+
 tri_mem_list facets_cube_acute(int dim);
 int facet_cube_acute(ptriangle triang, facet_acute_data * data, int mode);
 #endif

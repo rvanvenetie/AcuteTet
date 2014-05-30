@@ -19,7 +19,7 @@
  */
  
 #define USE_FILE 1
-#define REDIRECT_OUTPUT 1
+#define REDIRECT_OUTPUT 0
 
 #define FUND_LOG "output_fund_%d.log"
 #define TET_LOG "output_tet_%d.log"
@@ -41,7 +41,6 @@ int main(int argc, char *argv[]) {
   exit(0);
   */
   tri_mem_list face_list;
-  
   double time_start,time_end;
   
   int loop_tet = 1; //By default loop over the tetrahedron shape
@@ -90,7 +89,7 @@ int main(int argc, char *argv[]) {
       if (loop_tet)
         face_list = mem_list_init_tet(i, MEM_LIST_TRUE);
       else 
-        face_list = mem_list_init_fund(i, MEM_LIST_TRUE);
+        face_list = mem_list_init_fund2(i, MEM_LIST_TRUE);
     }    
     time_end   = omp_get_wtime();
     printf("Took %f seconds to init the memory list.\n", time_end - time_start);
@@ -98,10 +97,8 @@ int main(int argc, char *argv[]) {
     printf("Size of the memory list is %zu bytes.\n", mem_list_memory(&face_list));
     printf("Start filtering triangles not acute or not gezellig.\n\n");
     
-    if (loop_tet)
-      facets_face2face_tet(&face_list, filename); //Start filtering
-    else
-      facets_face2face_fund(&face_list, filename);
+
+    facets_face2face(&face_list, filename);
       
     time_end = omp_get_wtime();
     printf("\nAmount of sharp facets after face2face filter: %zu\n", mem_list_count(&face_list));    
@@ -118,6 +115,7 @@ int main(int argc, char *argv[]) {
     //printf("Total memory used: %zu\n\n", mem_list_memory(&face_list));
     
     mem_list_free(&face_list);
-    fclose(stdout);
+    if (REDIRECT_OUTPUT)
+      fclose(stdout);
   }
 }

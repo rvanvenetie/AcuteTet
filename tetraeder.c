@@ -98,15 +98,21 @@ void print_tetra(ptetra tet) {
  * The tetrahedron is made out of the base facet triang and the apex new_vertex. Function
  * assumes that the triang is in the memory_list (check before!)
  */
+
 int facet_tetra_list(ptriangle triang, arr3 new_vertex, tri_mem_list * acute_list) {
-  if (acute_list->mode == MEM_LIST_FUND)
-    return (mem_list_get_fund(acute_list, triang->vertices[0], triang->vertices[1], new_vertex) &&
-            mem_list_get_fund(acute_list, triang->vertices[0], triang->vertices[2], new_vertex) &&
-            mem_list_get_fund(acute_list, triang->vertices[1], triang->vertices[2], new_vertex));
-  else 
+  if (acute_list->mode == MEM_LIST_FUND2)
+    return (mem_list_get_fund2(acute_list, triang->vertices[0], triang->vertices[1], new_vertex) &&
+            mem_list_get_fund2(acute_list, triang->vertices[0], triang->vertices[2], new_vertex) &&
+            mem_list_get_fund2(acute_list, triang->vertices[1], triang->vertices[2], new_vertex));
+  else if (acute_list->mode == MEM_LIST_TET)
     return (mem_list_get_tet(acute_list, triang->vertices[0], triang->vertices[1],new_vertex) &&
             mem_list_get_tet(acute_list, triang->vertices[0], triang->vertices[2],new_vertex) &&
-            mem_list_get_tet(acute_list, triang->vertices[1], triang->vertices[2],new_vertex));
+            mem_list_get_tet(acute_list, triang->vertices[1], triang->vertices[2],new_vertex));    
+  else
+    return (mem_list_get_fund(acute_list, triang->vertices[0], triang->vertices[1], new_vertex) &&
+            mem_list_get_fund(acute_list, triang->vertices[0], triang->vertices[2], new_vertex) &&
+            mem_list_get_fund(acute_list, triang->vertices[1], triang->vertices[2], new_vertex));    
+
 }
 
 /*
@@ -296,7 +302,7 @@ void facets_face2face_fund(tri_mem_list * acute_list, char * save_file){
           , mem_list_count(acute_list), omp_get_thread_num());
     time_start = omp_get_wtime();
     #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri, indices)  firstprivate(parameters)
-    for (j = 0; j < cube.len; j++) 
+    for (j = 0; j < cube.len; j++) {
       for (k = j+1; k < cube.len; k++) {
         for (i = 0; i < fund.len; i++){ //Against all fundamental points
           indices_unique_fund(vertex_to_index_cube(fund.points[i],acute_list->mem_fund.dim_mult), j,k, acute_list, indices); 
@@ -325,9 +331,9 @@ void facets_face2face_fund(tri_mem_list * acute_list, char * save_file){
           }
         }
       } 
+    }
     time_end   = omp_get_wtime();
     printf("Loop took %f seconds.\n\n", time_end-time_start);
-    
   }
   
   free(cube.points);
@@ -344,14 +350,15 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
   char tmp_file[100];
   if (save_file) 
     sprintf(tmp_file,"%s_tmp", save_file);
-          
+  
   vert_index i,j,k;
   triangle cur_tri;
   facet_acute_data parameters;
-  cube_points tet = gen_tet_points(acute_list->dim[0], NULL);
+  cube_points tet = gen_tet_points(acute_list->dim[0]);
   parameters.cube = &tet;
   parameters.boundary_func = &triangle_boundary_tet;
   parameters.acute_list = acute_list;
+  
   
   double time_start =0 , time_end = 0, time_save = save_interval;
   while (changed) {
@@ -360,7 +367,7 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
           , mem_list_count(acute_list), omp_get_thread_num());
     time_start = omp_get_wtime();
     #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
-    for (i = 0; i < tet.len; i++)
+    for (i = 0; i < tet.len; i++) {
       for (j = i + 1; j < tet.len; j++) {
         for (k = j + 1;k < tet.len; k++) //All combinations of three vertices in the tet
         {
@@ -376,9 +383,10 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
           cur_tri = (triangle) {{{tet.points[i][0],tet.points[i][1],tet.points[i][2]},
                                 {tet.points[j][0],tet.points[j][1],tet.points[j][2]},
                                 {tet.points[k][0],tet.points[k][1],tet.points[k][2]}}};
-        if (!facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE_LIST)) { //remove from list
-          changed = 1;
-          CMI(acute_list->t_arr,indices); 
+          if (!facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE_LIST)) { //remove from list
+            changed = 1;
+            CMI(acute_list->t_arr,indices); 
+          }
         }
       }
       if (save_file && //Do we want to save the file?
@@ -395,14 +403,90 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
           time_save += save_interval;
         }
       }
-    } 
+    }
     time_end   = omp_get_wtime();
     printf("Loop took %f seconds.\n\n", time_end-time_start);
-    
   }
   free(tet.points);
 }
 
+/*
+ * See face2face tet/fund
+ */
+void facets_face2face_fund2(tri_mem_list * acute_list, char * save_file){
+  int changed = 1;
+  tri_index indices;
+  char tmp_file[100];
+  if (save_file) 
+    sprintf(tmp_file,"%s_tmp", save_file);
+  
+  
+  arr3 * vert_from_index = acute_list->mem_fund2.vert_from_index;         
+  size_t i,j,k;
+  triangle cur_tri;
+  facet_acute_data parameters;
+  cube_points cube = gen_cube_points(acute_list->dim);
+  size_t fund_len = acute_list->mem_fund2.fund_len; //Cache
+  parameters.cube = &cube;
+  parameters.boundary_func = &triangle_boundary_cube;
+  parameters.acute_list = acute_list;
+  
+  double time_start =0 , time_end = 0, time_save = save_interval;
+  while (changed) {
+    changed = 0;
+    printf("Face2face loop with %zu acute triangles from thread %d.\n"
+          , mem_list_count(acute_list), omp_get_thread_num());
+    time_start = omp_get_wtime();
+    #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
+    for (i = 0; i < fund_len; i++) {
+      for (j = i + 1; j < cube.len; j++) {
+        for (k = j + 1;k < cube.len; k++) //All combinations of three vertices in the tet
+        {
+          //Below is the same as indices_unique_tet(i,j,k,indices) because i < j < k, already sorted
+          
+          indices[0] = i;
+          indices[1] = j - i - 1;
+          indices[2] = k - j - 1;
+          if (!GMI(acute_list->t_arr,indices)) //Check if this index is still acute
+            continue;
+            
+          cur_tri = (triangle) {{{vert_from_index[i][0],vert_from_index[i][1],vert_from_index[i][2]},
+                                 {vert_from_index[j][0],vert_from_index[j][1],vert_from_index[j][2]},
+                                 {vert_from_index[k][0],vert_from_index[k][1],vert_from_index[k][2]}}};
+          if (!facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE_LIST)) { //remove from list
+            changed = 1;
+            mem_list_clear_fund2(acute_list, &cur_tri);
+          }
+        }
+        if (save_file && //Do we want to save the file?
+            omp_get_thread_num() == 0 && //Only let master save to the file
+          ((omp_get_wtime() - time_start) > time_save))  //Time to save current progress
+        {  
+          printf("Saving tmp file with +/- %zu facets.\n", mem_list_count(acute_list));
+          if (!mem_list_to_file(acute_list, tmp_file, MEM_LIST_SAVE_CLEAN)) { //Save as tmp
+            remove(tmp_file);
+            time_save += save_interval / 2;
+          } else {
+            remove(save_file); //Remove the old progress file
+            rename(tmp_file, save_file); //Rename tmp to new   
+            time_save += save_interval;
+          }
+        }
+      }
+    }
+    time_end   = omp_get_wtime();
+    printf("Loop took %f seconds.\n\n", time_end-time_start);
+  }
+}
+
+void facets_face2face(tri_mem_list * acute_list, char * save_file){
+  if (acute_list->mode == MEM_LIST_FUND)
+    facets_face2face_fund(acute_list, save_file);
+  else if (acute_list->mode == MEM_LIST_FUND2)
+    facets_face2face_fund2(acute_list, save_file);
+  else if (acute_list->mode == MEM_LIST_TET)
+    facets_face2face_tet(acute_list,save_file);  
+}
 /*
  * Generate a list of acute tetrahedron for dim given as argument
  */

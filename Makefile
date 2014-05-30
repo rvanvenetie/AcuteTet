@@ -25,5 +25,5 @@ tetraeder.o: vector.h triangle.h tetraeder.h tetraeder.c
 triangulate.o: vector.h triangle.h tetraeder.h triangulate.h triangulate.c
 mem_list.o : vector.h triangle.h mem_list.h mem_list.c
 #datastructures.o: vector.h triangle.h tetraeder.h datastructures.h datastructures.c
-main.o     : vector.h triangle.h tetraeder.h datastructures.h mem_list.h triangulate.h main.c
-test.o     : vector.h triangle.h tetraeder.h datastructures.h mem_list.h triangulate.h test.c
+main.o     : vector.h triangle.h tetraeder.h mem_list.h triangulate.h main.c
+test.o     : vector.h triangle.h tetraeder.h mem_list.h triangulate.h test.c
