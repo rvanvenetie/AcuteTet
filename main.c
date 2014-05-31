@@ -32,6 +32,11 @@
 
 
 int main(int argc, char *argv[]) {
+  printf("Thread numbers:\n");
+  #pragma omp parallel for
+  for (int i = 0; i < 16; i++)
+    printf("%d,", omp_get_thread_num());
+  printf("\n");
   char filename[70];
   char log_file[70];
   /*
