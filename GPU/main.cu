@@ -15,6 +15,11 @@ extern "C" {
 }
 using namespace std;
 
+#define DIM 150
+#define THREADS_BLOCK 512
+
+
+
 /* Utility function, use to do error checking.
 
    Use this function like this:
@@ -47,6 +52,9 @@ __global__ void tet_acute_kernel(ptriangle triang, int dim, unsigned char * resu
   arr3 cur_pt;
   arr3 normals[4];
   int t; //Temp
+  /*
+   * Might as well copy the points once
+   */
   cur_pt[0] = idx / ((dim+1) * (dim + 1));
   t = idx % ((dim+1) * (dim+1));
   cur_pt[1] = t / (dim + 1);
@@ -57,20 +65,106 @@ __global__ void tet_acute_kernel(ptriangle triang, int dim, unsigned char * resu
   subArr3(cur_pt, triang->vertices[0], P[2]);
   subArr3(triang->vertices[2], triang->vertices[1], P[3]);
   subArr3(cur_pt, triang->vertices[1], P[4]); 
-  
+
+  crossArr3(P[4],P[3], normals[0]); //Normal on facet 1,2,3  
+  crossArr3(P[1],P[2], normals[1]); //Normal on facet 0,2,3
   crossArr3(P[2],P[0], normals[2]); //Normal on facet 0,1,3
   crossArr3(P[0],P[1], normals[3]); //Normal on facet 0,1,2
-  crossArr3(P[1],P[2], normals[1]); //Normal on facet 0,2,3
-  crossArr3(P[4],P[3], normals[0]); //Normal on facet 1,2,3
-  result[idx] = (dotArr3(normals[1], normals[2]) < 0 &
-                 dotArr3(normals[2], normals[3]) < 0 &
-                 dotArr3(normals[1], normals[3]) < 0 &
-                 dotArr3(normals[0], normals[1]) < 0 &
-                 dotArr3(normals[0], normals[2]) < 0 &
-                 dotArr3(normals[0], normals[3]) < 0);
+  //Normals[3] is the normal on the triangle plane
+  t = dotArr3(normals[3], triang->vertices[0]); //Find the constant specific for this plane  
   
+  result[idx] = ((dotArr3(normals[1], normals[2]) < 0) &
+                 (dotArr3(normals[2], normals[3]) < 0) &
+                 (dotArr3(normals[1], normals[3]) < 0) &
+                 (dotArr3(normals[0], normals[1]) < 0) &
+                 (dotArr3(normals[0], normals[2]) < 0) &
+                 (dotArr3(normals[0], normals[3]) < 0)) //First bit
+                 | 
+                ((dotArr3(cur_pt, normals[3]) <  t) << 1); //second bit
+                 
+
 }
 
+
+int facet_cube_acute_gpu(ptriangle triang, facet_acute_data * data, int mode) {
+  /*
+   * Every facet of an acute tetrahedron needs to be acute. If this facet is not even acute
+   * we may directly stop checking this facet as it's never going to be part of an acute tetrahedron
+   */
+  if (!mat3_triangle_acute(triang->vertices)) 
+    return 0;
+    
+    
+  data->boundary_triangle = data->boundary_func(triang, data->cube->dim); //Boundary plane only needs acute tetra on 1 side
+  int dim = data->cube->dim[0];
+  data->acute_above = 0;
+  data->acute_below = 0;
+  data->tetra_above_len = 0;
+  data->tetra_above = NULL;
+  data->tetra_below_len = 0;
+  data->tetra_below = NULL;
+  
+  size_t len = data->cube->len;
+  unsigned char * res_h, *res_d;
+  ptriangle ptriang_d; 
+  
+  checkCudaCall(cudaMalloc(&res_d, len * sizeof(unsigned char)));
+  checkCudaCall(cudaMalloc(&ptriang_d, sizeof(triangle))); 
+  checkCudaCall(cudaMemcpy(ptriang_d, &triang, sizeof(triangle), cudaMemcpyHostToDevice));
+  tet_acute_kernel <<< len/THREADS_BLOCK + 1  , THREADS_BLOCK >>> (ptriang_d, data->cube->dim[0], res_d, len);
+  
+  res_h = (unsigned char *) malloc(len * sizeof(unsigned char));  
+  checkCudaCall(cudaGetLastError());
+  checkCudaCall(cudaMemcpy(res_h, res_d, len * sizeof(unsigned char), cudaMemcpyDeviceToHost));
+  checkCudaCall(cudaFree(res_d));
+  checkCudaCall(cudaFree(ptriang_d));
+  
+  for (size_t i = 0; i < data->cube->len; i++){
+    if (res_h[i] == 1 && !data->acute_above ||
+        res_h[i] == 3 && !data->acute_below) {
+      arr3 cur_pt;
+      int t;
+      cur_pt[0] = i / ((dim+1) * (dim + 1));
+      t = i % ((dim+1) * (dim+1));
+      cur_pt[1] = t / (dim + 1);
+      cur_pt[2] = t % (dim + 1);
+      //All the facets must be in the acute_list
+      if ((mode == FACET_ACUTE_LIST) && !facet_tetra_list(triang, cur_pt, data->acute_list))
+        continue;   
+      
+      //Explicitly create a list of the acute tetrahedron
+      if (mode == FACET_ACUTE_TETRA) {
+        tetra test_tetra;
+        memcpy(test_tetra.vertices, cur_pt, sizeof(arr3));
+        memcpy(test_tetra.vertices + 1, triang->vertices, 3 * sizeof(arr3)); 
+      
+        if (res_h[i] == 1)
+          tetra_add_array(test_tetra, &data->tetra_above, &data->tetra_above_len);
+        else
+          tetra_add_array(test_tetra, &data->tetra_below, &data->tetra_below_len);
+      }
+      //We only need to know if tetrahedron above and below acute
+      else {
+        if (res_h[i] == 1)
+          data->acute_above = 1;
+        else 
+          data->acute_below = 1;
+        if ((data->acute_above && data->acute_below) || data->boundary_triangle) {
+          free(res_h);
+          return 1;
+        }
+      }
+    }
+  }
+  free(res_h);
+  if (mode == FACET_ACUTE_TETRA) {
+    data->acute_above = (data->tetra_above_len > 0);
+    data->acute_below = (data->tetra_below_len > 0);
+    if ((data->acute_above && data->acute_below) || (data->boundary_triangle && (data->acute_above || data->acute_below)))
+      return 1;
+  }
+  return 0;  
+}
 
 
 triangle rand_triangle(int dim) {
@@ -87,56 +181,35 @@ triangle rand_triangle(int dim) {
   return result;
 }
 
-#define DIM 150
-#define THREADS_BLOCK 512
 int main(void)
 {
   clock_t begin, end;
-  cudaEvent_t start, stop;
-  float time_ms;
-  triangle triang = rand_triangle(DIM);
-  triangle * ptriang;
-  arr3 dim = {DIM,DIM,DIM};
-  cube_points cube_pts = gen_cube_points(dim);
-  arr3 * cube_d;
-  unsigned char * res_h, *res_d;
   timeval t1,t2;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
+  triangle triang = rand_triangle(DIM);
+  arr3 dim = {DIM,DIM,DIM};
+  int acute;
+  cube_points cube_pts = gen_cube_points(dim);
+  facet_acute_data parameters;
+  parameters.cube = &cube_pts;
+  parameters.boundary_func = &triangle_boundary_cube;
+  printf("Triangle: \n");
+  print_triangle(&triang);
   gettimeofday(&t1,NULL);
   begin = clock();
-  checkCudaCall(cudaMalloc(&res_d, cube_pts.len * sizeof(unsigned char)));
-  checkCudaCall(cudaMalloc(&ptriang, sizeof(triangle))); 
-  res_h = (unsigned char *) malloc(cube_pts.len * sizeof(unsigned char));
-  checkCudaCall(cudaMemcpy(ptriang, &triang, sizeof(triangle), cudaMemcpyHostToDevice));
-  cudaEventRecord(start,0);
-  tet_acute_kernel <<< cube_pts.len/THREADS_BLOCK + 1  , THREADS_BLOCK >>> (ptriang, DIM, res_d, cube_pts.len);
-  cudaEventRecord(stop,0);  
-  checkCudaCall(cudaGetLastError());
-  checkCudaCall(cudaMemcpy(res_h, res_d, cube_pts.len * sizeof(unsigned char), cudaMemcpyDeviceToHost));
-  checkCudaCall(cudaFree(res_d));
+  acute = facet_cube_acute_gpu(&triang,&parameters,FACET_ACUTE);
   end = clock();
-  cudaEventElapsedTime(&time_ms,start,stop);
+  printf("Acute_GPU: %d\n", acute);
   gettimeofday(&t2,NULL);
-  printf("Wall time : %ld\n", ((t2.tv_sec * 1000000 + t2.tv_usec) - (t1.tv_sec * 1000000 + t1.tv_usec))); 
+  printf("Wall time : %ld\n", ((t2.tv_sec * 1000000 + t2.tv_usec) - (t1.tv_sec * 1000000 + t1.tv_usec))/1000); 
   printf("Time taken on CPU: %f sec\n", float( (end - begin) )/ CLOCKS_PER_SEC);
-  printf("Time taken op the GPU: %f msec\n", time_ms);
-  gettimeofday(&t1,NULL);  
+  gettimeofday(&t1,NULL);
   begin = clock();
-  for (int i=0; i<cube_pts.len; i++) {
-    //printf("Cuda: %d %d\n", i, res_h[i]);
-    tetra test_tetra;
-    memcpy(test_tetra.vertices + 3, cube_pts.points + i, sizeof(arr3));
-    memcpy(test_tetra.vertices , triang.vertices, 3 * sizeof(arr3)); 
-    unsigned char  acute = (unsigned char) tetra_acute(&test_tetra);
-    if (res_h[i] != acute) {
-      printf("FAIL %d %d %d\n",i, res_h[i], acute );
-    }
-  }
-  end  = clock();
+  acute = facet_cube_acute(&triang,&parameters,FACET_ACUTE);
+  end = clock();
+  printf("Acute: %d\n", acute);
   gettimeofday(&t2,NULL);
-  printf("Time taken on the CPU: %f sec\n", float((end - begin)) / CLOCKS_PER_SEC);
-  printf("Wall time : %ld\n", ((t2.tv_sec * 1000000 + t2.tv_usec) - (t1.tv_sec * 1000000 + t1.tv_usec))); 
+  printf("Wall time : %ld\n", ((t2.tv_sec * 1000000 + t2.tv_usec) - (t1.tv_sec * 1000000 + t1.tv_usec))/1000); 
+  printf("Time taken on CPU: %f sec\n", float( (end - begin) )/ CLOCKS_PER_SEC);
   free(cube_pts.points);
-  free(res_h);
+
 }
