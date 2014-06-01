@@ -86,7 +86,7 @@ __global__ void tet_acute_kernel(ptriangle triang, int dim, unsigned char * resu
 }
 
 
-int facet_cube_acute_gpu(ptriangle triang, facet_acute_data * data, int mode) {
+int facet_cube_acute_gpu(ptriangle triang, facet_acute_data * data, int mode, unsigned char * res_h) {
   /*
    * Every facet of an acute tetrahedron needs to be acute. If this facet is not even acute
    * we may directly stop checking this facet as it's never going to be part of an acute tetrahedron
@@ -104,20 +104,7 @@ int facet_cube_acute_gpu(ptriangle triang, facet_acute_data * data, int mode) {
   data->tetra_below_len = 0;
   data->tetra_below = NULL;
   
-  size_t len = data->cube->len;
-  unsigned char * res_h, *res_d;
-  ptriangle ptriang_d; 
   
-  checkCudaCall(cudaMalloc(&res_d, len * sizeof(unsigned char)));
-  checkCudaCall(cudaMalloc(&ptriang_d, sizeof(triangle))); 
-  checkCudaCall(cudaMemcpy(ptriang_d, &triang, sizeof(triangle), cudaMemcpyHostToDevice));
-  tet_acute_kernel <<< len/THREADS_BLOCK + 1  , THREADS_BLOCK >>> (ptriang_d, data->cube->dim[0], res_d, len);
-  
-  res_h = (unsigned char *) malloc(len * sizeof(unsigned char));  
-  checkCudaCall(cudaGetLastError());
-  checkCudaCall(cudaMemcpy(res_h, res_d, len * sizeof(unsigned char), cudaMemcpyDeviceToHost));
-  checkCudaCall(cudaFree(res_d));
-  checkCudaCall(cudaFree(ptriang_d));
   
   for (size_t i = 0; i < data->cube->len; i++){
     if (res_h[i] == 1 && !data->acute_above ||
@@ -166,7 +153,28 @@ int facet_cube_acute_gpu(ptriangle triang, facet_acute_data * data, int mode) {
   return 0;  
 }
 
+int * facets_cube_acute_gpu(ptriangle triang, size_t n, facet_acute_data * data) {
+  size_t len = data->cube->len;
+  int * acute = (int *)  malloc(sizeof(int) * n);
+  unsigned char * res_h, *res_d;
+  ptriangle ptriang_d; 
+  
+  checkCudaCall(cudaMalloc(&res_d, len * sizeof(unsigned char)));
+  checkCudaCall(cudaMalloc(&ptriang_d, sizeof(triangle))); 
+  res_h = (unsigned char *) malloc(len * sizeof(unsigned char));  
+  
+  for (size_t i = 0; i < n; i++) {
+    checkCudaCall(cudaMemcpy(ptriang_d, triang + i, sizeof(triangle), cudaMemcpyHostToDevice));
+    tet_acute_kernel <<< len/THREADS_BLOCK + 1  , THREADS_BLOCK >>> (ptriang_d, data->cube->dim[0], res_d, len);
+    checkCudaCall(cudaMemcpy(res_h, res_d, len * sizeof(unsigned char), cudaMemcpyDeviceToHost));
+    acute[i] = facet_cube_acute_gpu(triang + i,data,FACET_ACUTE, res_h);
+  }
+  
+  checkCudaCall(cudaFree(res_d));
+  checkCudaCall(cudaFree(ptriang_d));
+  return acute;
 
+}
 triangle rand_triangle(int dim) {
   triangle result;
   result.vertices[0][0] = rand() % dim;
@@ -180,23 +188,25 @@ triangle rand_triangle(int dim) {
   result.vertices[2][2] = rand() % dim;
   return result;
 }
-
+#define SIZE_LIST 100000
 int main(void)
 {
   clock_t begin, end;
   timeval t1,t2;
-  triangle triang = rand_triangle(DIM);
+  triangle * triangles = (triangle * ) malloc(sizeof(triangle) * SIZE_LIST);
+  int * acute;
+  for (int i = 0; i < SIZE_LIST; i++)
+    triangles[i] = rand_triangle(DIM);
+  //triangle triang = rand_triangle(DIM);
   arr3 dim = {DIM,DIM,DIM};
-  int acute;
   cube_points cube_pts = gen_cube_points(dim);
   facet_acute_data parameters;
   parameters.cube = &cube_pts;
   parameters.boundary_func = &triangle_boundary_cube;
   printf("Triangle: \n");
-  print_triangle(&triang);
   gettimeofday(&t1,NULL);
   begin = clock();
-  acute = facet_cube_acute_gpu(&triang,&parameters,FACET_ACUTE);
+  acute = facets_cube_acute_gpu(triangles,SIZE_LIST,&parameters);
   end = clock();
   printf("Acute_GPU: %d\n", acute);
   gettimeofday(&t2,NULL);
@@ -204,7 +214,8 @@ int main(void)
   printf("Time taken on CPU: %f sec\n", float( (end - begin) )/ CLOCKS_PER_SEC);
   gettimeofday(&t1,NULL);
   begin = clock();
-  acute = facet_cube_acute(&triang,&parameters,FACET_ACUTE);
+  for (int i =0; i < SIZE_LIST; i++)
+    acute[i] = facet_cube_acute(triangles + i,&parameters,FACET_ACUTE);
   end = clock();
   printf("Acute: %d\n", acute);
   gettimeofday(&t2,NULL);
