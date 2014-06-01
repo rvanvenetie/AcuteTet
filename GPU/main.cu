@@ -36,11 +36,8 @@ __global__ void square_array(float *a, int N)
   if (idx<N) a[idx] = a[idx] * a[idx];
 }
 
-__global__ void tet_acute_kernel(int * result) {
+__global__ void tet_acute_kernel(triangle triang, arr3 * new_vec, int * result, size_t N) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  result[idx] = 12345;
-  /*
-  return;
   if (idx>= N)
     return;
   
@@ -62,7 +59,7 @@ __global__ void tet_acute_kernel(int * result) {
                  dotArr3(normals[0], normals[1]) < 0 &&
                  dotArr3(normals[0], normals[2]) < 0 &&
                  dotArr3(normals[0], normals[3]) < 0);
-  */
+  
 }
 
 
@@ -101,7 +98,7 @@ int main(void)
   
   checkCudaCall(cudaMemcpy(cube_d, &cube_pts.points[0], cube_pts.len * sizeof(arr3), cudaMemcpyHostToDevice));
   
-  tet_acute_kernel <<< 1, 256 >>> (res_d);
+  tet_acute_kernel <<< 1, cube_pts.len >>> (triang, cube_d, res_d, cube_pts.len);
   
   checkCudaCall(cudaGetLastError());
   checkCudaCall(cudaMemcpy(res_h, res_d, cube_pts.len * sizeof(int), cudaMemcpyDeviceToHost));
