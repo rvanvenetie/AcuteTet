@@ -1,18 +1,19 @@
 // example1.cpp : Defines the entry point for the console application.
 //
  
-#include "stdafx.h"
- 
 #include <stdio.h>
 #include <cuda.h>
- 
+#include "../vector.h" 
+#include "../tetraeder.h"
 // Kernel that executes on the CUDA device
 __global__ void square_array(float *a, int N)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx<N) a[idx] = a[idx] * a[idx];
 }
- 
+
+
+//__global__ void tetra_acute( 
 // main routine that executes on the host
 int main(void)
 {
