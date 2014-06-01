@@ -1,7 +1,7 @@
 NVCC		= nvcc
 CC		= gcc
 #CU_FLAGS	= -O3 -g -deviceemu
-CU_FLAGS	= -O3 -g -DINLINE_MACROS 
+CU_FLAGS	= -O3 -g -DINLINE_MACROS -arch=sm_20
 CC_FLAGS	= -O3 -Wall -std=c11
 
 CU_SOURCES	= main.cu
