@@ -32,6 +32,12 @@
 
 
 int main(int argc, char *argv[]) {
+  
+    if (REDIRECT_OUTPUT) {
+    if (freopen("output_cube.log","a",stdout) == NULL)
+      printf("Redirecting output failed\n");
+    setvbuf(stdout, NULL,_IOLBF, 1024);
+  }
   for (int i = 0; i < 16; i++)
   {
     tri_mem_list tri_list;
