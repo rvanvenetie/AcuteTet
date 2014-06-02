@@ -230,7 +230,7 @@ int facet_cube_acute(ptriangle triang, facet_acute_data * data, int mode) {
  * Returns a memory list with all the acute facets (see above for definition) in the cube
  * with grid 0..dim
  */
-tri_mem_list facets_cube_acute(int dim) {
+tri_mem_list facets_acute_fund(int dim) {
   tri_mem_list result = mem_list_init_fund(dim,MEM_LIST_FALSE);
   arr3 tmpdim = {dim,dim,dim};
   cube_points fund = gen_fund_points(dim);
@@ -263,6 +263,32 @@ tri_mem_list facets_cube_acute(int dim) {
   return result;
 }
 
+/*
+ * Returns a memory list with all the acute facets (see above for definition) in the cube
+ * with grid 0..dim
+ */
+tri_mem_list facets_acute_cube(int dim) {
+  arr3 tmpdim = {dim,dim,dim};
+  tri_mem_list result = mem_list_init_cube(tmpdim);
+  cube_points cube = gen_cube_points(tmpdim);
+  size_t j,k,i;
+  triangle cur_tri;
+  facet_acute_data parameters;
+  parameters.cube = &cube;
+  parameters.boundary_func = &triangle_boundary_cube;
+  #pragma omp parallel for schedule(guided) private(j,k,i,cur_tri) firstprivate(parameters)
+  for (i = 0; i < cube.len; i++)
+    for (j = i + 1; j < cube.len; j++)
+      for (k = j + 1; k < cube.len; k++) {
+        cur_tri = (triangle) {{{cube.points[i][0],cube.points[i][1],cube.points[i][2]},
+                               {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
+                               {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
+        if (facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE))
+          mem_list_set_cube(&result, &cur_tri);
+      }
+  free(cube.points);
+  return result;
+}
 //if save_file is set. The acute_list is saved to this file every hour
 #define save_interval 60*60
 

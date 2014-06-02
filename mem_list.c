@@ -569,8 +569,9 @@ size_t mem_list_count(tri_mem_list * list) {
     for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++)
      if (list->t_arr[i])
         for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++)
-          for (int k = 0; k < mem_list_dim_size(list,2,i,j) / 8 + 1; k++)
-            result += BitsSetTable256[list->t_arr[i][j][k]];    
+          if (list->t_arr[i][j])
+            for (int k = 0; k < mem_list_dim_size(list,2,i,j) / 8 + 1; k++)
+              result += BitsSetTable256[list->t_arr[i][j][k]];    
   return result;
 }
 

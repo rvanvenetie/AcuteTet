@@ -32,9 +32,16 @@
 
 
 int main(int argc, char *argv[]) {
-
-  arr3 dim = {10,10,10};
-  tetra_list tet_list = acute_tetrahedra_recur(dim,  omp_get_wtime());
+  for (int i = 0; i < 16; i++)
+  {
+    tri_mem_list tri_list;
+    double time_start = omp_get_wtime();
+    tri_list = facets_acute_cube(i);
+    printf("Dimension %d\n", i);
+    printf("Amount of acute: %zu\n", mem_list_count(&tri_list));
+    printf("Time taken: %f\n\n", omp_get_wtime() - time_start);
+    mem_list_free(&tri_list);
+  }
   exit(0);
   printf("Thread numbers:\n");
   #pragma omp parallel for
