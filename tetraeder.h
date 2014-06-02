@@ -60,7 +60,7 @@ typedef struct facet_acute_data {
 void tetra_normals(ptetra tet, arr3 * normals);
 int tetra_acute(ptetra tetra);
 tetra_list acute_tetrahedra(arr3 dim);
-tetra_list acute_tetrahedra_recur(arr3 dim);
+tetra_list acute_tetrahedra_recur(arr3 dim, double time_start);
 tri_mem_list acute_triangles_tetra(arr3 dim);
 triangle_list acute_triangles_tetra_old(arr3 dim);
 int triangle_tetra_acute(ptriangle triang, cube_points * cube, ptriang_tetra_result res  , tri_mem_list *acute_list);

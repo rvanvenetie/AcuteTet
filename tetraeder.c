@@ -537,7 +537,7 @@ tetra_list acute_tetrahedra(arr3 dim){
 /*
  * Does the same as above, but works by recursion (less acute checks)
  */
-tetra_list acute_tetrahedra_recur(arr3 dim){
+tetra_list acute_tetrahedra_recur(arr3 dim, double time_start){
   tetra_list result = {NULL, 0, {dim[0],dim[1],dim[2]}};
   tetra_list prev;
   int maxdim, axis;
@@ -550,7 +550,7 @@ tetra_list acute_tetrahedra_recur(arr3 dim){
     return result;
   arr3 new_dim = {dim[0],dim[1],dim[2]};
   new_dim[axis]--;
-  prev = acute_tetrahedra_recur(new_dim);
+  prev = acute_tetrahedra_recur(new_dim,time_start);
    
   cube_points cube = gen_cube_points(dim);
   len = cube.len;
@@ -648,6 +648,7 @@ tetra_list acute_tetrahedra_recur(arr3 dim){
   printf("  Tetraeders prev:  %zu\n", (prev.len));
   printf("  Amount of tetra: %zu\n", combination(len,4));
   printf("  Fraction sharp: %f\n", (float) result.len / combination(len,4));  
-  printf("  Total tetraeders: %zu\n\n", result.len);
+  printf("  Total tetraeders: %zu\n", result.len);
+  printf("  Total time taken so far: %f \n\n", omp_get_wtime() - time_start);
   return result;  
 }
