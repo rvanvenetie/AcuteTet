@@ -274,7 +274,20 @@ int mem_list_dim_size(tri_mem_list * list, int dim, int idx1, int idx2) {
   return 0;
 }
 
-
+tri_mem_list mem_list_init(arr3 dim, int mode, int init_value) {
+  printf("%d, %d, %d\n", dim[0], mode, init_value);
+  switch (mode) {
+    case MEM_LIST_CUBE:
+      return mem_list_init_cube(dim);
+    case MEM_LIST_FUND:
+      return mem_list_init_fund(dim[0], init_value);
+    case MEM_LIST_FUND2:
+      return mem_list_init_fund2(dim[0], init_value);
+    case MEM_LIST_TET:
+      return mem_list_init_tet(dim[0], init_value);
+  }
+  //return NULL;
+}
 
 tri_mem_list mem_list_init_cube(arr3 dim) { 
   int dim_size = (dim[2] + 1) * (dim[1] + 1) * (dim[0] + 1);
@@ -637,13 +650,14 @@ int mem_list_from_file(tri_mem_list * result, char * filename) {
   if (fread(result, sizeof(tri_mem_list), 1, stream) < 1)
     return 0;
   
+  *result = mem_list_init(result->dim, result->mode, MEM_LIST_FALSE);
  
   for (int i = 0; i < mem_list_dim_size(result,0,-1,-1); i++) {
     if (!result->t_arr[i])
       continue;
 
     for (int j = 0; j < mem_list_dim_size(result,1,i,-1); j++) {
-      size_t read_count = mem_list_dim_size(result,2,i,j);
+      size_t read_count = mem_list_dim_size(result,2,i,j) / 8 + 1;
       if (fgetc(stream)) {
         if (!result->t_arr[i][j])
           result->t_arr[i][j] = calloc(read_count, sizeof(unsigned char));

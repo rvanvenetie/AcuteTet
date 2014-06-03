@@ -32,23 +32,21 @@
 
 
 int main(int argc, char *argv[]) {
+/*  {
+  int i = 5;
   
-    if (REDIRECT_OUTPUT) {
-    if (freopen("output_cube.log","a",stdout) == NULL)
-      printf("Redirecting output failed\n");
-    setvbuf(stdout, NULL,_IOLBF, 1024);
-  }
-  for (int i = 0; i < 16; i++)
-  {
     tri_mem_list tri_list;
+    
     double time_start = omp_get_wtime();
-    tri_list = facets_acute_cube(i);
+    //tri_list = facets_acute_fund(i);
+    mem_list_from_file(&tri_list, "test.tet");
     printf("Dimension %d\n", i);
     printf("Amount of acute: %zu\n", mem_list_count(&tri_list));
     printf("Time taken: %f\n\n", omp_get_wtime() - time_start);
+    //mem_list_to_file(&tri_list, "test.tet",MEM_LIST_SAVE_CLEAN);
     mem_list_free(&tri_list);
   }
-  exit(0);
+  exit(0); */
   printf("Thread numbers:\n");
   #pragma omp parallel for
   for (int i = 0; i < 16; i++)

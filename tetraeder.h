@@ -79,6 +79,7 @@ void tetra_add_array(tetra tetra_to_add, ptetra  * tetra_array, int * len);
 int facet_tetra_list(ptriangle triang, arr3 new_vertex, tri_mem_list * acute_list);
  
 tri_mem_list facets_acute_cube(int dim);
+tri_mem_list facets_acute_fund(int dim);
 
 int facet_cube_acute(ptriangle triang, facet_acute_data * data, int mode);
 #endif
