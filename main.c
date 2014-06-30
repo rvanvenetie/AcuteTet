@@ -106,15 +106,17 @@ int main(int argc, char *argv[]) {
       printf("Continuing previous data-set.\n");
     } else {
       printf("Initalizing new data-set.\n");
+      
       if (loop_tet)
         face_list = mem_list_init_tet(i, MEM_LIST_TRUE);
       else 
-        face_list = mem_list_init_fund2(i, MEM_LIST_TRUE);
+        face_list = mem_list_init_fund(i, MEM_LIST_TRUE);
     }    
     time_end   = omp_get_wtime();
     printf("Took %f seconds to init the memory list.\n", time_end - time_start);
     time_start = omp_get_wtime();
     printf("Size of the memory list is %zu bytes.\n", mem_list_memory(&face_list));
+    printf("Amount of start facets is %zu.\n", mem_list_count(&face_list));
     printf("Start filtering triangles not acute or not gezellig.\n\n");
     
 

@@ -29,8 +29,8 @@ Triangle triange_init(vec3 v1, vec3 v2, vec3 v3);
 int triangle_acute(Triangle *triang);
 int mat3_triangle_acute(mat3 v);
 int arr3_triangle_acute(arr3 v0, arr3 v1, arr3 v2);
-int triangle_boundary_cube(ptriangle triang, arr3 dim);
-int triangle_boundary_tet(ptriangle triang, arr3 dim);
+int triangle_boundary_cube(ptriangle triang, int dim);
+int triangle_boundary_tet(ptriangle triang, int dim);
 
 void triangle_normal(ptriangle triang, arr3 normal);
 void print_triangle(ptriangle tet);
@@ -50,7 +50,7 @@ void triangle_symmetry(ptriangle triang, int sym,int dim, ptriangle result);
  */
 #define triangle_sides_acute(P0,P1,P2) ((dotArr3(P0,P1) > 0) && \
           (dotArr3(P1,P2) > 0) && \
-          ((-P0[0] * P2[0] - P0[1]*P2[1] - P0[2]*P2[2]) > 0))
+          (dotArr3(P0,P2) < 0))
            
 #define triangle_P_acute(P) (triangle_sides_acute(P[0],P[1],P[2]))
 #endif

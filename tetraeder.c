@@ -44,15 +44,15 @@ void tetra_normals(ptetra tet, arr3 * normals) {
  * each pair and checks if the angle is acute.
  */
 
-int tetra_acute(ptetra tet) {
+int tetra_acute(ptriangle tet, arr3 cube_pt) {
   arr3 P[5]; //Edges
   arr3 normals[4]; 
   /*
    * Calculate three edges of the tetrahedron
    */
-  subArr3(tet->vertices[1], tet->vertices[0], P[0]);
-  subArr3(tet->vertices[2], tet->vertices[0], P[1]);
-  subArr3(tet->vertices[3], tet->vertices[0], P[2]);
+  subArr3(tet->vertices[0], cube_pt, P[0]);
+  subArr3(tet->vertices[1], cube_pt, P[1]);
+  subArr3(tet->vertices[2], cube_pt, P[2]);
   
   /*
    * All Facets must have acute triangles, cheap test to rule this tetra out right now
@@ -71,8 +71,8 @@ int tetra_acute(ptetra tet) {
       dotArr3(normals[1], normals[3]) >= 0)
     return 0;
   
-  subArr3(tet->vertices[2], tet->vertices[1], P[3]);
-  subArr3(tet->vertices[3], tet->vertices[1], P[4]); 
+  subArr3(tet->vertices[1], tet->vertices[0], P[3]);
+  subArr3(tet->vertices[2], tet->vertices[0], P[4]); 
   crossArr3(P[4],P[3], normals[0]); //Normal on facet 1,2,3 
   
   return (dotArr3(normals[0], normals[1]) < 0 &&
@@ -80,6 +80,31 @@ int tetra_acute(ptetra tet) {
           dotArr3(normals[0], normals[3]) < 0);
 }
 
+
+int tetra_acute_optimized(ptetra tet) {
+  arr3 P[5]; //Edges
+  arr3 normals[4]; 
+  subArr3(tet->vertices[1], tet->vertices[0], P[0]); //b - a
+  subArr3(tet->vertices[2], tet->vertices[0], P[1]); //c - a
+  subArr3(tet->vertices[3], tet->vertices[0], P[2]); //d - a
+  subArr3(tet->vertices[2], tet->vertices[1], P[3]); //c - b
+  subArr3(tet->vertices[3], tet->vertices[1], P[4]); //d - b
+  
+ // if (dotArr3(P[0],P[1]) <= 0 || dotArr3(P[1],P[2]) <= 0 || dotArr3(P[0],P[2]) <= 0)
+   // return 0;
+      
+  crossArr3(P[4],P[3], normals[0]); //Normal on facet 1,2,3 
+  crossArr3(P[1],P[2], normals[1]); //Normal on facet 0,2,3
+  crossArr3(P[2],P[0], normals[2]); //Normal on facet 0,1,3
+  crossArr3(P[0],P[1], normals[3]); //Normal on facet 0,1,2
+
+  return (dotArr3(normals[0], normals[1]) < 0 &&
+          dotArr3(normals[0], normals[2]) < 0 &&
+          dotArr3(normals[0], normals[3]) < 0 &&
+          dotArr3(normals[1], normals[2]) < 0 &&
+          dotArr3(normals[1], normals[3]) < 0 &&
+          dotArr3(normals[2], normals[3]));
+}
 /*
  * Debug function
  */
@@ -100,18 +125,17 @@ void print_tetra(ptetra tet) {
  */
 
 int facet_tetra_list(ptriangle triang, arr3 new_vertex, tri_mem_list * acute_list) {
-  if (acute_list->mode == MEM_LIST_FUND2)
-    return (mem_list_get_fund2(acute_list, triang->vertices[0], triang->vertices[1], new_vertex) &&
-            mem_list_get_fund2(acute_list, triang->vertices[0], triang->vertices[2], new_vertex) &&
-            mem_list_get_fund2(acute_list, triang->vertices[1], triang->vertices[2], new_vertex));
-  else if (acute_list->mode == MEM_LIST_TET)
-    return (mem_list_get_tet(acute_list, triang->vertices[0], triang->vertices[1],new_vertex) &&
-            mem_list_get_tet(acute_list, triang->vertices[0], triang->vertices[2],new_vertex) &&
-            mem_list_get_tet(acute_list, triang->vertices[1], triang->vertices[2],new_vertex));    
-  else
+  if (acute_list->mode == MEM_LIST_fund)
     return (mem_list_get_fund(acute_list, triang->vertices[0], triang->vertices[1], new_vertex) &&
             mem_list_get_fund(acute_list, triang->vertices[0], triang->vertices[2], new_vertex) &&
-            mem_list_get_fund(acute_list, triang->vertices[1], triang->vertices[2], new_vertex));    
+            mem_list_get_fund(acute_list, triang->vertices[1], triang->vertices[2], new_vertex));
+  else if (acute_list->mode == MEM_LIST_CUBE)
+    return (mem_list_get_cube(acute_list, triang->vertices[0], triang->vertices[1], new_vertex) &&
+            mem_list_get_cube(acute_list, triang->vertices[0], triang->vertices[2], new_vertex) &&
+            mem_list_get_cube(acute_list, triang->vertices[1], triang->vertices[2], new_vertex));
+    return (mem_list_get_tet(acute_list, triang->vertices[0], triang->vertices[1],new_vertex) &&
+            mem_list_get_tet(acute_list, triang->vertices[0], triang->vertices[2],new_vertex) &&
+            mem_list_get_tet(acute_list, triang->vertices[1], triang->vertices[2],new_vertex)); 
 
 }
 
@@ -142,21 +166,16 @@ void tetra_add_array(tetra tetra_to_add, ptetra  * tetra_array, int * len) {
  * 
  */
 int facet_cube_acute(ptriangle triang, facet_acute_data * data, int mode) {
-  /*
-   * Every facet of an acute tetrahedron needs to be acute. If this facet is not even acute
-   * we may directly stop checking this facet as it's never going to be part of an acute tetrahedron
-   */
-  if (!mat3_triangle_acute(triang->vertices)) 
-    return 0;
-    
   mat3 P;
   //Calculate the three edges of this triangle
   triangle_sides(triang->vertices[0], triang->vertices[1], triang->vertices[2],P);
+  if (!triangle_P_acute(P))
+    return 0;
   arr3 tri_normal;
   crossArr3(P[1], P[0], tri_normal); //Calculate normal on the triangle plane
   int  tri_d = dotArr3(tri_normal, triang->vertices[0]); //Find the constant specific for this plane
   
-  //Calculate the vector perpendicular to each side and the normal. Normals on each side of the prism
+    //Calculate the vector perpendicular to each side and the normal. Normals on each side of the prism
   mat3 side_normals;
   arr3 side_d; //The constant expression for the plane equations of the sides
   //Convention, need to explain why it works?? Third point must be on the other side!!
@@ -169,125 +188,38 @@ int facet_cube_acute(ptriangle triang, facet_acute_data * data, int mode) {
   side_d[1] = dotArr3(side_normals[1], triang->vertices[0]);
   side_d[2] = dotArr3(side_normals[2], triang->vertices[2]);
   
+  
   data->boundary_triangle = data->boundary_func(triang, data->cube->dim); //Boundary plane only needs acute tetra on 1 side
   int dotprod;
   data->acute_above = 0;
   data->acute_below = 0;
-  data->tetra_above_len = 0;
-  data->tetra_above = NULL;
-  data->tetra_below_len = 0;
-  data->tetra_below = NULL;
   
   for (size_t i = 0; i < data->cube->len; i++){
     dotprod = dotArr3(data->cube->points[i], tri_normal); //Calculate angle between normal and vector from plane to cube_pt
     //Check if current point lies on side of the triangle which isn't sharp yet and check if point lies in the
     //prism of possible sharp tetrahedron
-    
     if (((dotprod > tri_d && !data->acute_above) ||  //Dotprod > tri_d implies that the point lies "above" the triangle (same side as normal) 
-         (dotprod < tri_d && !data->acute_below))     //Dotprod < tri_d implies lies below
-          && //Check if point lies in the prism
+         (dotprod < tri_d && !data->acute_below)) && //Check if point lies in the prism
           dotArr3(data->cube->points[i],side_normals[0]) < side_d[0] &&
           dotArr3(data->cube->points[i],side_normals[1]) < side_d[1] &&
-          dotArr3(data->cube->points[i],side_normals[2]) < side_d[2]) 
+          dotArr3(data->cube->points[i],side_normals[2]) < side_d[2])     //Dotprod < tri_d implies lies below
       {
+  
       tetra test_tetra;
-      memcpy(test_tetra.vertices, &data->cube->points[i], sizeof(arr3));
-      memcpy(test_tetra.vertices + 1, triang->vertices, 3 * sizeof(arr3)); 
-      if (tetra_acute(&test_tetra)) {
+      if (tetra_acute(triang,data->cube->points[i])) {
         //All the facets must be in the acute_list
-        if ((mode == FACET_ACUTE_LIST) && !facet_tetra_list(triang, data->cube->points[i], data->acute_list))
+        if (!facet_tetra_list(triang, data->cube->points[i], data->acute_list))
           continue;   
-        
-        //Explicitly create a list of the acute tetrahedron
-        if (mode == FACET_ACUTE_TETRA) {
-          if (dotprod > tri_d)
-            tetra_add_array(test_tetra, &data->tetra_above, &data->tetra_above_len);
-          else
-            tetra_add_array(test_tetra, &data->tetra_below, &data->tetra_below_len);
-        }
-        //We only need to know if tetrahedron above and below acute
-        else {
-          if (dotprod > tri_d) 
-            data->acute_above = 1;
-          else 
-            data->acute_below = 1;
-          if ((data->acute_above && data->acute_below) || data->boundary_triangle)
-            return 1;
-        }
+        if (dotprod > tri_d) 
+          data->acute_above = 1;
+        else 
+          data->acute_below = 1;
+        if ((data->acute_above && data->acute_below) || data->boundary_triangle)
+          return 1;    
       }
     }
-  }
-  if (mode == FACET_ACUTE_TETRA) {
-    data->acute_above = (data->tetra_above_len > 0);
-    data->acute_below = (data->tetra_below_len > 0);
-    if ((data->acute_above && data->acute_below) || (data->boundary_triangle && (data->acute_above || data->acute_below)))
-      return 1;
   }
   return 0;  
-}
-
-/*
- * Returns a memory list with all the acute facets (see above for definition) in the cube
- * with grid 0..dim
- */
-tri_mem_list facets_acute_fund(int dim) {
-  tri_mem_list result = mem_list_init_fund(dim,MEM_LIST_FALSE);
-  arr3 tmpdim = {dim,dim,dim};
-  cube_points fund = gen_fund_points(dim);
-  cube_points cube = gen_cube_points(tmpdim);
-  size_t comb_len;
-  Dindex * comb = combinations_list(cube.len, 2, &comb_len);
-  
-  size_t j,k,i,l;
-  triangle cur_tri;
-  facet_acute_data parameters;
-  parameters.cube = &cube;
-  parameters.boundary_func = &triangle_boundary_cube;
-  #pragma omp parallel for schedule(guided) private(l,j,k,i,cur_tri) firstprivate(parameters)
-
-  for (l = 0; l < comb_len; l++) {//Loop through all combinations
-    j = comb[l*2];
-    k = comb[l*2+1];
-    for (i = 0; i < fund.len; i++){    
-      cur_tri = (triangle) {{{fund.points[i][0],fund.points[i][1],fund.points[i][2]},
-                             {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
-                             {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
-                      
-      if (facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE))
-        mem_list_set_fund(&result, &cur_tri);
-    }
-  }
-  free(comb);
-  free(cube.points);
-  free(fund.points);
-  return result;
-}
-
-/*
- * Returns a memory list with all the acute facets (see above for definition) in the cube
- * with grid 0..dim
- */
-tri_mem_list facets_acute_cube(int dim) {
-  arr3 tmpdim = {dim,dim,dim};
-  tri_mem_list result = mem_list_init_cube(tmpdim);
-  cube_points cube = gen_cube_points(tmpdim);
-  size_t j,k,i;
-  triangle cur_tri;
-  facet_acute_data parameters;
-  parameters.cube = &cube;
-  parameters.boundary_func = &triangle_boundary_cube;
-  #pragma omp parallel for schedule(guided) private(j,k,i,cur_tri) firstprivate(parameters)
-  for (i = 0; i < cube.len; i++)
-    for (j = i + 1; j < cube.len; j++)
-      for (k = j + 1; k < cube.len; k++) {
-        cur_tri = (triangle) {{{cube.points[i][0],cube.points[i][1],cube.points[i][2]},
-                               {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
-                               {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
-        if (facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE))
-          mem_list_set_cube(&result, &cur_tri);
-      }
-  free(cube.points);
-  return result;
 }
 //if save_file is set. The acute_list is saved to this file every hour
 #define save_interval 60*60
@@ -304,19 +236,20 @@ tri_mem_list facets_acute_cube(int dim) {
  * 
  * Saves the memory_list every save_interval, if save_file is set.
  */
-void facets_face2face_fund(tri_mem_list * acute_list, char * save_file){
-  cube_points fund = gen_fund_points(acute_list->dim[0]);
-  cube_points cube = gen_cube_points(acute_list->dim);
+
+void facets_face2face_cube(tri_mem_list * acute_list, char * save_file){
   int changed = 1;
-  size_t i;
   tri_index indices;
   char tmp_file[100];
   if (save_file) 
     sprintf(tmp_file,"%s_tmp", save_file);
-          
-  vert_index j, k;
+  
+  
+  size_t i,j,k;
   triangle cur_tri;
   facet_acute_data parameters;
+  cube_points cube = gen_cube_points(acute_list->dim);
+  cube_points fund = gen_fund_points(acute_list->dim);
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.acute_list = acute_list;
@@ -324,46 +257,28 @@ void facets_face2face_fund(tri_mem_list * acute_list, char * save_file){
   double time_start =0 , time_end = 0, time_save = save_interval;
   while (changed) {
     changed = 0;
-    printf("Face2face loop with %zu acute triangles from thread %d.\n"
-          , mem_list_count(acute_list), omp_get_thread_num());
-    time_start = omp_get_wtime();
-    #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri, indices)  firstprivate(parameters)
-    for (j = 0; j < cube.len; j++) {
-      for (k = j+1; k < cube.len; k++) {
-        for (i = 0; i < fund.len; i++){ //Against all fundamental points
-          indices_unique_fund(vertex_to_index_cube(fund.points[i],acute_list->mem_fund.dim_mult), j,k, acute_list, indices); 
+    for (i = 0; i < fund.len; i++) {
+    //for (i = 0; i < cube.len; i++) {
+      for (j = 0; j < cube.len; j++) {
+        for (k = j + 1;k < cube.len; k++) //All combinations of three vertices in the tet
+        {
+          //Below is the same as indices_unique_tet(i,j,k,indices) because i < j < k, already sorted
+          
+          indices_unique_cube(vertex_to_index_cube(fund.points[i],acute_list->dim),j,k,indices);
           if (!GMI(acute_list->t_arr,indices)) //Check if this index is still acute
             continue;
+            
           cur_tri = (triangle) {{{fund.points[i][0],fund.points[i][1],fund.points[i][2]},
-                               {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
-                               {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
+                                 {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
+                                 {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
           if (!facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE_LIST)) { //remove from list
             changed = 1;
-            mem_list_clear_fund(acute_list, &cur_tri);
+            mem_list_clear_cube_sym(acute_list, &cur_tri);
           }
         }
-        if (save_file && //Do we want to save the file?
-            omp_get_thread_num() == 0 && //Only let master save to the file
-          ((omp_get_wtime() - time_start) > time_save)) { //Time to save current progress
-          
-          printf("Saving tmp file with +/- %zu facets.\n", mem_list_count(acute_list));
-          if (!mem_list_to_file(acute_list, tmp_file, MEM_LIST_SAVE_CLEAN)) { //Save as tmp
-            remove(tmp_file);
-            time_save += save_interval / 2;
-          } else {
-            remove(save_file); //Remove the old progress file
-            rename(tmp_file, save_file); //Rename tmp to new   
-            time_save += save_interval;
-          }
-        }
-      } 
+      }
     }
-    time_end   = omp_get_wtime();
-    printf("Loop took %f seconds.\n\n", time_end-time_start);
   }
-  
-  free(cube.points);
-  free(fund.points);
 }
 
 /*
@@ -380,7 +295,7 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
   vert_index i,j,k;
   triangle cur_tri;
   facet_acute_data parameters;
-  cube_points tet = gen_tet_points(acute_list->dim[0]);
+  cube_points tet = gen_tet_points(acute_list->dim);
   parameters.cube = &tet;
   parameters.boundary_func = &triangle_boundary_tet;
   parameters.acute_list = acute_list;
@@ -439,7 +354,7 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
 /*
  * See face2face tet/fund
  */
-void facets_face2face_fund2(tri_mem_list * acute_list, char * save_file){
+void facets_face2face_fund(tri_mem_list * acute_list, char * save_file){
   int changed = 1;
   tri_index indices;
   char tmp_file[100];
@@ -447,12 +362,12 @@ void facets_face2face_fund2(tri_mem_list * acute_list, char * save_file){
     sprintf(tmp_file,"%s_tmp", save_file);
   
   
-  arr3 * vert_from_index = acute_list->mem_fund2.vert_from_index;         
+  arr3 * vert_from_index = acute_list->mem_fund.vert_from_index;         
   size_t i,j,k;
   triangle cur_tri;
   facet_acute_data parameters;
   cube_points cube = gen_cube_points(acute_list->dim);
-  size_t fund_len = acute_list->mem_fund2.fund_len; //Cache
+  size_t fund_len = acute_list->mem_fund.fund_len; //Cache
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.acute_list = acute_list;
@@ -481,7 +396,7 @@ void facets_face2face_fund2(tri_mem_list * acute_list, char * save_file){
                                  {vert_from_index[k][0],vert_from_index[k][1],vert_from_index[k][2]}}};
           if (!facet_cube_acute(&cur_tri,&parameters,FACET_ACUTE_LIST)) { //remove from list
             changed = 1;
-            mem_list_clear_fund2(acute_list, &cur_tri);
+            mem_list_clear_fund(acute_list, &cur_tri);
           }
         }
         if (save_file && //Do we want to save the file?
@@ -506,10 +421,10 @@ void facets_face2face_fund2(tri_mem_list * acute_list, char * save_file){
 }
 
 void facets_face2face(tri_mem_list * acute_list, char * save_file){
-  if (acute_list->mode == MEM_LIST_FUND)
+  if (acute_list->mode == MEM_LIST_CUBE)
+    facets_face2face_cube(acute_list,save_file);
+  else if (acute_list->mode == MEM_LIST_fund)
     facets_face2face_fund(acute_list, save_file);
-  else if (acute_list->mode == MEM_LIST_FUND2)
-    facets_face2face_fund2(acute_list, save_file);
   else if (acute_list->mode == MEM_LIST_TET)
     facets_face2face_tet(acute_list,save_file);  
 }
@@ -517,6 +432,7 @@ void facets_face2face(tri_mem_list * acute_list, char * save_file){
  * Generate a list of acute tetrahedron for dim given as argument
  */
 tetra_list acute_tetrahedra(arr3 dim){
+  /*
   tetra_list result = {NULL, 0, {dim[0],dim[1],dim[2]}};
   size_t count = 0;
   ptetra t_arr = NULL;
@@ -558,12 +474,14 @@ tetra_list acute_tetrahedra(arr3 dim){
   result.len = count;
   free(cube_pts);
   return result;
+  */
 }
 
 /*
  * Does the same as above, but works by recursion (less acute checks)
  */
 tetra_list acute_tetrahedra_recur(arr3 dim, double time_start){
+  /*
   tetra_list result = {NULL, 0, {dim[0],dim[1],dim[2]}};
   tetra_list prev;
   int maxdim, axis;
@@ -593,7 +511,7 @@ tetra_list acute_tetrahedra_recur(arr3 dim, double time_start){
   do {
     size_t i = arr[0], j = arr[1], k = arr[2], l = arr[3];
     //Find all acute tetrahedra with two vertices on both "edge-planes"
-    
+    */
     /*
      * It is possible to skip this if:
      *   --first vertex has point with axis = 0
@@ -609,6 +527,7 @@ tetra_list acute_tetrahedra_recur(arr3 dim, double time_start){
      *  y coordinate is 
      *  z coordinate is index mod dim[2]??
      */
+    /*
     if ((cube_pts[i][axis] == 0 || cube_pts[j][axis] == 0 || 
        cube_pts[k][axis] == 0 || cube_pts[l][axis] == 0) &&
       (cube_pts[i][axis] == maxdim || cube_pts[j][axis] == maxdim ||
@@ -677,4 +596,5 @@ tetra_list acute_tetrahedra_recur(arr3 dim, double time_start){
   printf("  Total tetraeders: %zu\n", result.len);
   printf("  Total time taken so far: %f \n\n", omp_get_wtime() - time_start);
   return result;  
+  */
 }

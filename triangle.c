@@ -82,20 +82,20 @@ void print_triangle(ptriangle tet) {
  */
  
 #define mat3_col_equal(mat,col,val) (mat[0][col] == val && mat[1][col] == val && mat[2][col] == val)
-int triangle_boundary_cube(ptriangle triang, arr3 dim) {
-  return (mat3_col_equal(triang->vertices,0,0) || mat3_col_equal(triang->vertices,0,dim[0]) ||
-          mat3_col_equal(triang->vertices,1,0) || mat3_col_equal(triang->vertices,1,dim[1]) ||
-          mat3_col_equal(triang->vertices,2,0) || mat3_col_equal(triang->vertices,2,dim[2]));
+int triangle_boundary_cube(ptriangle triang, int dim) {
+  return (mat3_col_equal(triang->vertices,0,0) || mat3_col_equal(triang->vertices,0,dim) ||
+          mat3_col_equal(triang->vertices,1,0) || mat3_col_equal(triang->vertices,1,dim) ||
+          mat3_col_equal(triang->vertices,2,0) || mat3_col_equal(triang->vertices,2,dim));
 }
 
 #define arr3_sum(arr) (arr[0] + arr[1] + arr[2])
-int triangle_boundary_tet(ptriangle triang, arr3 dim) {
+int triangle_boundary_tet(ptriangle triang, int dim) {
   return (mat3_col_equal(triang->vertices,0,0) || //X = 0 plane
           mat3_col_equal(triang->vertices,1,0) || //Y = 0 plane
           mat3_col_equal(triang->vertices,2,0) || //Z = 0 plane
-         (arr3_sum(triang->vertices[0]) == dim[0] &&
-          arr3_sum(triang->vertices[1]) == dim[0] &&
-          arr3_sum(triang->vertices[2]) == dim[0])); //X + Y + Z = dim plane
+         (arr3_sum(triang->vertices[0]) == dim &&
+          arr3_sum(triang->vertices[1]) == dim &&
+          arr3_sum(triang->vertices[2]) == dim)); //X + Y + Z = dim plane
   
 }
 void triangle_symmetry(ptriangle triang, int sym,int dim, ptriangle res) {
@@ -105,7 +105,7 @@ void triangle_symmetry(ptriangle triang, int sym,int dim, ptriangle res) {
 }
 
 triangle_list acute_triangle_recur(arr3 dim){
-  triangle_list result = {NULL, 0, {dim[0],dim[1],dim[2]}};
+  /*triangle_list result = {NULL, 0, {dim[0],dim[1],dim[2]}};
   triangle_list prev;
   int maxdim, axis;
   size_t count = 0;
@@ -198,4 +198,5 @@ triangle_list acute_triangle_recur(arr3 dim){
   printf("  Fraction sharp: %f\n", (float) result.len / combination(len,3));
   printf("  Total triangles: %d\n\n", result.len);
   return result;  
+  */
 }

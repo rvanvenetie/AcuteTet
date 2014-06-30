@@ -37,6 +37,10 @@ void crossArr3(arr3 u, arr3 v, arr3 result){
 int zeroArr3(arr3 u) {
   return (u[0] == 0 && u[1] == 0 && u[2] == 0);
 }
+
+int equalArr3(arr3 u,arr3 v){
+  return (u[0] == v[0] && u[1] == v[1] && u[2] == v[2]);
+}
 #endif
 
 void negArr3(arr3 result) {
@@ -344,15 +348,15 @@ cube_points gen_tet_points(int dim) {
   return result;
 }
 
-cube_points gen_cube_points(arr3 dim) {
+cube_points gen_cube_points(int dim) {
   cube_points result = {NULL, 
-                        {dim[0], dim[1], dim[2]},
-                        ((dim[0] + 1) * (dim[1] + 1) * (dim[2]+1))};
+                        dim,
+                        ((dim + 1) * (dim + 1) * (dim+1))};
   result.points = malloc(result.len *sizeof(int) * 3);
   int c = 0;
-  for (int x = 0; x <= dim[0]; x++)
-    for (int y = 0; y <= dim[1]; y++)
-      for (int z = 0; z <= dim[2]; z++) {
+  for (int x = 0; x <= dim; x++)
+    for (int y = 0; y <= dim; y++)
+      for (int z = 0; z <= dim; z++) {
         result.points[c][0] = x;
         result.points[c][1] = y;
         result.points[c][2] = z;
@@ -394,10 +398,10 @@ cube_points gen_fund_points(int dim){
   return result;
 }
 
-void randomArr3(arr3 dim, arr3 result) {
-  result[0] = rand() % dim[0];
-  result[1] = rand() % dim[1];
-  result[2] = rand() % dim[2];
+void randomArr3(int dim, arr3 result) {
+  result[0] = rand() % dim;
+  result[1] = rand() % dim;
+  result[2] = rand() % dim;
 }
 
 void copyArr3(arr3 dest, arr3 source) {

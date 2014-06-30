@@ -14,7 +14,7 @@ typedef  int mat3[3][3];
 typedef struct cube_points
 {
   arr3 * points;
-  arr3 dim;
+  int dim;
   size_t len;
 } cube_points;
 
@@ -112,6 +112,7 @@ typedef vert_index ***vert_index_array;
   int dotArr3(arr3 u, arr3 v);
   void apply_symmetry(int sym,int dim,arr3 pt, arr3 result);
   int zeroArr3(arr3 u);
+  int equalArr3(arr3 u,arr3 v); 
 #endif
 
 void negArr3(arr3 result);
@@ -135,8 +136,8 @@ vec3 mat3Col(mat3 mat, int col);
 vec3 mat3Row(mat3 mat, int row);
 
 cube_points gen_tet_points(int dim);
-cube_points gen_cube_points(arr3 dim);
+cube_points gen_cube_points(int dim);
 cube_points gen_fund_points(int dim);
 
-void randomArr3(arr3 dim, arr3 result);
+void randomArr3(int dim, arr3 result);
 #endif

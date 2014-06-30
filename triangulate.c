@@ -106,6 +106,7 @@ int tetra_triangulation_disjoint(ptetra tet, ptriangulation triang) {
 }
 
 void filter_tetra_list_disjoint(ptetra *  list, size_t * list_len, ptriangulation triang) {
+  /*
   size_t c = 0;
   for (size_t i = 0; i< *list_len; i++)
     if (tetra_triangulation_disjoint((*list) + i, triang)) {
@@ -115,26 +116,32 @@ void filter_tetra_list_disjoint(ptetra *  list, size_t * list_len, ptriangulatio
 
   *list_len = c;
   *list = realloc(*list, c * sizeof(tetra));  
+  */
 }
 
 void add_boundary_triangulation(ptriangle triang, ptriangulation result) {
+  /*
   printf("New boundary for triangulation:\n");
   print_triangle(triang);
   result->bound_len++;
   result->boundaries = realloc(result->boundaries,result->bound_len * sizeof(triangle));
   result->boundaries[result->bound_len - 1] = *triang;
+  */
 }
 
 void rem_boundary_triangulation(int rem_bound, ptriangulation result) {
+  /*
   result->bound_len--;
   ptriangle new_bound = malloc(result->bound_len * sizeof(triangle));
   memcpy(new_bound,result->boundaries,rem_bound * sizeof(triangle));
   memcpy(new_bound + rem_bound, result->boundaries + rem_bound + 1, (result->bound_len - rem_bound) * sizeof(triangle));
   free(result->boundaries);
   result->boundaries = new_bound;
+  */
 }
 
 int facet_boundary_triangulation(arr3 v1, arr3 v2, arr3 v3, ptriangulation result, ptriangle search_tri) {
+  /*
   *search_tri = (triangle) {{{v1[0],v1[1],v1[2]}, {v2[0],v2[1],v2[2]}, {v3[0],v3[1],v3[2]}}};
   if (triangle_boundary_cube(search_tri, result->dim))
     return 1;
@@ -148,9 +155,11 @@ int facet_boundary_triangulation(arr3 v1, arr3 v2, arr3 v3, ptriangulation resul
       return 1;
   }
   return 0;
+  */
 }
 
 void add_tet_triangulation(ptetra tet, ptriangulation result) {
+  /*
   result->tetra_len++;
   result->tetraeders = realloc(result->tetraeders,result->tetra_len * sizeof(tetra));
   result->tetraeders[result->tetra_len - 1] = *tet;
@@ -169,10 +178,11 @@ void add_tet_triangulation(ptetra tet, ptriangulation result) {
   //0,1,3
   if (!facet_boundary_triangulation(tet->vertices[0], tet->vertices[1], tet->vertices[3], result, &facet)) //Not on boundary
     add_boundary_triangulation(&facet,result);
+  */
 } 
 
 ptriangulation triangulate_cube_random(arr3 dim) {
-  
+  /*
   ptriangulation result = calloc(sizeof(triangulation), 1);
   result->dim[0] = dim[0];
   result->dim[1] = dim[1];
@@ -202,13 +212,13 @@ ptriangulation triangulate_cube_random(arr3 dim) {
     int rand_bound = rand() % result->bound_len;
     facet_cube_acute(&result->boundaries[rand_bound], &parameters, FACET_ACUTE_TETRA); 
     
-    /* Concentanate ... Do this in face_cube_acute already I guess */
+    // Concentanate ... Do this in face_cube_acute already I guess 
     size_t list_len = parameters.tetra_above_len + parameters.tetra_below_len;
     ptetra tet_list = malloc(list_len * sizeof(tetra));
     memcpy(tet_list                             , parameters.tetra_above, parameters.tetra_above_len * sizeof(tetra));
     memcpy(tet_list + parameters.tetra_above_len, parameters.tetra_below, parameters.tetra_below_len * sizeof(tetra));
     free(parameters.tetra_below); free(parameters.tetra_above);
-    /* Filtering.. Do this in facet_cube_acute already? */
+    // Filtering.. Do this in facet_cube_acute already? 
     filter_tetra_list_disjoint(&tet_list, &list_len,result);
     if (list_len == 0) {
       printf("Waarom is deze lijst nu al fucking leeggefilterd?\n");
@@ -226,4 +236,5 @@ ptriangulation triangulate_cube_random(arr3 dim) {
   free(cube.points);
   printf("Triangulation has length of %d\n", result->tetra_len);
   return result;
+  */
 }

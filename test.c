@@ -13,14 +13,13 @@ void test_sym(void){
   for (int i = 1; i < 100; i++) {
     int dim = i;
     size_t dim_size = (i+1) * (i+1) * (i+1);
-    arr2 dim_mult = {(i+1) * (i+1), (i+1)};
     unsigned char * points = calloc(dim_size, sizeof(unsigned char)); 
     cube_points fund = gen_fund_points(i);
     for (size_t j = 0; j < fund.len; j ++) //For each point in the fundamental domain
       for (int k = 0; k < 48; k++) {//Apply symmetry
         arr3 sym_fund;
         apply_symmetry(k,i, fund.points[j], sym_fund);
-        points[vertex_to_index_cube(sym_fund, dim_mult)] = 1;
+        points[vertex_to_index_cube(sym_fund, dim)] = 1;
       }
     for (size_t j = 0; j < dim_size; j++) {
       if (points[j] == 0) {
@@ -34,6 +33,7 @@ void test_sym(void){
 
 triangle rand_triangle(int dim) {
   triangle result;
+  dim = dim + 1;
   result.vertices[0][0] = rand() % dim;
   result.vertices[0][1] = rand() % dim;
   result.vertices[0][2] = rand() % dim;
@@ -86,13 +86,12 @@ int tri_index_same(tri_index a, tri_index b){
 }
 void test_triangle_indices(void){
   int dim = 50;
-  arr2 dim_mult = {(dim+1) * (dim+1), dim+1};
   for (int i = 0; i < 500; i++){
     triangle origin = rand_triangle(dim);
     tri_index ori,v1,v2;
-    triangle_to_index_cube(origin, dim_mult, ori);
-    vertices_to_index_cube(origin.vertices[1], origin.vertices[2], origin.vertices[0], dim_mult, v1);
-    vertices_to_index_cube(origin.vertices[1], origin.vertices[0], origin.vertices[2], dim_mult, v2);
+    triangle_to_index_cube(origin, dim, ori);
+    vertices_to_index_cube(origin.vertices[1], origin.vertices[2], origin.vertices[0], dim, v1);
+    vertices_to_index_cube(origin.vertices[1], origin.vertices[0], origin.vertices[2], dim, v2);
     if (!tri_index_same(ori,v1) || !tri_index_same(v1,v2)) {
       printf("UNIQUE INDEX NOT THE SAME!!\n");
       print_triangle(&origin);
@@ -239,10 +238,46 @@ void test_tetra_disjunct(void) {
   printf("Test disjunct: %d", tetra_tetra_disjoint(&t1,&t2));
 }
 
+void test_boundary(int dim) {
+  for (int i = 0; i < 15000; i ++) {
+    triangle tmp_tri = rand_triangle(dim);
+    if (triangle_boundary_cube(&tmp_tri,dim))
+      print_triangle(&tmp_tri);
+  }
+}
+
+void test_prism(int dim) {
+  while (1){
+    tetra tmp_tetra = rand_tetra(dim);
+    mat3 P;
+    triangle_sides(tmp_tetra.vertices[0], tmp_tetra.vertices[1], tmp_tetra.vertices[2],P);
+    arr3 tri_normal;
+    crossArr3(P[1], P[0], tri_normal); //Calculate normal on the triangle plane
+    //Calculate the vector perpendicular to each side and the normal. Normals on each side of the prism
+    mat3 side_normals;
+    arr3 side_d; //The constant expression for the plane equations of the sides
+    //Convention, need to explain why it works?? Third point must be on the other side!!
+  
+    crossArr3(tri_normal, P[0], side_normals[0]);
+    crossArr3(P[1], tri_normal, side_normals[1]);
+    crossArr3(tri_normal, P[2], side_normals[2]);
+    side_d[0] = dotArr3(side_normals[0], tmp_tetra.vertices[0]); 
+    side_d[1] = dotArr3(side_normals[1], tmp_tetra.vertices[0]);
+    side_d[2] = dotArr3(side_normals[2], tmp_tetra.vertices[2]);
+    int a = (dotArr3(tmp_tetra.vertices[3],side_normals[0]) < side_d[0] &&
+          dotArr3(tmp_tetra.vertices[3],side_normals[1]) < side_d[1] &&
+          dotArr3(tmp_tetra.vertices[3],side_normals[2]) < side_d[2]);
+    int b = tetra_acute(&tmp_tetra);
+    if (b && !a)
+    printf("%d,%d\n",a,b);
+  }
+}
 int main(void){
+  test_prism(20);
+  //test_boundary(5);
   //test_sym();
   //test_tetra_normals();
-  test_mem_list_tet();
+  //test_mem_list_tet();
   //test_triangle_indices();
   //
   //test_tetra_disjunct();

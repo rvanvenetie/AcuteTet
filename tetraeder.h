@@ -41,24 +41,20 @@ typedef struct facet_acute_data {
   tri_mem_list * acute_list;
 
   
- //Store the actual tetrahedrons acute above and acute below
-  ptetra tetra_above;
-  int    tetra_above_len;
-  ptetra tetra_below;
-  int    tetra_below_len;
-  
+ 
   //Store whether facet has one tetra acute above, acute below
   int acute_above, acute_below;
   
   //Store whether this triangle lies on a boundary (thus only is acute_above or acute_below)
-  int (*boundary_func)(ptriangle, arr3);
+  int (*boundary_func)(ptriangle, int);
+  //int (*facets_list)(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
 
   int boundary_triangle;
 } facet_acute_data;
 
 
 void tetra_normals(ptetra tet, arr3 * normals);
-int tetra_acute(ptetra tetra);
+int tetra_acute(ptriangle tet, arr3 cube_pt);
 tetra_list acute_tetrahedra(arr3 dim);
 tetra_list acute_tetrahedra_recur(arr3 dim, double time_start);
 tri_mem_list acute_triangles_tetra(arr3 dim);
