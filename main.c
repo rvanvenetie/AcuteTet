@@ -24,8 +24,8 @@
 #define FUND_LOG "output_fund_%d.log"
 #define TET_LOG "output_tet_%d.log"
 
-#define FUND_TMP "/var/scratch/rvveneti/gez_verz_%d.tet"
-#define TET_TMP  "/var/scratch/rvveneti/tet_verz_%d.tet"
+#define FUND_TMP "/local/rvveneti/gez_verz_%d.tet"
+#define TET_TMP  "/local/rvveneti/tet_verz_%d.tet"
 
 #define FUND_DATA "data/gez_verz_%d.tet"
 #define TET_DATA  "data/tet_verz_%d.tet"
