@@ -307,7 +307,7 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
     printf("Face2face loop with %zu acute triangles from thread %d.\n"
           , mem_list_count(acute_list), omp_get_thread_num());
     time_start = omp_get_wtime();
-    time_save =  save_interval
+    time_save =  save_interval;
     #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
     for (i = 0; i < tet.len; i++) {
       for (j = i + 1; j < tet.len; j++) {
