@@ -301,12 +301,13 @@ void facets_face2face_tet(tri_mem_list * acute_list, char * save_file){
   parameters.acute_list = acute_list;
   
   
-  double time_start =0 , time_end = 0, time_save = save_interval;
+  double time_start =0 , time_end = 0, time_save;
   while (changed) {
     changed = 0;
     printf("Face2face loop with %zu acute triangles from thread %d.\n"
           , mem_list_count(acute_list), omp_get_thread_num());
     time_start = omp_get_wtime();
+    time_save =  save_interval
     #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
     for (i = 0; i < tet.len; i++) {
       for (j = i + 1; j < tet.len; j++) {
@@ -372,12 +373,13 @@ void facets_face2face_fund(tri_mem_list * acute_list, char * save_file){
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.acute_list = acute_list;
   
-  double time_start =0 , time_end = 0, time_save = save_interval;
+  double time_start =0 , time_end = 0, time_save;
   while (changed) {
     changed = 0;
     printf("Face2face loop with %zu acute triangles from thread %d.\n"
           , mem_list_count(acute_list), omp_get_thread_num());
     time_start = omp_get_wtime();
+    time_save = save_interval;
     #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
     for (i = 0; i < fund_len; i++) {
       for (j = i + 1; j < cube.len; j++) {
