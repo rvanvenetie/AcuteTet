@@ -48,9 +48,12 @@ int main(int argc, char *argv[]) {
   }
   exit(0); */
   printf("Thread numbers:\n");
-  #pragma omp parallel for
-  for (int i = 0; i < 16; i++)
-    printf("%d,", omp_get_thread_num());
+  printf("Dynamic threads:%d\n", omp_get_dynamic());
+  printf("Maximum number of threads: %d\n",omp_get_max_threads());
+  //omp_set_num_threads(48);
+  #pragma omp parallel for schedule(static,1)
+  for (int i = 0; i < 70; i++)
+    printf("(%d,%d)", omp_get_thread_num(),omp_get_num_threads());
   printf("\n");
   char filename[70];
   char log_file[70];

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <time.h>
 #include "vector.h"
@@ -127,13 +128,22 @@ void test_mem_list_fund(void){
     triang_list[i] = rand_triangle(dim);
     mem_list_set_fund(&mem_list,triang_list + i);
   } //Inserted all the triangles.
+  
+  //Check if all set
   for (int i = 0; i < 750; i++) {
     randomize_triangle(triang_list + i);
     triangle_symmetry(triang_list + i, rand() % 48,dim, triang_list + i); 
     if (!mem_list_get_fund(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
       printf("Triangle not fount!!");
     }
-  } //Check for additional 
+  } 
+  //Delete all
+  for (int i = 0; i < 750; i++) 
+    mem_list_clear_fund(&mem_list, triang_list + i);
+  //Check if all deleted
+  if (mem_list_count(&mem_list) > 0)
+    printf("Mem_list fund > 0\n");
+  //Check for additional 
   free(triang_list);
 }
 
@@ -221,13 +231,6 @@ void test_tetra_normals(void) {
       printf("Inconsistent normals on tetra!\n");
       print_tetra(&tet);
     }
-    if (tetra_acute(&tet) ^ tetra_acute_normal(&tet)) //XOR, means we got different results
-    {
-      printf("Tetra acute by one method, but not by the other.\n");
-      printf("Tetra_acute method: %d\n", tetra_acute(&tet));
-      printf("Test acute method : %d\n", tetra_acute_normal(&tet));
-      print_tetra(&tet);
-    }
     
   }
 }
@@ -267,13 +270,18 @@ void test_prism(int dim) {
     int a = (dotArr3(tmp_tetra.vertices[3],side_normals[0]) < side_d[0] &&
           dotArr3(tmp_tetra.vertices[3],side_normals[1]) < side_d[1] &&
           dotArr3(tmp_tetra.vertices[3],side_normals[2]) < side_d[2]);
-    int b = tetra_acute(&tmp_tetra);
+    
+    
+    triangle tmp_triangle;
+    memcpy(tmp_triangle.vertices, tmp_tetra.vertices, 3 * sizeof(arr3));
+    int b = tetra_acute(&tmp_triangle, tmp_tetra.vertices[3]);
     if (b && !a)
     printf("%d,%d\n",a,b);
   }
 }
 int main(void){
-  test_prism(20);
+  test_mem_list_fund();
+  //test_prism(20);
   //test_boundary(5);
   //test_sym();
   //test_tetra_normals();
