@@ -112,7 +112,7 @@ void print_tetra(ptetra tet) {
  */
 
 int facet_tetra_list(ptriangle triang, arr3 apex, tri_mem_list * conform_list) {
-  if (conform_list->mode == MEM_LIST_fund)
+  if (conform_list->mode == MEM_LIST_FUND)
     return (mem_list_get_fund(conform_list, triang->vertices[0], triang->vertices[1], apex) &&
             mem_list_get_fund(conform_list, triang->vertices[0], triang->vertices[2], apex) &&
             mem_list_get_fund(conform_list, triang->vertices[1], triang->vertices[2], apex));
@@ -215,8 +215,8 @@ void facets_conform_cube(tri_mem_list * conform_list, char * save_file){
   double time_start =0 , time_end = 0;
   while (changed) {
     changed = 0;
-    printf("Conform loop with %zu acute triangles from thread %d.\n"
-          , mem_list_count(conform_list), omp_get_thread_num());   
+    printf("Starting conform loop with %zu facets.\n"
+          , mem_list_count(conform_list));   
     time_start = omp_get_wtime();
     
     //#pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
@@ -268,8 +268,8 @@ void facets_conform_tet(tri_mem_list * conform_list, char * save_file){
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
     changed = 0;
-    printf("Conform loop with %zu acute triangles from thread %d.\n"
-          , mem_list_count(conform_list), omp_get_thread_num());
+    printf("Starting conform loop with %zu facets.\n"
+          , mem_list_count(conform_list));   
     time_start = omp_get_wtime();
     time_save =  save_interval;
     #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
@@ -311,7 +311,7 @@ void facets_conform_tet(tri_mem_list * conform_list, char * save_file){
       }
     }
     time_end   = omp_get_wtime();
-    printf("Loop took %f seconds.\n\n", time_end-time_start);
+    printf("Conform loop took %f seconds.\n\n", time_end-time_start);
   }
   free(tet.points);
 }
@@ -340,8 +340,8 @@ void facets_conform_fund(tri_mem_list * conform_list, char * save_file){
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
     changed = 0;
-    printf("Conform loop with %zu acute triangles from thread %d.\n"
-          , mem_list_count(conform_list), omp_get_thread_num());
+    printf("Starting conform loop with %zu facets.\n"
+          , mem_list_count(conform_list));   
     time_start = omp_get_wtime();
     time_save = save_interval;
     
@@ -361,6 +361,7 @@ void facets_conform_fund(tri_mem_list * conform_list, char * save_file){
           cur_tri = (triangle) {{{vert_from_index[i][0],vert_from_index[i][1],vert_from_index[i][2]},
                                  {vert_from_index[j][0],vert_from_index[j][1],vert_from_index[j][2]},
                                  {vert_from_index[k][0],vert_from_index[k][1],vert_from_index[k][2]}}};
+              
           if (!facet_conform(&cur_tri,&parameters)) { //remove from list
             changed = 1;
             mem_list_clear_fund(conform_list, &cur_tri);
@@ -382,7 +383,7 @@ void facets_conform_fund(tri_mem_list * conform_list, char * save_file){
       }
     }
     time_end   = omp_get_wtime();
-    printf("Loop took %f seconds.\n\n", time_end-time_start);
+    printf("Conform loop took %f seconds.\n\n", time_end-time_start);
   }
 }
 
@@ -392,7 +393,7 @@ void facets_conform_fund(tri_mem_list * conform_list, char * save_file){
 void facets_conform(tri_mem_list * conform_list, char * save_file){
   if (conform_list->mode == MEM_LIST_CUBE)
     facets_conform_cube(conform_list,save_file);
-  else if (conform_list->mode == MEM_LIST_fund)
+  else if (conform_list->mode == MEM_LIST_FUND)
     facets_conform_fund(conform_list, save_file);
   else if (conform_list->mode == MEM_LIST_TET)
     facets_conform_tet(conform_list,save_file);  

@@ -35,9 +35,9 @@ typedef struct tri_mem_list
   
 } tri_mem_list;
 
-#define MEM_LIST_CUBE  0
-#define MEM_LIST_fund 2
-#define MEM_LIST_TET   3
+#define MEM_LIST_CUBE 0
+#define MEM_LIST_FUND 2
+#define MEM_LIST_TET  3
 typedef unsigned short tri_index[3];
 typedef unsigned short tet_index[4];
 
@@ -120,6 +120,8 @@ triangle triangle_from_index_fund(tri_index indices,arr3 * index_vertex);
  */
 #define MEM_LIST_FALSE 0
 #define MEM_LIST_TRUE 1
+
+tri_mem_list mem_list_init(int dim, int mode, int init_value);
 tri_mem_list mem_list_init_cube(int dim, int init_value);
 tri_mem_list mem_list_init_fund(int dim, int init_value);
 tri_mem_list mem_list_init_tet(int dim, int init_value);

@@ -210,7 +210,7 @@ int mem_list_dim_size(tri_mem_list * list, int axis, int idx1, int idx2) {
         return list->mem_cube.dim_size - idx1;
       else if (axis == 2)
         return list->mem_cube.dim_size - idx1 - idx2 ;
-    case MEM_LIST_fund:
+    case MEM_LIST_FUND:
       if (axis == 0)
         return list->mem_fund.fund_len;
       else if (axis == 1)
@@ -226,7 +226,8 @@ int mem_list_dim_size(tri_mem_list * list, int axis, int idx1, int idx2) {
       else  
         return list->mem_tet.tet_len - idx1 - idx2 - 2;
   }
-  printf("WAT! NOT POSSIBLE");
+
+  printf("WAT! NOT POSSIBLE:%d, %d, %d, %d\n", list->mem_tet.tet_len, axis, idx1,idx2);
   exit(0);
   return 0;
 }
@@ -237,15 +238,17 @@ int mem_list_dim_size(tri_mem_list * list, int axis, int idx1, int idx2) {
  * can initalize to TRUE makes it set all the triangles in the memory list.
  */
 tri_mem_list mem_list_init(int dim, int mode, int init_value) {
-  printf("Initalizing memory_list: %d, %d, %d\n", dim, mode, init_value);
+  //printf("Initalizing memory_list: dim = %d, mode = %d, init_value =  %d\n", dim, mode, init_value);
   switch (mode) {
     case MEM_LIST_CUBE:
       return mem_list_init_cube(dim,init_value);
-    case MEM_LIST_fund:
+    case MEM_LIST_FUND:
       return mem_list_init_fund(dim, init_value);
     case MEM_LIST_TET:
       return mem_list_init_tet(dim, init_value);
   }
+  printf("Should not come here..!!\n");
+  exit(0);
   //return NULL;
 }
 
@@ -316,7 +319,7 @@ tri_mem_list mem_list_init_tet(int dim, int init_value) {
 tri_mem_list mem_list_init_fund(int dim, int init_value) {
   tri_mem_list result;
   memset(&result,0,sizeof(tri_mem_list));
-  result.mode = MEM_LIST_fund;
+  result.mode = MEM_LIST_FUND;
   result.dim = dim; 
     
   //Generate vertex to index array  
@@ -385,7 +388,7 @@ void mem_list_free(tri_mem_list * list) {
   }
   free(list->t_arr);
   
-  if (list->mode == MEM_LIST_fund) {
+  if (list->mode == MEM_LIST_FUND) {
     vert_index ** sym_index;
     sym_index = list->mem_fund.sym_index;
       
@@ -447,7 +450,7 @@ triangle_list mem_list_to_triangle_list(tri_mem_list * list) {
   triangle_list result= {NULL, count, list->dim}; 
   ptriangle t_arr = malloc(count * sizeof(triangle));
   
-  if (list->mode == MEM_LIST_fund) {
+  if (list->mode == MEM_LIST_FUND) {
     for (size_t i = 0; i < count; i ++) {
       printf("%d,%d,%d\n", index_list.index_list[i][0],index_list.index_list[i][1],index_list.index_list[i][2]);
       t_arr[i] = triangle_from_index_fund(index_list.index_list[i], list->mem_fund.vert_from_index); 
