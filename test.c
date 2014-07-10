@@ -7,8 +7,7 @@
 #include "triangle.h"
 #include "tetraeder.h"
 #include "mem_list.h"
-#include "triangulate.h"
-#include "combinations.h"
+
 
 void test_sym(void){
   for (int i = 1; i < 100; i++) {
@@ -236,9 +235,10 @@ void test_tetra_normals(void) {
 }
 
 void test_tetra_disjunct(void) {
-  tetra t1 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,6}}};
-  tetra t2 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,4}}};
-  printf("Test disjunct: %d", tetra_tetra_disjoint(&t1,&t2));
+  //tetra t1 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,6}}};
+  //tetra t2 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,4}}};
+  
+  //printf("Test disjunct: %d", tetra_tetra_disjoint(&t1,&t2));
 }
 
 void test_boundary(int dim) {
@@ -257,7 +257,7 @@ void test_prism(int dim) {
     arr3 tri_normal;
     crossArr3(P[1], P[0], tri_normal); //Calculate normal on the triangle plane
     //Calculate the vector perpendicular to each side and the normal. Normals on each side of the prism
-    mat3 side_normals;
+    arr3 side_normals[3];
     arr3 side_d; //The constant expression for the plane equations of the sides
     //Convention, need to explain why it works?? Third point must be on the other side!!
   
@@ -274,7 +274,7 @@ void test_prism(int dim) {
     
     triangle tmp_triangle;
     memcpy(tmp_triangle.vertices, tmp_tetra.vertices, 3 * sizeof(arr3));
-    int b = tetra_acute(&tmp_triangle, tmp_tetra.vertices[3]);
+    int b = tetra_acute_optimized(&tmp_triangle, tmp_tetra.vertices[3]);
     if (b && !a)
     printf("%d,%d\n",a,b);
   }

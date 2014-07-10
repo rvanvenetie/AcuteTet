@@ -9,7 +9,7 @@
 #include "tetraeder.h"
 #include "mem_list.h"
 #include "omp.h"
-#include "triangulate.h"
+
 /*
  * Loops from dimension 1 to 25 by default.
  * Parameters are "<type> <dim_1>" or "<type> <dim_1> <dim_2>".

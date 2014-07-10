@@ -53,6 +53,8 @@ typedef struct facet_acute_data {
 
 void tetra_normals(ptetra tet, arr3 * normals);
 int tetra_acute(ptetra tet);
+int tetra_acute_optimized(ptriangle tet, arr3 cube_pt);
 int tetrahedra_acute(int dim);
 void facets_conform(tri_mem_list * conform_list, char * save_file);
+void print_tetra(ptetra tet);
 #endif
