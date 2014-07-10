@@ -45,7 +45,7 @@ typedef struct tri_index_list
 {
   tri_index * index_list;
   size_t len;
-  arr3 dim;
+  int dim;
 } tri_index_list;
 
 
@@ -90,12 +90,16 @@ typedef struct tri_index_list
 #define triangle_to_index_tet(triang, vert_to_index, indices) (\
           vertices_to_index_tet( triang.vertices[0],triang.vertices[1], triang.vertices[2], vert_to_index,indices))
 
-
+/*
+ * Returns whether this is a fundamental triangle (has point in fund domain, by using fund len)
+ */
+#define triangle_in_fund(idx1, idx2, idx3, fund_len) (((idx1 < fund_len) || (idx2 < fund_len) || (idx3 < fund_len)))
 
 /*
  * Index - Vertex functions
  */
 void indices_unique_cube(vert_index idx1, vert_index idx2, vert_index idx3, tri_index indices);
+void indices_unique_fund(vert_index idx1, vert_index idx2, vert_index idx3, tri_index indices);
 void indices_unique_tet(vert_index idx1, vert_index idx2, vert_index idx3, tri_index indices);
 
 /*

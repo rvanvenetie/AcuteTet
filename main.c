@@ -8,7 +8,6 @@
 #include "triangle.h"
 #include "tetraeder.h"
 #include "mem_list.h"
-#include "combinations.h"
 #include "omp.h"
 #include "triangulate.h"
 /*
@@ -19,7 +18,7 @@
  */
  
 #define USE_FILE 1
-#define REDIRECT_OUTPUT 1
+#define REDIRECT_OUTPUT 0
 
 #define FUND_LOG "output_fund_%d.log"
 #define TET_LOG "output_tet_%d.log"
@@ -31,22 +30,8 @@
 #define TET_DATA  "data/tet_verz_%d.tet"
 
 
+
 int main(int argc, char *argv[]) {
-/*  {
-  int i = 5;
-  
-    tri_mem_list tri_list;
-    
-    double time_start = omp_get_wtime();
-    //tri_list = facets_acute_fund(i);
-    mem_list_from_file(&tri_list, "test.tet");
-    printf("Dimension %d\n", i);
-    printf("Amount of acute: %zu\n", mem_list_count(&tri_list));
-    printf("Time taken: %f\n\n", omp_get_wtime() - time_start);
-    //mem_list_to_file(&tri_list, "test.tet",MEM_LIST_SAVE_CLEAN);
-    mem_list_free(&tri_list);
-  }
-  exit(0); */
   printf("Thread numbers:\n");
   printf("Dynamic threads:%d\n", omp_get_dynamic());
   printf("Maximum number of threads: %d\n",omp_get_max_threads());
@@ -57,16 +42,10 @@ int main(int argc, char *argv[]) {
   printf("\n");
   char filename[70];
   char log_file[70];
-  /*
-  ptriangulation opdeling = triangulate_cube_random(dim);
-  while (!opdeling)
-    opdeling = triangulate_cube_random(dim);
-  exit(0);
-  */
   tri_mem_list face_list;
   double time_start,time_end;
   
-  int loop_tet = 1; //By default loop over the tetrahedron shape
+  int loop_tet = 0; //By default loop over the fundamental domain
   int loop_start = 1; //Start with dimension 1
   int loop_end   = 25; //End with dimension 25
   if (argc == 3 || argc == 4) { //Check arguments
@@ -123,10 +102,10 @@ int main(int argc, char *argv[]) {
     printf("Start filtering triangles not acute or not gezellig.\n\n");
     
 
-    facets_face2face(&face_list, filename);
+    facets_conform(&face_list, filename);
       
     time_end = omp_get_wtime();
-    printf("\nAmount of sharp facets after face2face filter: %zu\n", mem_list_count(&face_list));    
+    printf("\nAmount of sharp facets after conform filter: %zu\n", mem_list_count(&face_list));    
     printf("Total calculation gezellige verzameling took %f seconds\n\n",time_end - time_start);
     
     if (loop_tet)
@@ -136,7 +115,7 @@ int main(int argc, char *argv[]) {
     
     
     if (!mem_list_to_file(&face_list, filename, MEM_LIST_SAVE_CLEAN))
-      printf("Failed to save face2face data to file: %s\n", filename);
+      printf("Failed to save conform data to file: %s\n", filename);
     //printf("Total memory used: %zu\n\n", mem_list_memory(&face_list));
     
     mem_list_free(&face_list);

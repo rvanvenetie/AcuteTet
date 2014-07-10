@@ -49,50 +49,6 @@ void negArr3(arr3 result) {
   result[2] = -result[2];
 }
 
-void printVector(vec3 u){
-  printf("[%d,%d,%d]\n",u.pt[0],u.pt[1],u.pt[2]);
-}
-vec3 scalarVector(int alpha, vec3 u){
-  return ((vec3) {{alpha * u.pt[0], alpha * u.pt[1], alpha * u.pt[2]}});
-}
-
-vec3 negVector(vec3 u){
-  return ((vec3) {{-u.pt[0],-u.pt[1],-u.pt[2]}});
-}
-
-int dotVector(vec3 u, vec3 v){
-  return u.pt[0] * v.pt[0] + u.pt[1] * v.pt[1] + u.pt[2]*v.pt[2];
-}
-
-
-vec3 crossVector(vec3 u, vec3 v){
-  return ((vec3) 
-    {{u.pt[1] * v.pt[2] - u.pt[2] * v.pt[1],
-      u.pt[2] * v.pt[0] - u.pt[0] * v.pt[2],
-      u.pt[0] * v.pt[1] - u.pt[1] * v.pt[0]}});
-}
-vec3 addVectors(vec3 u, vec3 v){
-  return ((vec3) 
-  {{ u.pt[0] + v.pt[0],
-     u.pt[1] + v.pt[1],
-     u.pt[2] + v.pt[2]}});
-}
-
-vec3 subVectors(vec3 u, vec3 v){
-  vec3 result;
-  result.pt[0] = u.pt[0] - v.pt[0];
-  result.pt[1] = u.pt[1] - v.pt[1];
-  result.pt[2] = u.pt[2] - v.pt[2];
-  return result;
-  /*
-  return ((vec3) 
-  {{ u.pt[0] - v.pt[0],
-     u.pt[1] - v.pt[1],
-     u.pt[2] - v.pt[2]}});
-  */
-}
-
-
 
 int maxArr3(arr3 u, int * axis) {
   if (u[0] >= u[1] && u[0] >= u[2]) {
@@ -110,60 +66,10 @@ int maxArr3(arr3 u, int * axis) {
 void printArr3(arr3 u) {
   printf("[%d,%d,%d]\n",u[0],u[1],u[2]);   
 }
-void initMat3(vec3 c1, vec3 c2, vec3 c3,mat3 result){
-  memcpy(result[0],c1.pt,sizeof(c1.pt));
-  memcpy(result[1],c2.pt,sizeof(c1.pt));
-  memcpy(result[2],c3.pt,sizeof(c1.pt));
-}
-
-void transMat3(mat3 mat, mat3 result) {
-  for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-      result[i][j] = mat[j][i];
-}
-
-vec3 mat3Col(mat3 mat, int col) {
-  return ((vec3) {{mat[0][col], 
-                   mat[1][col],
-                   mat[2][col]}});
-}
-
-vec3 mat3Row(mat3 mat, int row) {
-  return ((vec3) {{mat[row][0], mat[row][1], mat[row][2]}});
-}
-/*
- * Matrix times vector
- */
-vec3 mat3Vector(mat3 mat, vec3 v) {
-  vec3 result = (vec3) {{0}};
-  for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-      result.pt[i] += mat[i][j] * v.pt[j];
-  return result;
-}
-/*
- * Calculates MN as matrices
- */
-void dotMat3(mat3 M,mat3 N, mat3 result) {
-  for(int i = 0; i < 3; i++)
-    for(int j = 0; j < 3; j++){
-      result[i][j]=0;
-      for(int k = 0; k < 3; k++)
-          result[i][j] += M[i][k]*N[k][j];
-    }
-}
-
-void printMatrix(mat3 mat){
-  printf("[[%d,%d,%d],\n",mat[0][0],mat[0][1],mat[0][2]);
-  printf(" [%d,%d,%d],\n",mat[1][0],mat[1][1],mat[1][2]);
-  printf(" [%d,%d,%d]]\n",mat[2][0],mat[2][1],mat[2][2]);
-}
 
 
 /*
- * De symmetrie group is gelijk aan S_4 x Z_2 (waarbij Z_2 de reflecties voorstellen en S_4 de rotaties)
- * We kunnen hem verder onderverdelen met S_4 = V_4 x 
- * 
+ *
  */
  
 void symmetries_old(int sym,int dim,arr3 pt, arr3 result) {
@@ -331,8 +237,8 @@ void symmetries_old(int sym,int dim,arr3 pt, arr3 result) {
  */
 cube_points gen_tet_points(int dim) {
   cube_points result = {NULL, 
-                        {dim,dim,dim},
-                        (dim+1)*(dim+2)*(dim+3)/6};
+                        dim,
+                       (dim+1)*(dim+2)*(dim+3)/6};
   result.points = malloc(result.len *sizeof(arr3));
   int c = 0;
   
@@ -377,7 +283,7 @@ cube_points gen_cube_points(int dim) {
  */
 cube_points gen_fund_points(int dim){
   cube_points result = {NULL, 
-                        {dim, dim, dim},
+                        dim,
                         0};
 
   /*
@@ -408,5 +314,4 @@ void copyArr3(arr3 dest, arr3 source) {
   dest[0] = source[0];
   dest[1] = source[1];
   dest[2] = source[2];
-  
 }

@@ -38,9 +38,7 @@ typedef struct
 
 typedef struct facet_acute_data {
   cube_points * cube;
-  tri_mem_list * acute_list;
-
-  
+  tri_mem_list * conform_list;
  
   //Store whether facet has one tetra acute above, acute below
   int acute_above, acute_below;
@@ -54,28 +52,7 @@ typedef struct facet_acute_data {
 
 
 void tetra_normals(ptetra tet, arr3 * normals);
-int tetra_acute(ptriangle tet, arr3 cube_pt);
-tetra_list acute_tetrahedra(arr3 dim);
-tetra_list acute_tetrahedra_recur(arr3 dim, double time_start);
-tri_mem_list acute_triangles_tetra(arr3 dim);
-triangle_list acute_triangles_tetra_old(arr3 dim);
-int triangle_tetra_acute(ptriangle triang, cube_points * cube, ptriang_tetra_result res  , tri_mem_list *acute_list);
-void print_tetra(ptetra tet);
-void mem_list_face2face_old(tri_mem_list * acute_list, int sym);
-void mem_list_face2face(tri_mem_list * acute_list);
-
-
-//Different modes
-#define FACET_ACUTE 0
-#define FACET_ACUTE_LIST 1
-#define FACET_ACUTE_TETRA 2
-
-void facets_face2face(tri_mem_list * acute_list, char * save_file);
-void tetra_add_array(tetra tetra_to_add, ptetra  * tetra_array, int * len);
-int facet_tetra_list(ptriangle triang, arr3 new_vertex, tri_mem_list * acute_list);
- 
-tri_mem_list facets_acute_cube(int dim);
-tri_mem_list facets_acute_fund(int dim);
-
-int facet_cube_acute(ptriangle triang, facet_acute_data * data, int mode);
+int tetra_acute(ptetra tet);
+int tetrahedra_acute(int dim);
+void facets_conform(tri_mem_list * conform_list, char * save_file);
 #endif

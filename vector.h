@@ -9,7 +9,6 @@ typedef struct vec3
 
 typedef  int arr2[2];
 typedef  int arr3[3];
-typedef  int mat3[3][3];
 
 typedef struct cube_points
 {
@@ -126,14 +125,6 @@ vec3 subVectors(vec3 u, vec3 v);
 int maxArr3(arr3 u, int * axis);
 void copyArr3(arr3 dest, arr3 source);
 void printArr3(arr3 u);
-
-void initMat3(vec3 c1, vec3 c2, vec3 c3,mat3 result);
-void printMatrix(mat3 mat);
-void transMat3(mat3 mat, mat3 result);
-void dotMat3(mat3 M,mat3 N, mat3 result);
-vec3 mat3Vector(mat3 mat, vec3 v);
-vec3 mat3Col(mat3 mat, int col);
-vec3 mat3Row(mat3 mat, int row);
 
 cube_points gen_tet_points(int dim);
 cube_points gen_cube_points(int dim);
