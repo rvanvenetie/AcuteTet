@@ -20,28 +20,12 @@ using namespace std;
 
 
 
-/* Utility function, use to do error checking.
 
-   Use this function like this:
-
-   checkCudaCall(cudaMalloc((void **) &deviceRGB, imgS * sizeof(color_t)));
-
-   And to check the result of a kernel invocation:
-
-   checkCudaCall(cudaGetLastError());
-*/
 static void checkCudaCall(cudaError_t result) {
     if (result != cudaSuccess) {
         cerr << "cuda error: " << cudaGetErrorString(result) << endl;
         exit(1);
     }
-}
-
-// Kernel that executes on the CUDA device
-__global__ void square_array(float *a, int N)
-{
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx<N) a[idx] = a[idx] * a[idx];
 }
 
 __global__ void tet_acute_kernel(ptriangle triang, int dim, unsigned char * result, size_t N) {

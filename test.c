@@ -252,7 +252,7 @@ void test_boundary(int dim) {
 void test_prism(int dim) {
   while (1){
     tetra tmp_tetra = rand_tetra(dim);
-    mat3 P;
+    arr3 P[3];
     triangle_sides(tmp_tetra.vertices[0], tmp_tetra.vertices[1], tmp_tetra.vertices[2],P);
     arr3 tri_normal;
     crossArr3(P[1], P[0], tri_normal); //Calculate normal on the triangle plane
