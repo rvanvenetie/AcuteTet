@@ -48,8 +48,7 @@ int main(int argc, char *argv[]) {
   tri_index_list ind_list;
   double time_start,time_end;
   
-  
-  
+ 
   int loop_type = LOOP_FUND; //By default loop over the fundamental domain
   int loop_start = 1; //Start with dimension 1
   int loop_end   = 25; //End with dimension 25
@@ -167,9 +166,37 @@ int main(int argc, char *argv[]) {
     
     printf("Index list holds %zu facets.\n", ind_list.len);
     printf("Index list uses  %zu bytes.\n", sizeof(tri_index) * ind_list.len);
-    for (int i = 0; i < 10; i++)
-      printf("%d,%d,%d\n", ind_list.index_list[i][0],ind_list.index_list[i][1],ind_list.index_list[i][2]);
+    long double sum_area = 0, sum_angle = 0;
+    long double min_angle = 9000000, min_area = 9000000;
+    long double max_angle = 0, max_area = 0;
     
+    #define lenArr3(arr) (sqrt(dotArr3(arr,arr)))
+    size_t k = 20;
+    for (size_t j = 0; j < k; j++)
+    {
+      triangle triang = triangle_from_index_fund(ind_list.index_list[j], face_list.mem_fund.vert_from_index);
+      arr3 P[3];
+      subArr3(triang.vertices[1], triang.vertices[0], P[0]);
+      subArr3(triang.vertices[2], triang.vertices[0], P[1]);
+      subArr3(triang.vertices[2], triang.vertices[1], P[2]);
+      
+      arr3 cross;
+      crossArr3(P[0],P[1], cross);
+      long double area = lenArr3(cross) / 2.0;
+      
+      sum_area += area;
+      if (area < min_area)
+        min_area = area;
+      else if (area > max_area)
+        max_area = area;
+     
+
+      
+    }
+    sum_area = sum_area / k;
+    printf("Avg area: %Lf\n", sum_area);
+    printf("Min area: %Lf\n", min_area);
+    printf("Max area: %Lf\n", max_area);
     mem_list_free(&face_list);
     if (REDIRECT_OUTPUT)
       fclose(stdout);
