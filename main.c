@@ -170,13 +170,18 @@ int main(int argc, char *argv[]) {
     long double min_angle = 9000000, min_area = 9000000;
     long double max_angle = 0, max_area = 0;
     
+    triangle min_angle_tri, max_angle_tri;
+    triangle min_area_tri,  max_area_tri;
+    
     #define lenArr3(arr) (sqrt(dotArr3(arr,arr)))
-    #define hackish(sum,min,max,new) {\
+    #define hackish(sum,min,max,new,min_tri,max_tri,tri) {\
       sum += new;    \
-      if (new < min) \
+      if (new < min) { \
         min = new;   \
-      else if (new > max) \
-        max = new; }
+        min_tri = tri; }\
+      else if (new > max) { \
+        max = new;\
+        max_tri = tri;  }}
     
     size_t k = ind_list.len;
     for (size_t j = 0; j < k; j++)
@@ -190,18 +195,18 @@ int main(int argc, char *argv[]) {
       arr3 cross;
       crossArr3(P[0],P[1], cross);
       long double area = lenArr3(cross) / 2.0;
-      hackish(sum_area,min_area,max_area,area);
+      hackish(sum_area,min_area,max_area,area,min_area_tri,max_area_tri,triang);
       
       long double angle;
       //Angle BAC
       angle = dotArr3(P[0],P[1]) / (lenArr3(P[0]) * lenArr3(P[1]));
-      hackish(sum_angle,min_angle,max_angle,angle);
+      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
       //Angle ACB
       angle = - dotArr3(P[0],P[2]) / (lenArr3(P[0]) * lenArr3(P[2]));
-      hackish(sum_angle,min_angle,max_angle,angle);
+      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
       //Angle ABC
       angle = dotArr3(P[1],P[2]) / (lenArr3(P[1]) * lenArr3(P[2]));
-      hackish(sum_angle,min_angle,max_angle,angle);
+      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
 
      
 
@@ -210,11 +215,16 @@ int main(int argc, char *argv[]) {
     sum_area = sum_area / k;
     printf("Avg area: %Lf\n", sum_area);
     printf("Min area: %Lf\n", min_area);
+    print_triangle(&min_area_tri);
     printf("Max area: %Lf\n", max_area);
-    sum_angle = sum_angle / k;
+    print_triangle(&max_area_tri);
+
+    sum_angle = sum_angle / (3 * k);
     printf("Avg angle: %Lf\n", sum_angle);
     printf("Min angle: %Lf\n", min_angle);
+    print_triangle(&min_angle_tri);
     printf("Max angle: %Lf\n", max_angle);
+    print_triangle(&max_angle_tri);
     mem_list_free(&face_list);
     if (REDIRECT_OUTPUT)
       fclose(stdout);
