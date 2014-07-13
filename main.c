@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
   double time_start,time_end;
   
   
+  
   int loop_type = LOOP_FUND; //By default loop over the fundamental domain
   int loop_start = 1; //Start with dimension 1
   int loop_end   = 25; //End with dimension 25
@@ -159,13 +160,16 @@ int main(int argc, char *argv[]) {
       printf("Amount of conform facets is %zu.\n", mem_list_count(&face_list));
     }
     
-    mem_list_indices(&face_list, &ind_list);
+    if (!index_list_from_file(&ind_list, ind_file)) {
+      index_list_to_file(&ind_list, ind_file);
+      mem_list_indices(&face_list, &ind_list);
+    }
+    
     printf("Index list holds %zu facets.\n", ind_list.len);
     printf("Index list uses  %zu bytes.\n", sizeof(tri_index) * ind_list.len);
     for (int i = 0; i < 10; i++)
       printf("%d,%d,%d\n", ind_list.index_list[i][0],ind_list.index_list[i][1],ind_list.index_list[i][2]);
     
-    index_list_to_file(&ind_list, ind_file);
     mem_list_free(&face_list);
     if (REDIRECT_OUTPUT)
       fclose(stdout);
