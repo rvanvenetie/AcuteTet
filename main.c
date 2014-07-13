@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
   
    
     
-    if (USE_FILE && mem_list_from_file(&face_list, tmp_file)) {
+    if (USE_FILE && (mem_list_from_file(&face_list, data_file) || mem_list_from_file(&face_list, tmp_file))) {
       printf("Continuing previous data-set.\n");
     } else {
       printf("Initalizing new data-set.\n");
