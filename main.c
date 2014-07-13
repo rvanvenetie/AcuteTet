@@ -171,7 +171,14 @@ int main(int argc, char *argv[]) {
     long double max_angle = 0, max_area = 0;
     
     #define lenArr3(arr) (sqrt(dotArr3(arr,arr)))
-    size_t k = 20;
+    #define hackish(sum,min,max,new) {\
+      sum += new;    \
+      if (new < min) \
+        min = new;   \
+      else if (new > max) \
+        max = new; }
+    
+    size_t k = ind_list.len;
     for (size_t j = 0; j < k; j++)
     {
       triangle triang = triangle_from_index_fund(ind_list.index_list[j], face_list.mem_fund.vert_from_index);
@@ -183,12 +190,19 @@ int main(int argc, char *argv[]) {
       arr3 cross;
       crossArr3(P[0],P[1], cross);
       long double area = lenArr3(cross) / 2.0;
+      hackish(sum_area,min_area,max_area,area);
       
-      sum_area += area;
-      if (area < min_area)
-        min_area = area;
-      else if (area > max_area)
-        max_area = area;
+      long double angle;
+      //Angle BAC
+      angle = dotArr3(P[0],P[1]) / (lenArr3(P[0]) * lenArr3(P[1]));
+      hackish(sum_angle,min_angle,max_angle,angle);
+      //Angle ACB
+      angle = - dotArr3(P[0],P[2]) / (lenArr3(P[0]) * lenArr3(P[2]));
+      hackish(sum_angle,min_angle,max_angle,angle);
+      //Angle ABC
+      angle = dotArr3(P[1],P[2]) / (lenArr3(P[1]) * lenArr3(P[2]));
+      hackish(sum_angle,min_angle,max_angle,angle);
+
      
 
       
@@ -197,6 +211,10 @@ int main(int argc, char *argv[]) {
     printf("Avg area: %Lf\n", sum_area);
     printf("Min area: %Lf\n", min_area);
     printf("Max area: %Lf\n", max_area);
+    sum_angle = sum_angle / k;
+    printf("Avg angle: %Lf\n", sum_angle);
+    printf("Min angle: %Lf\n", min_angle);
+    printf("Max angle: %Lf\n", max_angle);
     mem_list_free(&face_list);
     if (REDIRECT_OUTPUT)
       fclose(stdout);
