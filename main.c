@@ -18,8 +18,8 @@
  * If <dim_2> is also specified, it loops from dim_1 to dim_2.
  */
  
-#define USE_FILE 0
-#define REDIRECT_OUTPUT 0
+#define USE_FILE 1
+#define REDIRECT_OUTPUT 1
 
 #define CUBE_LOG "output_cube_%d.log"
 #define FUND_LOG "output_fund_%d.log"
