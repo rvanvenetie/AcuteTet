@@ -42,6 +42,66 @@
 #define LOOP_CUBE MEM_LIST_CUBE
 #define LOOP_TET  MEM_LIST_TET 
 
+
+void print_stats(tri_index_list ind_list, tri_mem_list face_list) {
+    long double sum_area = 0, sum_angle = 0;
+    long double min_angle = 9000000, min_area = 9000000;
+    long double max_angle = 0, max_area = 0;
+    
+    triangle min_angle_tri, max_angle_tri;
+    triangle min_area_tri,  max_area_tri;
+    
+    #define lenArr3(arr) (sqrt(dotArr3(arr,arr)))
+    #define hackish(sum,min,max,new,min_tri,max_tri,tri) {\
+      sum += new;    \
+      if (new < min) { \
+        min = new;   \
+        min_tri = tri; }\
+      else if (new > max) { \
+        max = new;\
+        max_tri = tri;  }}
+    
+    size_t k = ind_list.len;
+    for (size_t j = 0; j < k; j++)
+    {
+      triangle triang = triangle_from_index_fund(ind_list.index_list[j], face_list.mem_fund.vert_from_index);
+      arr3 P[3];
+      subArr3(triang.vertices[1], triang.vertices[0], P[0]);
+      subArr3(triang.vertices[2], triang.vertices[0], P[1]);
+      subArr3(triang.vertices[2], triang.vertices[1], P[2]);
+      
+      arr3 cross;
+      crossArr3(P[0],P[1], cross);
+      long double area = lenArr3(cross) / 2.0;
+      hackish(sum_area,min_area,max_area,area,min_area_tri,max_area_tri,triang);
+      
+      long double angle;
+      //Angle BAC
+      angle = dotArr3(P[0],P[1]) / (lenArr3(P[0]) * lenArr3(P[1]));
+      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
+      //Angle ACB
+      angle = - dotArr3(P[0],P[2]) / (lenArr3(P[0]) * lenArr3(P[2]));
+      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
+      //Angle ABC
+      angle = dotArr3(P[1],P[2]) / (lenArr3(P[1]) * lenArr3(P[2]));
+      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
+    }
+    sum_area = sum_area / k;
+    printf("Avg area: %Lf\n", sum_area);
+    printf("Min area: %Lf\n", min_area);
+    print_triangle(&min_area_tri);
+    printf("Max area: %Lf\n", max_area);
+    print_triangle(&max_area_tri);
+
+    sum_angle = sum_angle / (3 * k);
+    printf("Avg angle: %Lf\n", sum_angle);
+    printf("Min angle: %Lf\n", min_angle);
+    print_triangle(&min_angle_tri);
+    printf("Max angle: %Lf\n", max_angle);
+    print_triangle(&max_angle_tri);  
+  
+}
+
 int main(int argc, char *argv[]) {
   char tmp_file[70],log_file[70],data_file[70],ind_file[70];
   tri_mem_list face_list;
@@ -166,65 +226,7 @@ int main(int argc, char *argv[]) {
     
     printf("Index list holds %zu facets.\n", ind_list.len);
     printf("Index list uses  %zu bytes.\n", sizeof(tri_index) * ind_list.len);
-    long double sum_area = 0, sum_angle = 0;
-    long double min_angle = 9000000, min_area = 9000000;
-    long double max_angle = 0, max_area = 0;
-    
-    triangle min_angle_tri, max_angle_tri;
-    triangle min_area_tri,  max_area_tri;
-    
-    #define lenArr3(arr) (sqrt(dotArr3(arr,arr)))
-    #define hackish(sum,min,max,new,min_tri,max_tri,tri) {\
-      sum += new;    \
-      if (new < min) { \
-        min = new;   \
-        min_tri = tri; }\
-      else if (new > max) { \
-        max = new;\
-        max_tri = tri;  }}
-    
-    size_t k = ind_list.len;
-    for (size_t j = 0; j < k; j++)
-    {
-      triangle triang = triangle_from_index_fund(ind_list.index_list[j], face_list.mem_fund.vert_from_index);
-      arr3 P[3];
-      subArr3(triang.vertices[1], triang.vertices[0], P[0]);
-      subArr3(triang.vertices[2], triang.vertices[0], P[1]);
-      subArr3(triang.vertices[2], triang.vertices[1], P[2]);
-      
-      arr3 cross;
-      crossArr3(P[0],P[1], cross);
-      long double area = lenArr3(cross) / 2.0;
-      hackish(sum_area,min_area,max_area,area,min_area_tri,max_area_tri,triang);
-      
-      long double angle;
-      //Angle BAC
-      angle = dotArr3(P[0],P[1]) / (lenArr3(P[0]) * lenArr3(P[1]));
-      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
-      //Angle ACB
-      angle = - dotArr3(P[0],P[2]) / (lenArr3(P[0]) * lenArr3(P[2]));
-      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
-      //Angle ABC
-      angle = dotArr3(P[1],P[2]) / (lenArr3(P[1]) * lenArr3(P[2]));
-      hackish(sum_angle,min_angle,max_angle,angle,min_angle_tri,max_angle_tri,triang);
-
-     
-
-      
-    }
-    sum_area = sum_area / k;
-    printf("Avg area: %Lf\n", sum_area);
-    printf("Min area: %Lf\n", min_area);
-    print_triangle(&min_area_tri);
-    printf("Max area: %Lf\n", max_area);
-    print_triangle(&max_area_tri);
-
-    sum_angle = sum_angle / (3 * k);
-    printf("Avg angle: %Lf\n", sum_angle);
-    printf("Min angle: %Lf\n", min_angle);
-    print_triangle(&min_angle_tri);
-    printf("Max angle: %Lf\n", max_angle);
-    print_triangle(&max_angle_tri);
+    print_stats(ind_list,face_list);
     mem_list_free(&face_list);
     if (REDIRECT_OUTPUT)
       fclose(stdout);
