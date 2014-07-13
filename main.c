@@ -19,7 +19,7 @@
  */
  
 #define USE_FILE 1
-#define REDIRECT_OUTPUT 1
+#define REDIRECT_OUTPUT 0
 
 #define CUBE_LOG "output_cube_%d.log"
 #define FUND_LOG "output_fund_%d.log"
@@ -28,6 +28,10 @@
 #define FUND_TMP "/local/rvveneti/fund_conf_%d.tet"
 #define TET_TMP  "/local/rvveneti/tet_conf_%d.tet"
 #define CUBE_TMP "/local/rvveneti/cube_verz_%d.tet"
+
+#define FUND_IND "data/fund_conf_%d.ind"
+#define TET_IND "data/tet_conf_%d.ind"
+#define CUBE_IND "data/cube_conf_%d.ind"
 
 #define FUND_DATA "data/fund_conf_%d.tet"
 #define TET_DATA  "data/tet_conf_%d.tet"
@@ -39,8 +43,9 @@
 #define LOOP_TET  MEM_LIST_TET 
 
 int main(int argc, char *argv[]) {
-  char tmp_file[70],log_file[70],data_file[70];
+  char tmp_file[70],log_file[70],data_file[70],ind_file[70];
   tri_mem_list face_list;
+  tri_index_list ind_list;
   double time_start,time_end;
   
   
@@ -91,17 +96,22 @@ int main(int argc, char *argv[]) {
       case LOOP_FUND: 
         sprintf(log_file,  FUND_LOG,i); 
         sprintf(tmp_file,  FUND_TMP,i);         
-        sprintf(data_file, FUND_DATA,i);         
+        sprintf(data_file, FUND_DATA,i);
+        sprintf(ind_file,  FUND_IND,i);
+                 
         break;
       case LOOP_CUBE: 
         sprintf(log_file,  CUBE_LOG,i);
         sprintf(tmp_file,  CUBE_TMP,i);
         sprintf(data_file, CUBE_DATA,i);
+        sprintf(ind_file,  CUBE_IND,i);
         break;
       case LOOP_TET:
        sprintf(log_file,  TET_LOG,i);
        sprintf(tmp_file,  TET_TMP,i);
        sprintf(data_file, TET_DATA,i);
+       sprintf(ind_file,  TET_IND,i);
+
        break;
     }
       
@@ -114,35 +124,48 @@ int main(int argc, char *argv[]) {
     
     time_start = omp_get_wtime();
     
-  
-   
     
-    if (USE_FILE && (mem_list_from_file(&face_list, data_file) || mem_list_from_file(&face_list, tmp_file))) {
-      printf("Continuing previous data-set.\n");
-    } else {
-      printf("Initalizing new data-set.\n");
-      face_list = mem_list_init(i, loop_type, MEM_LIST_TRUE);
-    }    
-    time_end   = omp_get_wtime();
-    printf("Took %f seconds to init the memory list.\n", time_end - time_start);
-    time_start = omp_get_wtime();
-    printf("Size of the memory list is %zu bytes.\n", mem_list_memory(&face_list));
-    printf("Amount of start facets is %zu.\n", mem_list_count(&face_list));
-    printf("Start filtering triangles not conform:\n\n");
     
-
-    facets_conform(&face_list, tmp_file);
+    //Load from file, but no data found
+    if (!(USE_FILE && mem_list_from_file(&face_list, data_file))) {
       
-    time_end = omp_get_wtime();
-    printf("\nAmount of conform facets after filtering: %zu\n", mem_list_count(&face_list));    
-    printf("Total calculation Conforme Verzameling took %f seconds\n\n",time_end - time_start);
+      //Calculate conform set
+      
+      if (USE_FILE &&  mem_list_from_file(&face_list, tmp_file)) {
+        printf("Continuing previous data-set.\n");
+      } else {
+        printf("Initalizing new data-set.\n");
+        face_list = mem_list_init(i, loop_type, MEM_LIST_TRUE);
+      }    
+      time_end   = omp_get_wtime();
+      printf("Took %f seconds to init the memory list.\n", time_end - time_start);
+      printf("Size of the memory list is %zu bytes.\n", mem_list_memory(&face_list));
+      printf("Amount of start facets is %zu.\n", mem_list_count(&face_list));
+      printf("Start filtering triangles not conform:\n\n");
+      
+      time_start = omp_get_wtime();
+      facets_conform(&face_list, tmp_file);
+        
+      time_end = omp_get_wtime();
+      printf("\nAmount of conform facets after filtering: %zu\n", mem_list_count(&face_list));    
+      printf("Total calculation Conforme Verzameling took %f seconds\n\n",time_end - time_start);     
+      if (!mem_list_to_file(&face_list, data_file, MEM_LIST_SAVE_CLEAN))
+        printf("Failed to save conform data to file: %s\n", data_file);
     
+    } else {
+      time_end   = omp_get_wtime();
+      printf("Took %f seconds to load Conforme Verzameling from disk.\n", time_end - time_start);
+      printf("Size of the memory list is %zu bytes.\n", mem_list_memory(&face_list));
+      printf("Amount of conform facets is %zu.\n", mem_list_count(&face_list));
+    }
     
+    mem_list_indices(&face_list, &ind_list);
+    printf("Index list holds %zu facets.\n", ind_list.len);
+    printf("Index list uses  %zu bytes.\n", sizeof(tri_index) * ind_list.len);
+    for (int i = 0; i < 10; i++)
+      printf("%d,%d,%d\n", ind_list.index_list[i][0],ind_list.index_list[i][1],ind_list.index_list[i][2]);
     
-    if (!mem_list_to_file(&face_list, data_file, MEM_LIST_SAVE_CLEAN))
-      printf("Failed to save conform data to file: %s\n", data_file);
-    //printf("Total memory used: %zu\n\n", mem_list_memory(&face_list));
-    
+    index_list_to_file(&ind_list, ind_file);
     mem_list_free(&face_list);
     if (REDIRECT_OUTPUT)
       fclose(stdout);

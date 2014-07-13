@@ -729,9 +729,9 @@ int index_list_from_file(tri_index_list * result, char * filename){
   stream = fopen(filename, "rb");
   if (stream == NULL)
     return 0;
-  if (fread(&result->dim, sizeof(int), 1, stream) < 1)
-    return 0;
-  if (fread(&result->len, sizeof(size_t), 1, stream) < 1)
+  
+  //Reads the entire struct from file
+  if (fread(result, sizeof(tri_index_list), 1, stream) < 1)
     return 0;
   result->index_list = malloc(sizeof(tri_index) * result->len);
   if (fread(result->index_list, sizeof(tri_index), result->len, stream) < 1) {
@@ -748,9 +748,11 @@ int index_list_to_file(tri_index_list * list, char * filename) {
   stream = fopen(filename, "wb");
   if (stream == NULL)
     return 0;
+    
   //Write the struct to the file
-  fwrite(&list->dim, sizeof(int), 1, stream);
-  fwrite(&list->len, sizeof(size_t), 1, stream);
+  if (fwrite(list,sizeof(tri_index_list), 1,stream) < 1)
+    return 0;
+  //Write data
   fwrite(list->index_list, sizeof(tri_index), list->len, stream);
   fclose(stream);
   return 1;  
