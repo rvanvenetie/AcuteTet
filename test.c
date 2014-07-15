@@ -29,6 +29,7 @@ void test_sym(void){
     }
     free(points);
   }
+  printf("Passed symmetry test\n");
 }
 
 triangle rand_triangle(int dim) {
@@ -97,6 +98,7 @@ void test_triangle_indices(void){
       print_triangle(&origin);
     }
   }
+  printf("Unique index cube-test passed\n");
 }
 void swap_vertex(arr3 a, arr3 b) {
   arr3 t;
@@ -133,7 +135,7 @@ void test_mem_list_fund(void){
     randomize_triangle(triang_list + i);
     triangle_symmetry(triang_list + i, rand() % 48,dim, triang_list + i); 
     if (!mem_list_get_fund(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
-      printf("Triangle not fount!!");
+      printf("ERROR IN MEM_LIST_FUND");
     }
   } 
   //Delete all
@@ -141,9 +143,10 @@ void test_mem_list_fund(void){
     mem_list_clear_fund(&mem_list, triang_list + i);
   //Check if all deleted
   if (mem_list_count(&mem_list) > 0)
-    printf("Mem_list fund > 0\n");
+    printf("ERROR 2 IN MEM_LIST_FUND\n");
   //Check for additional 
   free(triang_list);
+  printf("MEM_LIST_FUND test passed\n");
 }
 
 void test_mem_list_tet(void) {
@@ -155,19 +158,21 @@ void test_mem_list_tet(void) {
     triang_list[i] = rand_triangle_tet(dim);
     mem_list_set_tet(&mem_list,triang_list + i);
   } //Inserted all the triangles
-  printf("Amount of unique triangles: %zu\n", mem_list_count(&mem_list));
+
   for (int i = 0; i < len; i++) {
     randomize_triangle(triang_list + i);
     if (!mem_list_get_tet(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
-      printf("Triangle not fount!!");
+      printf("ERROR 1 IN MEM_LIST_TET");
     }
   } 
   for (int i = 0; i < len; i++)  {
     mem_list_clear_tet(&mem_list, triang_list + i);
   }
-  printf("Amount of triangles left : %zu\n", mem_list_count(&mem_list));
+  if (mem_list_count(&mem_list) > 0)
+    printf("ERROR 2 IN MEM_LIST_TET\n");
   mem_list_free(&mem_list);
   free(triang_list);
+  printf("MEM_LIST_TET test passed\n");
 }
 
 int tetra_acute_normal(ptetra tet) {
@@ -232,6 +237,7 @@ void test_tetra_normals(void) {
     }
     
   }
+  printf("Normals on tetrahedra-test passed\n");
 }
 
 void test_tetra_disjunct(void) {
@@ -244,13 +250,14 @@ void test_tetra_disjunct(void) {
 void test_boundary(int dim) {
   for (int i = 0; i < 15000; i ++) {
     triangle tmp_tri = rand_triangle(dim);
-    if (triangle_boundary_cube(&tmp_tri,dim))
-      print_triangle(&tmp_tri);
+    if (triangle_boundary_cube(&tmp_tri,dim)) {
+      //print_triangle(&tmp_tri);
+    }
   }
 }
 
 void test_prism(int dim) {
-  while (1){
+  for (int i = 0; i < 15000; i++){
     tetra tmp_tetra = rand_tetra(dim);
     arr3 P[3];
     triangle_sides(tmp_tetra.vertices[0], tmp_tetra.vertices[1], tmp_tetra.vertices[2],P);
@@ -276,17 +283,17 @@ void test_prism(int dim) {
     memcpy(tmp_triangle.vertices, tmp_tetra.vertices, 3 * sizeof(arr3));
     int b = tetra_acute_optimized(&tmp_triangle, tmp_tetra.vertices[3]);
     if (b && !a)
-    printf("%d,%d\n",a,b);
+    printf("ERROR IN PRISM TEST: %d,%d\n",a,b);
   }
+  printf("Projection on facet-test passed\n");
 }
 int main(void){
   test_mem_list_fund();
-  //test_prism(20);
-  //test_boundary(5);
-  //test_sym();
-  //test_tetra_normals();
-  //test_mem_list_tet();
-  //test_triangle_indices();
-  //
-  //test_tetra_disjunct();
+  test_prism(20);
+  test_boundary(5);
+  test_sym();
+  test_tetra_normals();
+  test_mem_list_tet();
+  test_triangle_indices();
+  test_tetra_disjunct();
 }
