@@ -219,17 +219,15 @@ void facets_conform_cube(tri_mem_list * conform_list, char * save_file){
           , mem_list_count(conform_list));   
     time_start = omp_get_wtime();
     
-    //#pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
     for (i = 0; i < fund.len; i++) {
       for (j = 0; j < cube.len; j++) {
-        for (k = j + 1;k < cube.len; k++) //All combinations of three vertices in the tet
+        for (k = j;k < cube.len; k++) //All combinations of three vertices in the tet
         {
           //Below is the same as indices_unique(i,j,k,indices) because i < j < k, already sorted
           
           indices_unique_cube(vertex_to_index_cube(fund.points[i],conform_list->dim),j,k,indices);
           if (!GMI(conform_list->t_arr,indices)) //Check if this index is still acute
             continue;
-            
           cur_tri = (triangle) {{{fund.points[i][0],fund.points[i][1],fund.points[i][2]},
                                  {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
                                  {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
