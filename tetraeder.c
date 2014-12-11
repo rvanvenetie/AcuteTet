@@ -111,23 +111,23 @@ void print_tetra(ptetra tet) {
  * Does not check wheter the facet given by triangle itself occurs in the memory_list. (Check before!).
  */
 
-int facet_tetra_list(ptriangle triang, arr3 apex, facet_acute_data * data) {
+int facet_tetra_list(ptriangle triang, arr3 apex, data_list * data) {
   if (data->mode == DATA_MEM_LIST_FUND)
-    return (mem_list_get_fund(data->conf_mem_list, triang->vertices[0], triang->vertices[1], apex) &&
-            mem_list_get_fund(data->conf_mem_list, triang->vertices[0], triang->vertices[2], apex) &&
-            mem_list_get_fund(data->conf_mem_list, triang->vertices[1], triang->vertices[2], apex));
+    return (mem_list_get_fund(&data->mem_list, triang->vertices[0], triang->vertices[1], apex) &&
+            mem_list_get_fund(&data->mem_list, triang->vertices[0], triang->vertices[2], apex) &&
+            mem_list_get_fund(&data->mem_list, triang->vertices[1], triang->vertices[2], apex));
   else if (data->mode == DATA_MEM_LIST_CUBE) 
-    return (mem_list_get_cube(data->conf_mem_list, triang->vertices[0], triang->vertices[1], apex) &&
-            mem_list_get_cube(data->conf_mem_list, triang->vertices[0], triang->vertices[2], apex) &&
-            mem_list_get_cube(data->conf_mem_list, triang->vertices[1], triang->vertices[2], apex));
+    return (mem_list_get_cube(&data->mem_list, triang->vertices[0], triang->vertices[1], apex) &&
+            mem_list_get_cube(&data->mem_list, triang->vertices[0], triang->vertices[2], apex) &&
+            mem_list_get_cube(&data->mem_list, triang->vertices[1], triang->vertices[2], apex));
   else if (data->mode == DATA_MEM_LIST_TET)
-    return (mem_list_get_tet(data->conf_mem_list, triang->vertices[0], triang->vertices[1],apex) &&
-            mem_list_get_tet(data->conf_mem_list, triang->vertices[0], triang->vertices[2],apex) &&
-            mem_list_get_tet(data->conf_mem_list, triang->vertices[1], triang->vertices[2],apex)); 
+    return (mem_list_get_tet(&data->mem_list, triang->vertices[0], triang->vertices[1],apex) &&
+            mem_list_get_tet(&data->mem_list, triang->vertices[0], triang->vertices[2],apex) &&
+            mem_list_get_tet(&data->mem_list, triang->vertices[1], triang->vertices[2],apex)); 
   else if (data->mode == DATA_TRI_LIST) 
-    return (tri_list_get(data->conf_list, triang->vertices[0], triang->vertices[1],apex) &&
-            tri_list_get(data->conf_list, triang->vertices[0], triang->vertices[2],apex) &&
-            tri_list_get(data->conf_list, triang->vertices[1], triang->vertices[2],apex)); 
+    return (tri_list_get(&data->list, triang->vertices[0], triang->vertices[1],apex) &&
+            tri_list_get(&data->list, triang->vertices[0], triang->vertices[2],apex) &&
+            tri_list_get(&data->list, triang->vertices[1], triang->vertices[2],apex)); 
 }
 
 /*
@@ -175,7 +175,7 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
           dotArr3(data->cube->points[i],side_normals[1]) < side_d[1] &&
           dotArr3(data->cube->points[i],side_normals[2]) < side_d[2] &&    //Dotprod < tri_d implies lies below
           tetra_acute_optimized(triang,data->cube->points[i]) && //Tetrahedron is acute
-          facet_tetra_list(triang, data->cube->points[i], data)) //All facets are in the conf_mem_list
+          facet_tetra_list(triang, data->cube->points[i], &data->data)) //All facets are in the conf_mem_list
       { //Passed all tests, we have found a correct tetrahedron on this side.
         if (dotprod > tri_d) 
           data->acute_above = 1;
@@ -198,7 +198,7 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
  * Saves the memory_list every save_interval, if save_file is set.
  */
 
-void facets_conform_cube(tri_mem_list * conf_mem_list, char * save_file){
+void facets_conform_cube(data_list * data, char * save_file){
   int changed = 1;
   tri_index indices;
   char tmp_file[100];
@@ -208,13 +208,13 @@ void facets_conform_cube(tri_mem_list * conf_mem_list, char * save_file){
   
   size_t i,j,k;
   triangle cur_tri;
+  tri_mem_list * conf_mem_list = &data->mem_list;
   facet_acute_data parameters;
   cube_points cube = gen_cube_points(conf_mem_list->dim);
   cube_points fund = gen_fund_points(conf_mem_list->dim);
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
-  parameters.conf_mem_list = conf_mem_list;
-  parameters.mode = DATA_MEM_LIST_CUBE;
+  parameters.data = *data;
   
   double time_start =0 , time_end = 0;
   while (changed) {
@@ -251,7 +251,7 @@ void facets_conform_cube(tri_mem_list * conf_mem_list, char * save_file){
  * See facets_conform_cube. Only this checks for all the triangles in the 
  * unit tetrahedron.
  */
-void facets_conform_tet(tri_mem_list * conf_mem_list, char * save_file){
+void facets_conform_tet(data_list * data, char * save_file){
   int changed = 1;
   tri_index indices;
   char tmp_file[100];
@@ -260,12 +260,12 @@ void facets_conform_tet(tri_mem_list * conf_mem_list, char * save_file){
   
   vert_index i,j,k;
   triangle cur_tri;
+  tri_mem_list * conf_mem_list =&data->mem_list;
   facet_acute_data parameters;
   cube_points tet = gen_tet_points(conf_mem_list->dim);
   parameters.cube = &tet;
   parameters.boundary_func = &triangle_boundary_tet;
-  parameters.conf_mem_list = conf_mem_list;
-  parameters.mode = DATA_MEM_LIST_CUBE;
+  parameters.data = *data;
   
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -321,7 +321,7 @@ void facets_conform_tet(tri_mem_list * conf_mem_list, char * save_file){
 /*
  * See facets_conform_cube. Only stores triangles in the fundamental domain.
  */
-void facets_conform_fund(tri_mem_list * conf_mem_list, char * save_file){
+void facets_conform_fund(data_list * data, char * save_file){
   int changed = 1;
   tri_index indices;
   char tmp_file[100];
@@ -329,6 +329,7 @@ void facets_conform_fund(tri_mem_list * conf_mem_list, char * save_file){
     sprintf(tmp_file,"%s_tmp", save_file);
   
   
+  tri_mem_list * conf_mem_list = &data->mem_list;
   arr3 * vert_from_index = conf_mem_list->mem_fund.vert_from_index;         
   size_t i,j,k;
   triangle cur_tri;
@@ -337,8 +338,7 @@ void facets_conform_fund(tri_mem_list * conf_mem_list, char * save_file){
   size_t fund_len = conf_mem_list->mem_fund.fund_len; //Cache
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
-  parameters.conf_mem_list = conf_mem_list;
-  parameters.mode = DATA_MEM_LIST_FUND;
+  parameters.data = *data;
   
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -390,7 +390,7 @@ void facets_conform_fund(tri_mem_list * conf_mem_list, char * save_file){
   }
 }
 
-void facets_conform_tri_list(tri_list * conf_list, char * save_file){
+void facets_conform_tri_list(data_list * data, char * save_file){
   int changed = 1;
   tri_index indices;
   char tmp_file[100];
@@ -400,12 +400,12 @@ void facets_conform_tri_list(tri_list * conf_list, char * save_file){
   int l;
   size_t i,j,k;
   triangle cur_tri;
+  tri_list * conf_list = &data->list;
   facet_acute_data parameters;
   cube_points cube = gen_cube_points(conf_list->dim);
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
-  parameters.conf_list = conf_list;
-  parameters.mode = DATA_TRI_LIST;
+  parameters.data = *data;
 
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -438,13 +438,21 @@ void facets_conform_tri_list(tri_list * conf_list, char * save_file){
 /*
  * Calls the correct conform function. Depens on the memory type
  */
-void facets_conform(tri_mem_list * conf_mem_list, char * save_file){
-  if (conf_mem_list->mode == MEM_LIST_CUBE)
-    facets_conform_cube(conf_mem_list,save_file);
-  else if (conf_mem_list->mode == MEM_LIST_FUND)
-    facets_conform_fund(conf_mem_list, save_file);
-  else if (conf_mem_list->mode == MEM_LIST_TET)
-    facets_conform_tet(conf_mem_list,save_file);  
+void facets_conform(data_list * data, char * save_file){
+  switch (data->mode) {
+    case DATA_MEM_LIST_FUND:
+      facets_conform_fund(data, save_file);
+      break;
+    case DATA_MEM_LIST_CUBE:
+      facets_conform_cube(data, save_file);
+      break;
+    case DATA_MEM_LIST_TET:
+      facets_conform_tet(data,save_file);
+      break;
+    case DATA_TRI_LIST:
+      facets_conform_tri_list(data, save_file);
+      break;
+  }
 }
 
 /*

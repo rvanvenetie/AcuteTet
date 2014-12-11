@@ -189,7 +189,7 @@ long long C(int n, int r) {
 void test_tri_list(void) {
   int dim = 15;
   int len = 2500;
-  tri_list list = tri_list_init(dim);
+  tri_list list = tri_list_init(dim, MEM_LIST_FALSE);
   triangle * triang_list = malloc(sizeof(triangle)  * len);
   for (int i = 0; i < len; i++) {
     triang_list[i] = rand_triangle_tet(dim);

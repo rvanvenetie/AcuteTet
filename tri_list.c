@@ -119,6 +119,22 @@ size_t tri_list_count(tri_list * list) {
   return result;
 }
 
+size_t tri_list_memory(tri_list * list) {
+  int dim_size = (list->dim + 1) * (list->dim + 1) * (list->dim + 1);
+  size_t result = 0;
+
+  result += sizeof(int_arr *) * dim_size;
+  
+ 
+  for (int i = 0; i < dim_size; i++)  {
+    result += sizeof(int_arr) * (dim_size - i);
+    for (int j = 1; j < dim_size - i; j++){
+      result += sizeof(unsigned short) * list->t_arr[i][j].len;
+    }
+  }
+  return result;
+}
+
 int tri_list_to_file(tri_list * list, char * filename) {
   int dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   FILE * stream;
@@ -166,3 +182,85 @@ int tri_list_from_file(tri_list * list, char * filename) {
   return 1;
 }
 
+tri_list mem_list_to_tri_list(tri_mem_list * list) {
+  if (list->mode != MEM_LIST_FUND) 
+    return *(tri_list * )NULL;
+
+  int dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
+  tri_list result = tri_list_init(list->dim, MEM_LIST_FALSE);
+  for (int i = 0; i < dim_size; i++)
+    for (int j = 1; j < dim_size - i; j++) {
+      int cntr = 0;
+      result.t_arr[i][j].p_arr = malloc((dim_size - j - i) * sizeof(unsigned short));
+      for (int k = 1; k < dim_size - j - i; k++)
+      {
+        arr3 v1,v2,v3;
+        vertex_from_index_cube(i,list->dim, v1);
+        vertex_from_index_cube(i + j,list->dim, v2);
+        vertex_from_index_cube(i + j + k,list->dim, v3);
+        if (mem_list_get_fund(list,v1,v2,v3))
+          result.t_arr[i][j].p_arr[cntr++] = k;
+      }
+      result.t_arr[i][j].len = cntr;
+      result.t_arr[i][j].p_arr = realloc(result.t_arr[i][j].p_arr, cntr * sizeof(unsigned short));
+    }
+  return result;
+}
+
+
+/*
+ *
+ * Should be in a different file!
+ */
+
+
+data_list data_list_init(int dim, int mode, int init_value) {
+  data_list result;
+  result.mode = mode;
+  switch (mode){
+    case DATA_TRI_LIST:
+      result.list = tri_list_init(dim,init_value);
+      break;
+    case DATA_MEM_LIST_FUND:
+      result.mem_list = mem_list_init_fund(dim, init_value);
+      break;
+    case DATA_MEM_LIST_TET:
+      result.mem_list = mem_list_init_tet(dim, init_value);
+      break;
+    case DATA_MEM_LIST_CUBE:
+      result.mem_list = mem_list_init_cube(dim, init_value);
+      break;
+  }
+  return result;
+}
+size_t data_list_count(data_list * list) {
+  if (list->mode == DATA_TRI_LIST)
+    return tri_list_count(&list->list);
+  else
+    return mem_list_count(&list->mem_list);
+}
+size_t data_list_memory(data_list * list) {
+  if (list->mode == DATA_TRI_LIST)
+    return tri_list_memory(&list->list);
+  else
+    return mem_list_memory(&list->mem_list);
+}
+void data_list_free(data_list * list) {
+  if (list->mode == DATA_TRI_LIST)
+    tri_list_free(&list->list);
+  else
+    mem_list_free(&list->mem_list);
+}
+int data_list_from_file(data_list * result, int mode, char * filename) {
+  if (mode == DATA_TRI_LIST)
+    return tri_list_from_file(&result->list, filename);
+  else
+    return mem_list_from_file(&result->mem_list, filename);
+
+}
+int data_list_to_file(data_list * list, char * filename, int mode) {
+  if (mode == DATA_TRI_LIST)
+    return tri_list_to_file(&list->list, filename);
+  else
+    return mem_list_to_file(&list->mem_list, filename, mode);
+}
