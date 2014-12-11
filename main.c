@@ -8,6 +8,7 @@
 #include "triangle.h"
 #include "tetraeder.h"
 #include "mem_list.h"
+#include "tri_list.h"
 #include "omp.h"
 
 /*
@@ -24,27 +25,32 @@
 #define CUBE_LOG "output_cube_%d.log"
 #define FUND_LOG "output_fund_%d.log"
 #define TET_LOG  "output_tet_%d.log"
+#define TRI_LOG  "output_tri_%d.log"
 
 #define FUND_TMP "/local/rvveneti/fund_conf_%d.tet"
 #define TET_TMP  "/local/rvveneti/tet_conf_%d.tet"
 #define CUBE_TMP "/local/rvveneti/cube_verz_%d.tet"
+#define TRI_TMP   "/local/rvveneti/tri_verz_%d.tet"
 
 #define FUND_DATA "data/fund_conf_%d.tet"
 #define TET_DATA  "data/tet_conf_%d.tet"
 #define CUBE_DATA "data/cube_conf_%d.tet"
+#define TRI_DATA "data/tri_conf_%d.tet"
 
 
 #define LOOP_FUND MEM_LIST_FUND
 #define LOOP_CUBE MEM_LIST_CUBE
 #define LOOP_TET  MEM_LIST_TET 
+#define LOOP_TRI  TRI_LIST
 
 int main(int argc, char *argv[]) {
   char tmp_file[70],log_file[70],data_file[70];
-  tri_mem_list face_list;
+  tri_mem_list face_mem_list;
+  tri_list face_tri_list;
   double time_start,time_end;
   
   
-  int loop_type = LOOP_FUND; //By default loop over the fundamental domain
+  int loop_type = LOOP_TRI; //By default loop over the fundamental domain
   int loop_start = 1; //Start with dimension 1
   int loop_end   = 25; //End with dimension 25
   int help = 0;
@@ -103,6 +109,11 @@ int main(int argc, char *argv[]) {
        sprintf(tmp_file,  TET_TMP,i);
        sprintf(data_file, TET_DATA,i);
        break;
+      case LOOP_TRI:
+       sprintf(log_file,  TRI_LOG,i);
+       sprintf(tmp_file,  TRI_TMP,i);
+       sprintf(data_file, TRI_DATA,i);
+       break;
     }
       
     if (REDIRECT_OUTPUT) {
@@ -115,35 +126,51 @@ int main(int argc, char *argv[]) {
     time_start = omp_get_wtime();
     
   
-   
+
     
-    if (USE_FILE && mem_list_from_file(&face_list, tmp_file)) {
+    if (USE_FILE && (
+          (loop_type == LOOP_TRI && tri_list_from_file(&face_tri_list,tmp_file)) ||
+          mem_list_from_file(&face_mem_list, tmp_file))) {
       printf("Continuing previous data-set.\n");
     } else {
       printf("Initalizing new data-set.\n");
-      face_list = mem_list_init(i, loop_type, MEM_LIST_TRUE);
+      if (loop_type == LOOP_TRI)
+        face_tri_list = tri_list_init(i, MEM_LIST_TRUE);
+      else
+        face_mem_list = mem_list_init(i, loop_type, MEM_LIST_TRUE);
     }    
     time_end   = omp_get_wtime();
     printf("Took %f seconds to init the memory list.\n", time_end - time_start);
     time_start = omp_get_wtime();
-    printf("Size of the memory list is %zu bytes.\n", mem_list_memory(&face_list));
-    printf("Amount of start facets is %zu.\n", mem_list_count(&face_list));
-    printf("Start filtering triangles not conform:\n\n");
-    
-
-    facets_conform(&face_list, tmp_file);
+    if (loop_type == LOOP_TRI) {
+      printf("Amount of start facets is %zu.\n", tri_list_count(&face_tri_list));
+      printf("Start filtering triangles not conform:\n\n");
+      facets_conform_tri_list(&face_tri_list, tmp_file);
+      time_end = omp_get_wtime();
+      printf("\nAmount of conform facets after filtering: %zu\n", tri_list_count(&face_tri_list));    
+      printf("Total calculation Conforme Verzameling took %f seconds\n\n",time_end - time_start);
       
-    time_end = omp_get_wtime();
-    printf("\nAmount of conform facets after filtering: %zu\n", mem_list_count(&face_list));    
-    printf("Total calculation Conforme Verzameling took %f seconds\n\n",time_end - time_start);
-    
-    
-    
-    if (!mem_list_to_file(&face_list, data_file, MEM_LIST_SAVE_CLEAN))
-      printf("Failed to save conform data to file: %s\n", data_file);
-    //printf("Total memory used: %zu\n\n", mem_list_memory(&face_list));
-    
-    mem_list_free(&face_list);
+      tri_list_free(&face_tri_list);
+    } else {
+      printf("Size of the memory list is %zu bytes.\n", mem_list_memory(&face_mem_list));
+      printf("Amount of start facets is %zu.\n", mem_list_count(&face_mem_list));
+      printf("Start filtering triangles not conform:\n\n");
+
+
+      facets_conform(&face_mem_list, tmp_file);
+
+      time_end = omp_get_wtime();
+      printf("\nAmount of conform facets after filtering: %zu\n", mem_list_count(&face_mem_list));    
+      printf("Total calculation Conforme Verzameling took %f seconds\n\n",time_end - time_start);
+
+
+
+      if (!mem_list_to_file(&face_mem_list, data_file, MEM_LIST_SAVE_CLEAN))
+        printf("Failed to save conform data to file: %s\n", data_file);
+      //printf("Total memory used: %zu\n\n", mem_list_memory(&face_mem_list));
+
+      mem_list_free(&face_mem_list);
+    }
     if (REDIRECT_OUTPUT)
       fclose(stdout);
   }

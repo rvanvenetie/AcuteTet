@@ -3,7 +3,6 @@
 #include <inttypes.h>
 #include "vector.h"
 
-
 typedef struct tri_mem_tet{
   vert_index_array vert_to_index; 
   int tet_len; //Amount of vertices in the tetrahedron

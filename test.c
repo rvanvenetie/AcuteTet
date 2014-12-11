@@ -7,7 +7,7 @@
 #include "triangle.h"
 #include "tetraeder.h"
 #include "mem_list.h"
-
+#include "tri_list.h"
 
 void test_sym(void){
   for (int i = 1; i < 100; i++) {
@@ -174,6 +174,55 @@ void test_mem_list_tet(void) {
   free(triang_list);
   printf("MEM_LIST_TET test passed\n");
 }
+long long C(int n, int r) {
+  if(r > n / 2) r = n - r; // because C(n, r) == C(n, n - r)
+  long long ans = 1;
+  int i;
+
+  for(i = 1; i <= r; i++) {
+    ans *= n - r + i;
+    ans /= i;
+  }
+
+  return ans;
+}
+void test_tri_list(void) {
+  int dim = 15;
+  int len = 2500;
+  tri_list list = tri_list_init(dim);
+  triangle * triang_list = malloc(sizeof(triangle)  * len);
+  for (int i = 0; i < len; i++) {
+    triang_list[i] = rand_triangle_tet(dim);
+    tri_list_insert(&list, triang_list + i);
+  } //Inserted all the triangles
+  int count = tri_list_count(&list);
+  tri_list_to_file(&list, "test.tmp");
+  tri_list_free(&list);
+  tri_list_from_file(&list, "test.tmp");
+  if (count != tri_list_count(&list))
+    printf("ERROR 3 IN TRI_LIST");
+  for (int i = 0; i < len; i++) {
+    randomize_triangle(triang_list + i);
+    if (!tri_list_contains(&list, triang_list + i)) {
+      printf("ERROR 1 IN TRI_LIST");
+    }
+  } 
+  for (int i = 0; i < len; i++)  {
+    tri_list_remove(&list, triang_list + i );
+  }
+  if (tri_list_count(&list) > 0)
+    printf("ERROR 2 IN TRI_LIST\n");
+  tri_list_free(&list);
+  free(triang_list);
+
+  dim = 5;
+  tri_mem_list mem_list = mem_list_init_fund(dim, MEM_LIST_TRUE);
+  list = mem_list_to_tri_list(&mem_list);
+  if (C((dim + 1) * (dim + 1)  * (dim + 1), 3) != tri_list_count(&list))
+    printf("ERROR 4 IN TRI_LIST\n");
+  printf("TRI_LIST test passed\n");
+}
+
 
 int tetra_acute_normal(ptetra tet) {
   arr3 P[5]; //Edges
@@ -287,8 +336,13 @@ void test_prism(int dim) {
   }
   printf("Projection on facet-test passed\n");
 }
+
+
+
 int main(void){
+  /*
   test_mem_list_fund();
+  
   test_prism(20);
   test_boundary(5);
   test_sym();
@@ -296,4 +350,6 @@ int main(void){
   test_mem_list_tet();
   test_triangle_indices();
   test_tetra_disjunct();
+  */
+  test_tri_list();
 }
