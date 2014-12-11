@@ -188,13 +188,15 @@ tri_list mem_list_to_tri_list(tri_mem_list * list) {
 
   int dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   tri_list result = tri_list_init(list->dim, MEM_LIST_FALSE);
-  for (int i = 0; i < dim_size; i++)
-    for (int j = 1; j < dim_size - i; j++) {
-      int cntr = 0;
+  int i,j,k, cntr;
+  arr3 v1,v2,v3;
+  #pragma omp parallel for schedule(dynamic) private(j,k,i,v1,v2,v3, cntr)
+  for (i = 0; i < dim_size; i++)
+    for ( j = 1; j < dim_size - i; j++) {
+      cntr = 0;
       result.t_arr[i][j].p_arr = malloc((dim_size - j - i) * sizeof(unsigned short));
-      for (int k = 1; k < dim_size - j - i; k++)
+      for (k = 1; k < dim_size - j - i; k++)
       {
-        arr3 v1,v2,v3;
         vertex_from_index_cube(i,list->dim, v1);
         vertex_from_index_cube(i + j,list->dim, v2);
         vertex_from_index_cube(i + j + k,list->dim, v3);
@@ -252,6 +254,7 @@ void data_list_free(data_list * list) {
     mem_list_free(&list->mem_list);
 }
 int data_list_from_file(data_list * result, int mode, char * filename) {
+  result->mode = mode;
   if (mode == DATA_TRI_LIST)
     return tri_list_from_file(&result->list, filename);
   else
