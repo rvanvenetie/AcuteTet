@@ -175,7 +175,7 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
           dotArr3(data->cube->points[i],side_normals[1]) < side_d[1] &&
           dotArr3(data->cube->points[i],side_normals[2]) < side_d[2] &&    //Dotprod < tri_d implies lies below
           tetra_acute_optimized(triang,data->cube->points[i]) && //Tetrahedron is acute
-          facet_tetra_list(triang, data->cube->points[i], &data->data)) //All facets are in the conf_mem_list
+          facet_tetra_list(triang, data->cube->points[i], data->data)) //All facets are in the conf_mem_list
       { //Passed all tests, we have found a correct tetrahedron on this side.
         if (dotprod > tri_d) 
           data->acute_above = 1;
@@ -214,7 +214,7 @@ void facets_conform_cube(data_list * data, char * save_file){
   cube_points fund = gen_fund_points(conf_mem_list->dim);
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
-  parameters.data = *data;
+  parameters.data = data;
   
   double time_start =0 , time_end = 0;
   while (changed) {
@@ -265,7 +265,7 @@ void facets_conform_tet(data_list * data, char * save_file){
   cube_points tet = gen_tet_points(conf_mem_list->dim);
   parameters.cube = &tet;
   parameters.boundary_func = &triangle_boundary_tet;
-  parameters.data = *data;
+  parameters.data = data;
   
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -338,7 +338,7 @@ void facets_conform_fund(data_list * data, char * save_file){
   size_t fund_len = conf_mem_list->mem_fund.fund_len; //Cache
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
-  parameters.data = *data;
+  parameters.data = data;
   
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -405,7 +405,7 @@ void facets_conform_tri_list(data_list * data, char * save_file){
   cube_points cube = gen_cube_points(conf_list->dim);
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
-  parameters.data = *data;
+  parameters.data = data;
 
   double time_start =0 , time_end = 0, time_save;
   while (changed) {

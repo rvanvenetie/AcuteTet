@@ -37,7 +37,7 @@ typedef struct
 
 
 typedef struct facet_acute_data {
-  data_list  data;
+  data_list *  data;
   cube_points * cube;
   //Store whether facet has one tetra acute above, acute below
   int acute_above, acute_below;
