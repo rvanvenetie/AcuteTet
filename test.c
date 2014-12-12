@@ -363,17 +363,18 @@ void test_prism(int dim) {
 
 
 void test_tetra_disjunct(void) {
+  int dim = 16;
   tetra t1 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,6}}};
   triangle tri = (triangle) {{{5,5,5},{6,5,5},{5,6,5}}};
   triangle tri2 = (triangle) {{{5,6,5},{6,5,5},{5,5,6}}};
   tetra t2 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,4}}};
 
-  printf("Test disjunct: %d\n", tet_tet_disjoint(&t1,&t2));
-  printf("Tri tet distjunct: %d %d\n", tri_tet_disjoint(&tri,&t1), tri_tet_disjoint(&tri,&t1));
+  printf("Test disjunct: %d\n", tet_tet_disjoint(&t1,&t2,dim));
+  printf("Tri tet distjunct: %d %d\n", tri_tet_disjoint(&tri,&t1,dim), tri_tet_disjoint(&tri,&t1,dim));
 
   tetra t3 = (tetra) {{{0,0,0}, {1,1,0},{2,0,0},{0,0,5}}};
   triangle tri3= (triangle) {{{0,0,0}, {2,2,0},{3,0,0}}};
-  printf("Tri tet disjunct: %d\n", tri_tet_disjoint(&tri3, &t3));
+  printf("Tri tet disjunct: %d\n", tri_tet_disjoint(&tri3, &t3,dim));
   //THIS IS PROBLEM!!
 }
 
