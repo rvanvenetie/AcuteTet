@@ -26,7 +26,6 @@ void triangle_normal(ptriangle triang, arr3 normal);
 void print_triangle(ptriangle tet);
 void triangle_symmetry(ptriangle triang, int sym,int dim, ptriangle result);
 
-
 /*
  * Calculates the edge vectors of the triangle given by 3 points: v0, v1, v2.
  */

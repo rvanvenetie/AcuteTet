@@ -59,3 +59,4 @@ void triangle_symmetry(ptriangle triang, int sym,int dim, ptriangle res) {
   apply_symmetry(sym, dim, triang->vertices[1], res->vertices[1]);
   apply_symmetry(sym, dim, triang->vertices[2], res->vertices[2]);
 }
+

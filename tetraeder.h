@@ -46,6 +46,8 @@ typedef struct facet_acute_data {
 } facet_acute_data;
 
 
+int tri_tet_share_facet(ptetra tet, arr3 v0, arr3 v1, arr3 v2, int dim);
+int tet_tet_share_facet(ptetra t1, ptetra t2, int dim);
 void tetra_normals(ptetra tet, arr3 * normals);
 int tetra_acute(ptetra tet);
 int tetra_acute_optimized(ptriangle tet, arr3 cube_pt);

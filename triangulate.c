@@ -52,11 +52,25 @@ int vert_vert_disjoint_axis(arr3 * vert1, int len1, arr3 * vert2, int len2,arr3 
   /*
    * Disjoint if range A is completely after range B, or that range A is completely before B.
    */
-  return (min_1 >= max_2 || max_1 <= min_1);  //DISJOINT = 1
+  if (min_1 > max_2 || max_1 < min_1)
+    return DISJOINT;
+  else if (min_1 >= max_2 || max_1 <= min_1)
+    return TOUCH;
+  else
+    return INTERSECT;
 }
 
 int tet_tet_disjoint_axis(ptetra t1, ptetra t2, arr3 axis) {
-  return vert_vert_disjoint_axis(t1->vertices, 4, t2->vertices, 4, axis);
+  /*
+   * Check if we have a TOUCH, then insert code that checks if t1 and t2 share a face. If
+   * TOUCH but no shared face, we have a collision.
+   */
+  int collision = vert_vert_disjoint_axis(t1->vertices, 4, t2->vertices, 4, axis);
+  if (collision == TOUCH) {
+    collision = DISJOINT;
+
+  }
+  return collision;
 }
 
 /*
@@ -136,6 +150,9 @@ int tet_tet_list_disjoint(ptetra tet, ptetra  tet_list, int list_len) {
 }
 
 int tri_tet_disjoint_axis(ptriangle tri, ptetra tet, arr3 axis) {
+  /*
+   * Insert code that handles touch
+   */
   return vert_vert_disjoint_axis(tri->vertices, 3, tet->vertices, 4, axis);
 }
 
@@ -309,6 +326,7 @@ size_t filter_tri_list_disjoint_tet(tri_list * list, ptetra tet) {
 
     for (j = i; j < dim_size; j++) {
       vertex_from_index_cube(j, list->dim, cur_tri.vertices[1]);
+
       for (l = list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
         k = list->t_arr[i][j-i].p_arr[l] +  j;
 
@@ -359,7 +377,6 @@ ptriangulation triangulate_cube(data_list * data) {
 
   //While we have triangles on the boundary..
   while (result->bound_len > 0) {
-    //Choose a random triangle on the boundary
     /*
      * We are going to add a tetrahedron on the boundary triangle.
      * To do so, we select a random triangle on the boundary. Then we generate all the
@@ -409,9 +426,10 @@ ptriangulation triangulate_cube(data_list * data) {
      * Conform the resulting set of triangles. We probably do not want to do this step every time,
      * what is a good measure?
      */
-
+    facets_conform(data, NULL);
 
     free(tet_list);
+
   }
   free(cube.points);
   printf("Triangulation has length of %zu\n", result->tetra_len);

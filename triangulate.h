@@ -14,6 +14,7 @@ typedef struct triangulation {
   int dim;
 } triangulation, * ptriangulation;
 
+#define TOUCH 2
 #define DISJOINT 1
 #define INTERSECT 0
 
