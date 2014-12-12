@@ -189,36 +189,58 @@ tri_list mem_list_to_tri_list(tri_mem_list * list) {
 
   size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   tri_list result = tri_list_init(list->dim, MEM_LIST_FALSE);
-  size_t i,j,k, cntr, t;
-  
+  size_t i,j, cntr, t,tot_cntr, it_cntr;
+  unsigned short k;
+  int sym_num; 
+  tri_index cur_index, sym_index;
   unsigned short * tmp_array;
   arr3 v1,v2,v3;
   fprintf(stdout, "Starting the parallel loop\n");
-  #pragma omp parallel private(j,t,k,i,v1,v2,v3, cntr, tmp_array)
+  #pragma omp parallel private(j,t,k,i,v1,v2,v3, cntr, tmp_array, tot_cntr, it_cntr, cur_index, sym_num, sym_index)
   {
     tmp_array = malloc(dim_size * sizeof(unsigned short));
     t = 0;
+    tot_cntr = 0;
     printf("[%d] has ptr %d\n", omp_get_thread_num(), tmp_array);
-    #pragma omp for schedule(dynamic) 
+    #pragma omp for schedule(dynamic, 20)
     for (i = 0; i < dim_size; i++) {
-      vertex_from_index_cube(i,list->dim, v1);
+      it_cntr = 0;
+
+      vertex_from_index_cube(i,list->dim, v1); //Get point in cube
+      cur_index[0] = vertex_to_index_fund(v1,list->mem_fund.vert_to_index); //Convert to index in mem_list
+      sym_num = list->mem_fund.vert_fund_sym[cur_index[0]]; //Calculate symmetry needed
+      cur_index[0] = list->mem_fund.sym_index[cur_index[0]][sym_num]; //Store symmetried point
+
       for ( j = 1; j < dim_size - i; j++) {
         cntr = 0;
+
         vertex_from_index_cube(i + j,list->dim, v2);
+        cur_index[1] = vertex_to_index_fund(v2,list->mem_fund.vert_to_index);
+        cur_index[1] = list->mem_fund.sym_index[cur_index[1]][sym_num];
+
         for (k = 1; k < dim_size - j - i; k++)
         {
           vertex_from_index_cube(i + j + k,list->dim, v3);
-          if (mem_list_get_fund(list,v1,v2,v3))
+          cur_index[2] = vertex_to_index_fund(v3,list->mem_fund.vert_to_index);
+          cur_index[2] = list->mem_fund.sym_index[cur_index[2]][sym_num];
+
+          //Apply symmetry_number and return the unique_index of this transformed triangle.
+          indices_unique_fund(cur_index[0],cur_index[1],cur_index[2],sym_index);
+
+          //Sym_index now holds the index of the triangle given by v1,v2,v3 in FUND_MEM_LIST
+          if (GMI(list->t_arr,sym_index))
             tmp_array[cntr++] = k;
         }
         result.t_arr[i][j].len = cntr;
         result.t_arr[i][j].p_arr = malloc(cntr * sizeof(unsigned short));
         memcpy(result.t_arr[i][j].p_arr, tmp_array, cntr * sizeof(unsigned short));
+
+        it_cntr += cntr;
       }
+      tot_cntr += it_cntr;
       t++;
-      if (t < 9)
-        printf( "[%zu, %d]\n", i, omp_get_thread_num());
-      else {
+      printf("[%zu, %d] Iteration: %zu Total: %zu \n", i, omp_get_thread_num(),it_cntr, tot_cntr);
+      if (t == 9){
         printf( "[%zu,%d] Total count %zu\n",i, omp_get_thread_num(), tri_list_count(&result));
         t = 0;
       }
