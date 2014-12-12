@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "triangle.h"
 #include "tri_list.h"
+#include "omp.h"
 /*
  * Assumes we have a sorted array. Uses binary search
  * to find the index of i in the array. Returns -1 if the
@@ -52,7 +53,7 @@ void tri_list_insert(tri_list * list, ptriangle  triang) {
     return;
 
   unsigned short * new_arr = malloc((points->len + 1) * sizeof(unsigned short));
-  int i = 0;
+  size_t i = 0;
   while (i < points->len && points->p_arr[i] < idx[2] ) {
     new_arr[i] = points->p_arr[i];
     i++;
@@ -186,26 +187,43 @@ tri_list mem_list_to_tri_list(tri_mem_list * list) {
   if (list->mode != MEM_LIST_FUND) 
     return *(tri_list * )NULL;
 
-  int dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
+  size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   tri_list result = tri_list_init(list->dim, MEM_LIST_FALSE);
-  int i,j,k, cntr;
+  size_t i,j,k, cntr, t;
+  
+  unsigned short * tmp_array;
   arr3 v1,v2,v3;
-  #pragma omp parallel for schedule(dynamic) private(j,k,i,v1,v2,v3, cntr)
-  for (i = 0; i < dim_size; i++)
-    for ( j = 1; j < dim_size - i; j++) {
-      cntr = 0;
-      result.t_arr[i][j].p_arr = malloc((dim_size - j - i) * sizeof(unsigned short));
-      for (k = 1; k < dim_size - j - i; k++)
-      {
-        vertex_from_index_cube(i,list->dim, v1);
+  fprintf(stdout, "Starting the parallel loop\n");
+  #pragma omp parallel private(j,t,k,i,v1,v2,v3, cntr, tmp_array)
+  {
+    tmp_array = malloc(dim_size * sizeof(unsigned short));
+    t = 0;
+    printf("[%d] has ptr %d\n", omp_get_thread_num(), tmp_array);
+    #pragma omp for schedule(dynamic) 
+    for (i = 0; i < dim_size; i++) {
+      vertex_from_index_cube(i,list->dim, v1);
+      for ( j = 1; j < dim_size - i; j++) {
+        cntr = 0;
         vertex_from_index_cube(i + j,list->dim, v2);
-        vertex_from_index_cube(i + j + k,list->dim, v3);
-        if (mem_list_get_fund(list,v1,v2,v3))
-          result.t_arr[i][j].p_arr[cntr++] = k;
+        for (k = 1; k < dim_size - j - i; k++)
+        {
+          vertex_from_index_cube(i + j + k,list->dim, v3);
+          if (mem_list_get_fund(list,v1,v2,v3))
+            tmp_array[cntr++] = k;
+        }
+        result.t_arr[i][j].len = cntr;
+        result.t_arr[i][j].p_arr = malloc(cntr * sizeof(unsigned short));
+        memcpy(result.t_arr[i][j].p_arr, tmp_array, cntr * sizeof(unsigned short));
       }
-      result.t_arr[i][j].len = cntr;
-      result.t_arr[i][j].p_arr = realloc(result.t_arr[i][j].p_arr, cntr * sizeof(unsigned short));
+      t++;
+      if (t < 9)
+        printf( "[%zu, %d]\n", i, omp_get_thread_num());
+      else {
+        printf( "[%zu,%d] Total count %zu\n",i, omp_get_thread_num(), tri_list_count(&result));
+        t = 0;
+      }
     }
+  }
   return result;
 }
 

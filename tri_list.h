@@ -5,7 +5,7 @@
 
 typedef struct int_arr{
   unsigned short * p_arr;
-  int len;
+  size_t len;
 } int_arr;
 /*
  * This is a storage class for triangles. It does so by creating a 3D-array.
