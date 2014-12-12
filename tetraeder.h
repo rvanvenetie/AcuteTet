@@ -51,5 +51,6 @@ int tetra_acute(ptetra tet);
 int tetra_acute_optimized(ptriangle tet, arr3 cube_pt);
 int tetrahedra_acute(int dim);
 void facets_conform(data_list * conform_list, char * save_file);
+int facet_conform(ptriangle triang, facet_acute_data * data);
 void print_tetra(ptetra tet);
 #endif

@@ -187,9 +187,9 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
 
         if (data->store_tetra) { //We need to store al tetra
           tetra tet = (tetra)  {{{triang->vertices[0][0],triang->vertices[0][1],triang->vertices[0][2]},
-            {triang->vertices[1][0],triang->vertices[1][1],triang->vertices[1][2]},
-            {triang->vertices[2][0],triang->vertices[2][1],triang->vertices[2][2]},
-            {data->cube->points[i][0],data->cube->points[i][1],data->cube->points[i][2]}}};
+                                 {triang->vertices[1][0],triang->vertices[1][1],triang->vertices[1][2]},
+                                 {triang->vertices[2][0],triang->vertices[2][1],triang->vertices[2][2]},
+                                 {data->cube->points[i][0],data->cube->points[i][1],data->cube->points[i][2]}}};
           if (dotprod > tri_d) 
           {
             data->tet_above = realloc(data->tet_above, (data->tet_above_len + 1 ) * sizeof(tet));
@@ -458,12 +458,12 @@ void facets_conform_tri_list(data_list * data, char * save_file){
     time_start = omp_get_wtime();
     time_save = save_interval;
 
-    #pragma omp parallel for schedule(dynamic) private(j,k,i,l,cur_tri,indices)  firstprivate(parameters)
+    #pragma omp parallel for schedule(dynamic,conf_list->dim) private(j,k,i,l,cur_tri,indices)  firstprivate(parameters)
     for (i = 0; i < cube.len; i++) {
       for (j = i; j < cube.len; j++) {
         for (l = conf_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
           k = conf_list->t_arr[i][j-i].p_arr[l] +  j;
-
+          //Just vertex_from_index_cube?
           cur_tri = (triangle) {{{cube.points[i][0],cube.points[i][1],cube.points[i][2]},
                                  {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
                                  {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};

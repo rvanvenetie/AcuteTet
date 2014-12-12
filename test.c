@@ -8,6 +8,8 @@
 #include "tetraeder.h"
 #include "mem_list.h"
 #include "tri_list.h"
+#include "triangulate.h"
+
 
 void test_sym(void){
   for (int i = 1; i < 100; i++) {
@@ -317,12 +319,6 @@ void test_tetra_normals(void) {
   printf("Normals on tetrahedra-test passed\n");
 }
 
-void test_tetra_disjunct(void) {
-  //tetra t1 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,6}}};
-  //tetra t2 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,4}}};
-  
-  //printf("Test disjunct: %d", tetra_tetra_disjoint(&t1,&t2));
-}
 
 void test_boundary(int dim) {
   for (int i = 0; i < 15000; i ++) {
@@ -366,8 +362,18 @@ void test_prism(int dim) {
 }
 
 
+void test_tetra_disjunct(void) {
+  tetra t1 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,6}}};
+  triangle tri = (triangle) {{{5,5,5},{6,5,5},{5,6,5}}};
+  triangle tri2 = (triangle) {{{5,6,5},{6,5,5},{5,5,6}}};
+  tetra t2 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,4}}};
+
+  printf("Test disjunct: %d", tet_tet_disjoint(&t1,&t2));
+  printf("Tri tet distjunct: %d %d", tri_tet_disjoint(&tri,&t1), tri_tet_disjoint(&tri,&t1));
+}
 
 int main(void){
+  test_tetra_disjunct();
   /*
   test_mem_list_fund();
   
@@ -379,5 +385,5 @@ int main(void){
   test_triangle_indices();
   test_tetra_disjunct();
   */
-  test_tri_list();
+//  test_tri_list();
 }
