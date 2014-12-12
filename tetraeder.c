@@ -137,6 +137,13 @@ int facet_tetra_list(ptriangle triang, arr3 apex, data_list * data) {
  * 
  */
 int facet_conform(ptriangle triang, facet_acute_data * data) {
+  if (data->store_tetra)
+  {
+    data->tet_above = NULL;
+    data->tet_above_len = 0;
+    data->tet_below = NULL;
+    data->tet_below_len = 0;
+  }
   arr3 P[3];
   //Calculate the three edges of this triangle
   triangle_sides(triang->vertices[0], triang->vertices[1], triang->vertices[2],P);
@@ -177,13 +184,45 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
           tetra_acute_optimized(triang,data->cube->points[i]) && //Tetrahedron is acute
           facet_tetra_list(triang, data->cube->points[i], data->data)) //All facets are in the conf_mem_list
       { //Passed all tests, we have found a correct tetrahedron on this side.
-        if (dotprod > tri_d) 
-          data->acute_above = 1;
-        else 
-          data->acute_below = 1;
-        if ((data->acute_above && data->acute_below) || data->boundary_triangle)
-          return 1;    
+
+        if (data->store_tetra) { //We need to store al tetra
+          tetra tet = (tetra)  {{{triang->vertices[0][0],triang->vertices[0][1],triang->vertices[0][2]},
+            {triang->vertices[1][0],triang->vertices[1][1],triang->vertices[1][2]},
+            {triang->vertices[2][0],triang->vertices[2][1],triang->vertices[2][2]},
+            {data->cube->points[i][0],data->cube->points[i][1],data->cube->points[i][2]}}};
+          if (dotprod > tri_d) 
+          {
+            data->tet_above = realloc(data->tet_above, (data->tet_above_len + 1 ) * sizeof(tet));
+            data->tet_above[data->tet_above_len++] = tet;
+          } else {
+            data->tet_below = realloc(data->tet_below, (data->tet_below_len + 1 ) * sizeof(tet));
+            data->tet_below[data->tet_below_len++] = tet;
+          }
+        } else {
+
+          if (dotprod > tri_d) 
+            data->acute_above = 1;
+          else 
+            data->acute_below = 1;
+
+          if ((data->acute_above && data->acute_below) || data->boundary_triangle)
+            return 1;    
+        }
+
+
       }
+  }
+
+  //If we stored all tetrahedrons, we now need to check if this facet is conform
+  if (data->store_tetra) {
+    data->acute_above = (data->tet_above_len > 0);
+    data->acute_below = (data->tet_below_len > 0);
+    
+    if (data->acute_above && data->acute_below)
+      return 1;
+
+    if (data->boundary_triangle && (data->acute_above || data->acute_below))
+      return 1;
   }
   return 0;  
 }
@@ -213,6 +252,7 @@ void facets_conform_cube(data_list * data, char * save_file){
   cube_points cube = gen_cube_points(conf_mem_list->dim);
   cube_points fund = gen_fund_points(conf_mem_list->dim);
   parameters.cube = &cube;
+  parameters.store_tetra = 0;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.data = data;
   
@@ -266,6 +306,7 @@ void facets_conform_tet(data_list * data, char * save_file){
   parameters.cube = &tet;
   parameters.boundary_func = &triangle_boundary_tet;
   parameters.data = data;
+  parameters.store_tetra = 0;
   
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -339,6 +380,7 @@ void facets_conform_fund(data_list * data, char * save_file){
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.data = data;
+  parameters.store_tetra = 0;
   
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -406,6 +448,7 @@ void facets_conform_tri_list(data_list * data, char * save_file){
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.data = data;
+  parameters.store_tetra = 0;
 
   double time_start =0 , time_end = 0, time_save;
   while (changed) {

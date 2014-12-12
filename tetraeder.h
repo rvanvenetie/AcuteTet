@@ -24,16 +24,6 @@ typedef struct
   arr3 dim;   
 } tetra_list;
 
-/*
- * Struct holds whether this triangle has atleast one acute tetrahedron "above"
- * and "below". Where above/below is defined by the normal on this triangle.
- * Furthermore holds whether this triangle is on the boundary of the cube.
- */
-typedef struct
-{
-  int acute_above, acute_below;
-  int boundary_above, boundary_below;
-} triang_tetra_result, *ptriang_tetra_result;
 
 
 typedef struct facet_acute_data {
@@ -47,7 +37,12 @@ typedef struct facet_acute_data {
   //int (*facets_list)(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
 
   int boundary_triangle;
-
+  
+  int store_tetra;
+  ptetra tet_above;
+  ptetra tet_below;
+  size_t tet_above_len;
+  size_t tet_below_len;
 } facet_acute_data;
 
 
