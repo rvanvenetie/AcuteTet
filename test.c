@@ -190,6 +190,8 @@ void test_tri_list(void) {
   int dim = 15;
   int len = 2500;
   tri_list list = tri_list_init(dim, MEM_LIST_FALSE);
+  if (tri_list_count(&list) != 0)
+    printf("BLABLA ERROR TRI_LIST\n");
   triangle * triang_list = malloc(sizeof(triangle)  * len);
   for (int i = 0; i < len; i++) {
     triang_list[i] = rand_triangle_tet(dim);
@@ -220,6 +222,32 @@ void test_tri_list(void) {
   list = mem_list_to_tri_list(&mem_list);
   if (C((dim + 1) * (dim + 1)  * (dim + 1), 3) != tri_list_count(&list))
     printf("ERROR 4 IN TRI_LIST\n");
+  mem_list_free(&mem_list);
+  tri_list_free(&list);
+
+  mem_list = mem_list_init_fund(dim, MEM_LIST_FALSE);
+  triangle start_triangle = rand_triangle_tet(dim);
+  mem_list_set_fund(&mem_list, &start_triangle);
+  printf("Mem_list_count: %zu\n", mem_list_count(&mem_list));
+  list = mem_list_to_tri_list(&mem_list);
+  printf("Tri_list count: %zu\n", tri_list_count(&list));
+
+  for (int i = 0; i < 48; i++)
+  {
+    triangle sym_triangle;
+    triangle_symmetry(&start_triangle, i, dim, &sym_triangle);
+    if (!tri_list_contains(&list, &sym_triangle))
+      printf("ERROR 5 IN TRI_LIST\n");
+  }
+  for (int i = 0; i < 48; i++)
+  {
+    triangle sym_triangle;
+    triangle_symmetry(&start_triangle, i, dim, &sym_triangle);
+    tri_list_remove(&list, &sym_triangle);
+  }
+
+  if (tri_list_count(&list) != 0)
+    printf("ERROR 6 IN TRI_LIST\n");
   printf("TRI_LIST test passed\n");
 }
 
