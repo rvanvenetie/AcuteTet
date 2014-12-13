@@ -111,25 +111,25 @@ void tri_list_free(tri_list * list) {
   free(list->t_arr);
 }
 size_t tri_list_count(tri_list * list) {
-  int dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
-  int result = 0;
-  for (int i = 0; i < dim_size; i++) {
-    for (int j = 0; j < dim_size - i; j++) 
+  size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
+  size_t result = 0;
+  for (size_t i = 0; i < dim_size; i++) {
+    for (size_t j = 0; j < dim_size - i; j++) 
       result += list->t_arr[i][j].len;
   }
   return result;
 }
 
 size_t tri_list_memory(tri_list * list) {
-  int dim_size = (list->dim + 1) * (list->dim + 1) * (list->dim + 1);
+  size_t dim_size = (list->dim + 1) * (list->dim + 1) * (list->dim + 1);
   size_t result = 0;
 
   result += sizeof(int_arr *) * dim_size;
   
  
-  for (int i = 0; i < dim_size; i++)  {
+  for (size_t i = 0; i < dim_size; i++)  {
     result += sizeof(int_arr) * (dim_size - i);
-    for (int j = 1; j < dim_size - i; j++){
+    for (size_t j = 1; j < dim_size - i; j++){
       result += sizeof(unsigned short) * list->t_arr[i][j].len;
     }
   }
@@ -158,7 +158,6 @@ int tri_list_to_file(tri_list * list, char * filename) {
 }
 
 int tri_list_from_file(tri_list * list, char * filename) {
-  int dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   FILE * stream;
   stream = fopen(filename, "rb");
   if (stream == NULL)
@@ -168,10 +167,11 @@ int tri_list_from_file(tri_list * list, char * filename) {
   if (fread(list, sizeof(tri_list), 1, stream) < 1)
     return 0;
   
+  size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   *list = tri_list_init(list->dim,MEM_LIST_FALSE);
  
-  for (int i = 0; i < dim_size; i++) {
-    for (int j = 0; j < dim_size - i; j++) {
+  for (size_t i = 0; i < dim_size; i++) {
+    for (size_t j = 0; j < dim_size - i; j++) {
       if (fread(&list->t_arr[i][j].len, sizeof(list->t_arr[i][j].len), 1, stream) < 1)
         return 0;
       list->t_arr[i][j].p_arr = malloc(list->t_arr[i][j].len  * sizeof(unsigned short));
@@ -189,22 +189,17 @@ tri_list mem_list_to_tri_list(tri_mem_list * list) {
 
   size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   tri_list result = tri_list_init(list->dim, MEM_LIST_FALSE);
-  size_t i,j, cntr, t,tot_cntr, it_cntr;
+  size_t i,j, cntr;
   unsigned short k;
   int sym_num; 
   tri_index cur_index, sym_index;
   unsigned short * tmp_array;
   arr3 v1,v2,v3;
-  fprintf(stdout, "Starting the parallel loop\n");
-  #pragma omp parallel private(j,t,k,i,v1,v2,v3, cntr, tmp_array, tot_cntr, it_cntr, cur_index, sym_num, sym_index)
+  #pragma omp parallel private(j,k,i,v1,v2,v3, cntr, tmp_array, cur_index, sym_num, sym_index)
   {
     tmp_array = malloc(dim_size * sizeof(unsigned short));
-    t = 0;
-    tot_cntr = 0;
-    printf("[%d] has ptr %d\n", omp_get_thread_num(), tmp_array);
     #pragma omp for schedule(dynamic, 20)
     for (i = 0; i < dim_size; i++) {
-      it_cntr = 0;
 
       vertex_from_index_cube(i,list->dim, v1); //Get point in cube
       cur_index[0] = vertex_to_index_fund(v1,list->mem_fund.vert_to_index); //Convert to index in mem_list
@@ -234,15 +229,6 @@ tri_list mem_list_to_tri_list(tri_mem_list * list) {
         result.t_arr[i][j].len = cntr;
         result.t_arr[i][j].p_arr = malloc(cntr * sizeof(unsigned short));
         memcpy(result.t_arr[i][j].p_arr, tmp_array, cntr * sizeof(unsigned short));
-
-        it_cntr += cntr;
-      }
-      tot_cntr += it_cntr;
-      t++;
-      printf("[%zu, %d] Iteration: %zu Total: %zu \n", i, omp_get_thread_num(),it_cntr, tot_cntr);
-      if (t == 9){
-        printf( "[%zu,%d] Total count %zu\n",i, omp_get_thread_num(), tri_list_count(&result));
-        t = 0;
       }
     }
   }

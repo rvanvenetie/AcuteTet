@@ -255,7 +255,7 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
   return 0;  
 }
 //if save_file is set. The conf_mem_list is saved to this file every hour
-#define save_interval 60*60
+#define save_interval 15*60
 
 /*
  * Filters all non-conform facets in the conf_mem_list. Keeps looping
@@ -462,7 +462,6 @@ void facets_conform_fund(data_list * data, char * save_file){
 
 void facets_conform_tri_list(data_list * data, char * save_file){
   int changed = 1;
-  tri_index indices;
   char tmp_file[100];
   if (save_file) 
     sprintf(tmp_file,"%s_tmp", save_file);
@@ -486,7 +485,7 @@ void facets_conform_tri_list(data_list * data, char * save_file){
     time_start = omp_get_wtime();
     time_save = save_interval;
 
-    #pragma omp parallel for schedule(dynamic,conf_list->dim) private(j,k,i,l,cur_tri,indices)  firstprivate(parameters)
+    #pragma omp parallel for schedule(dynamic,conf_list->dim) private(j,k,i,l,cur_tri)  firstprivate(parameters)
     for (i = 0; i < cube.len; i++) {
       for (j = i; j < cube.len; j++) {
         for (l = conf_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
@@ -499,6 +498,12 @@ void facets_conform_tri_list(data_list * data, char * save_file){
             changed = 1;
             tri_list_remove(conf_list, &cur_tri);
           }
+        }
+        if (omp_get_thread_num() == 0 && //Only let master save to the file
+          ((omp_get_wtime() - time_start) > time_save))  //Time to save current progress
+        {  
+          printf("We have %zu facets left.\n", tri_list_count(conf_list));
+          time_save += save_interval;
         }
       }
     }

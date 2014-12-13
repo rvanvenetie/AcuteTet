@@ -19,8 +19,8 @@
  * If <dim_2> is also specified, it loops from dim_1 to dim_2.
  */
  
-#define USE_FILE 0
-#define REDIRECT_OUTPUT 0
+#define USE_FILE 1
+#define REDIRECT_OUTPUT 1
 
 #define CUBE_LOG "output_cube_%d.log"
 #define FUND_LOG "output_fund_%d.log"
@@ -30,7 +30,7 @@
 #define FUND_TMP "/local/rvveneti/fund_conf_%d.tet"
 #define TET_TMP  "/local/rvveneti/tet_conf_%d.tet"
 #define CUBE_TMP "/local/rvveneti/cube_verz_%d.tet"
-#define TRI_TMP   "/local/rvveneti/tri_verz_%d.tet"
+#define TRI_TMP   "/local/rvveneti/tri_conf_%d.tet"
 
 #define FUND_DATA "data/fund_conf_%d.tet"
 #define TET_DATA  "data/tet_conf_%d.tet"
@@ -44,7 +44,7 @@
 #define LOOP_TRI  DATA_TRI_LIST
 
 int main(int argc, char *argv[]) {
-
+/*
   if (freopen("/local/rvveneti/mem_to_tri_list.log","a",stdout) == NULL)
     printf("Redirecting output failed\n");
   setvbuf(stdout, NULL,_IOLBF, 1024);
@@ -60,12 +60,13 @@ int main(int argc, char *argv[]) {
   tri_list_to_file(&list, "/local/rvveneti/tri_conf_30.tet");
 
 return 0;
+*/
   char tmp_file[70],log_file[70],data_file[70];
   data_list face_list;
   double time_start,time_end;
   
   
-  int loop_type = LOOP_TRI; //By default loop over the fundamental domain
+  int loop_type = LOOP_FUND; //By default loop over the fundamental domain
   int loop_start = 1; //Start with dimension 1
   int loop_end   = 25; //End with dimension 25
   int help = 0;
@@ -74,6 +75,8 @@ return 0;
       loop_type = LOOP_CUBE;
     else if (argv[1][0] == 't')
       loop_type = LOOP_TET;
+    else if (argv[1][0] == 'l')
+      loop_type = LOOP_TRI;
     else if (!(argv[1][0] == 'f')) {
       help = 1;
     }
@@ -87,7 +90,7 @@ return 0;
   if (help) {
       printf("Illegal parameters. \n");
       printf("Parameters are <type> <p> or <type> <start p> <end p>\n");
-      printf("  <type> can be cube/fund/tet.\n");
+      printf("  <type> can be cube/fund/tet/list.\n");
       printf("   - Cube: Stores all the facets in the cube. \n");
       printf("   - Fund: Only stores facets with a point in the fundamental domain. \n");
       printf("   - Tet:  Tries to find a Conforme Verzameling for the unit tetrahedron instead of the cube. \n");
@@ -165,7 +168,8 @@ return 0;
 
     if (!data_list_to_file(&face_list, data_file, MEM_LIST_SAVE_CLEAN))
       printf("Failed to save conform data to file: %s\n", data_file);
-    //printf("Total memory used: %zu\n\n", data_list_memory(&face_list));
+
+    printf("Total memory used: %zu\n\n", data_list_memory(&face_list));
 
     data_list_free(&face_list);
   
