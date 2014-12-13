@@ -19,6 +19,7 @@ typedef struct triangle_list
 
 
 int arr3_triangle_acute(arr3 v0, arr3 v1, arr3 v2);
+int triangle_acute(ptriangle triang);
 int triangle_boundary_cube(ptriangle triang, int dim);
 int triangle_boundary_tet(ptriangle triang, int dim);
 

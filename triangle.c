@@ -11,6 +11,11 @@ int arr3_triangle_acute(arr3 v0, arr3 v1, arr3 v2) {
   return triangle_P_acute(P);
 }
 
+int triangle_acute(ptriangle triang) {
+   return arr3_triangle_acute(triang->vertices[0], triang->vertices[1], triang->vertices[2]);  
+}
+
+
 void triangle_normal(ptriangle triang, arr3 normal) {
   arr3 P[2];
   subArr3(triang->vertices[1],triang->vertices[0],P[0]);

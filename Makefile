@@ -2,15 +2,24 @@ CC=gcc -fopenmp
 WARNING_FLAGS=-Wall -Wextra -Werror-implicit-function-declaration -Wshadow -Wstrict-prototypes -pedantic
 CFLAGS=  -g -O3 -std=gnu99 $(WARNING_FLAGS) -DINLINE_MACROS
 LDFLAGS= -lm 
-.c.o:
+OBJ= vector.o triangle.o tetraeder.o mem_list.o tri_list.o triangulation.o
+DEPS=$(OBJ:.o=.h)
+MAIN_OBJ= main.o $(OBJ)
+TEST_OBJ= test.o $(OBJ)
+TRIANG_OBJ= triangulate.o $(OBJ)
+
+%.o : %.c
 	$(CC) -c $(CFLAGS) $<
 
 all: main
-main: main.o vector.o triangle.o tetraeder.o  mem_list.o tri_list.o
-	$(CC) -o main main.o vector.o triangle.o tetraeder.o  mem_list.o tri_list.o  $(LDFLAGS)
+main: $(MAIN_OBJ) 
+	$(CC) -o main $(MAIN_OBJ) $(LDFLAGS)
 
-test: test.o vector.o triangle.o tetraeder.o  mem_list.o tri_list.o triangulate.o
-	$(CC) -o test test.o vector.o triangle.o tetraeder.o  mem_list.o tri_list.o triangulate.o  $(LDFLAGS)
+test: $(TEST_OBJ) 
+	$(CC) -o test $(TEST_OBJ) $(LDFLAGS)
+
+triang: $(TRIANG_OBJ)
+	$(CC) -o triang $(TRIANG_OBJ) $(LDFLAGS)
 	
 run: main
 	main
@@ -18,12 +27,11 @@ clean:
 	rm -f *.o
 	rm -f main
 
-vector.o   : vector.h vector.c
-triangle.o : vector.h triangle.h triangle.c
-tetraeder.o: vector.h triangle.h tetraeder.h tetraeder.c 
-triangulate.o: vector.h triangle.h tetraeder.h tri_list.h triangulate.h triangulate.c
-mem_list.o : vector.h triangle.h mem_list.h mem_list.c
-tri_list.o : mem_list.h tri_list.h tri_list.c 
-#datastructures.o: vector.h triangle.h tetraeder.h datastructures.h datastructures.c
-main.o     : vector.h triangle.h tetraeder.h mem_list.h tri_list.h main.c
-test.o     : vector.h triangle.h tetraeder.h mem_list.h  test.c
+vector.o     : vector.h 
+triangle.o   : vector.h triangle.h 
+mem_list.o   : vector.h triangle.h mem_list.h
+tri_list.o   : vector.h triangle.h mem_list.h tri_list.h 
+tetraeder.o  : vector.h triangle.h mem_list.h tri_list.h tetraeder.h
+triangulate.o: $(DEPS)
+main.o       : $(DEPS)
+test.o       : $(DEPS)

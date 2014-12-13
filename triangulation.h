@@ -21,4 +21,5 @@ typedef struct triangulation {
 int tet_tet_disjoint(ptetra t1, ptetra t2, int dim);
 int tri_tet_disjoint(ptriangle tri, ptetra tet, int dim);
 void triangulation_free(ptriangulation triang);
+ptriangulation triangulate_cube(tri_list * list);
 #endif

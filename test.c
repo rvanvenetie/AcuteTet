@@ -8,7 +8,7 @@
 #include "tetraeder.h"
 #include "mem_list.h"
 #include "tri_list.h"
-#include "triangulate.h"
+#include "triangulation.h"
 
 
 void test_sym(void){
@@ -379,11 +379,6 @@ void test_tetra_disjunct(void) {
 }
 
 int main(void){
-  tri_list list; 
-  int res = tri_list_from_file(&list, "/local/rvveneti/tri_conf_30.tet");
-  printf("Reading succeeded? %d\n", res);
-  printf("Size %zu\n", tri_list_count(&list));
-  printf("Size %zu\n", tri_list_memory(&list));
   test_tetra_disjunct();
   /*
   test_mem_list_fund();

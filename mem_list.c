@@ -5,7 +5,6 @@
 #include <limits.h>
 #include "vector.h"
 #include "triangle.h"
-#include "tetraeder.h"
 #include "mem_list.h"
 
 /*

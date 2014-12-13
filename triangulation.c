@@ -2,11 +2,14 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "limits.h"
+#include <time.h>
+#include "vector.h"
 #include "triangle.h"
 #include "tetraeder.h"
+#include "mem_list.h"
 #include "tri_list.h"
-#include "triangulate.h"
+#include "omp.h"
+#include "triangulation.h"
 
 /*
  * Contains loads of functions which returns whether two objects
@@ -297,7 +300,6 @@ void add_tet_triangulation(ptetra tet, ptriangulation result) {
   result->tetra_len++;
   result->tetra = realloc(result->tetra,result->tetra_len * sizeof(tetra));
   result->tetra[result->tetra_len - 1] = *tet;
-  printf("Maar drie prints mogen hier komen");
   //Tetrahedron has 4 facets, check if facets are on boundary of triang / cube.
   //0,1,2
   update_boundary_triangulation(tet->vertices[0], tet->vertices[1], tet->vertices[2], result);
@@ -348,12 +350,9 @@ size_t filter_tri_list_disjoint_tet(tri_list * list, ptetra tet) {
   return (cnt - tri_list_count(list));
 }
 
-ptriangulation triangulate_cube(data_list * data) { 
-  if (data->mode != DATA_TRI_LIST)
-    return NULL;
+ptriangulation triangulate_cube(tri_list * list) {
 
   ptriangulation result = calloc(sizeof(triangulation), 1);
-  tri_list * list = &data->list;
   result->dim = list->dim;
 
   /* Try to find a start facet on the z = 0 plane */
@@ -368,19 +367,26 @@ ptriangulation triangulate_cube(data_list * data) {
     start_facet->vertices[2][0] = rand() %list->dim;
     start_facet->vertices[2][1] = rand() %list->dim;
 
+    if (!triangle_acute(start_facet))
+      continue;
     found_start =  (tri_list_contains(list, start_facet));
   }
 
   facet_acute_data parameters;
+  data_list data;
+  data.mode = DATA_TRI_LIST;
+  data.list = *list;
+
   cube_points cube = gen_cube_points(list->dim);
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
-  parameters.data = data;
+  parameters.data = &data;
   parameters.store_tetra = 1;
 
   //Start triangle (0,0,0), (rand,0,0), (rand,rand,0)
   printf("Starting triangulation with facet:\n");
   print_triangle(start_facet);
+  printf("Triangle acute? %d\n", triangle_acute(start_facet));
   result->bound_len = 1;
   result->bound_tri = start_facet;
 
@@ -394,7 +400,10 @@ ptriangulation triangulate_cube(data_list * data) {
      * Then we add a random tetrahedron to our triangulation, update the conform list and repeat.
      */
     int rand_bound = rand() % result->bound_len;
+    printf("\n\nExpanding triangulation at boundary triangle: \n");
+    print_triangle(result->bound_tri + rand_bound);
 
+    //Calculate the conform tetrahedrons above and below
     facet_conform(&result->bound_tri[rand_bound], &parameters);
 
     // Concentanate ... Do this in face_cube_acute already I guess 
@@ -404,9 +413,11 @@ ptriangulation triangulate_cube(data_list * data) {
     memcpy(tet_list + parameters.tet_above_len, parameters.tet_below, parameters.tet_below_len * sizeof(tetra));
     free(parameters.tet_below); free(parameters.tet_above);
 
+    printf("Total amount of tetrahedrons found: %zu\n", list_len);
     //Remove all the tetrahedrons that collide with current triangulation.
     filter_tet_list_disjoint_triangulation(&tet_list, &list_len,result);
 
+    printf("Amount of tetrahedrons left after filtering: %zu\n\n",list_len);
     if (list_len == 0) {
       printf("Waarom is deze lijst nu al fucking leeggefilterd?\n");
       exit(0);
@@ -422,20 +433,26 @@ ptriangulation triangulate_cube(data_list * data) {
      * Add one of the tetrahedrons to the triangulation.
      * This removes all the boundary triangles that are covered by this tetrahedron
      */
+    printf("Adding the following tetra to the triangulation\n");
+    print_tetra(tet_list + rand_tet);
+    printf("\n\n");
     add_tet_triangulation(tet_list + rand_tet, result);
+    printf("\n\n");
     /*
      * Remove all the triangles in list that collide with this tetrahedron.
      * Maybe save a list of triangles we have removed? This allows us to restore them,
      * in case we get a dead end.
      */
+    printf("Removing all triangles that intersect with the new tetra\n");
     size_t removed =  filter_tri_list_disjoint_tet(list, tet_list+rand_tet);
-    printf("Removed %zu triangles not disjoint with new tetrahedron\n", removed);
+    printf("Removed %zu triangles not disjoint with new tetrahedron\n\n", removed);
 
     /*
      * Conform the resulting set of triangles. We probably do not want to do this step every time,
      * what is a good measure?
      */
-    facets_conform(data, NULL);
+    
+    //facets_conform(&data, NULL);
 
     free(tet_list);
 
@@ -444,7 +461,6 @@ ptriangulation triangulate_cube(data_list * data) {
   printf("Triangulation has length of %zu\n", result->tetra_len);
   return result;
 }
-
 
 /*
  * Semi-random triangulation of the cube. Start with the fundamental index list.
