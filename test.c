@@ -376,6 +376,14 @@ void test_tetra_disjunct(void) {
   triangle tri3= (triangle) {{{0,0,0}, {2,2,0},{3,0,0}}};
   printf("Tri tet disjunct: %d\n", tri_tet_disjoint(&tri3, &t3,dim));
   //THIS IS PROBLEM!!
+  dim = 30;
+  tetra tet = (tetra) {{{0,0,0},{16,0,0},{12,9,0},{10,5,9}}};
+  triangle bound = (triangle) {{{0,0,0},{12,9,0},{10,5,9}}};
+  tri   = (triangle) {{{0,0,0},{8,8,9},{12,9,0}}};
+  printf("Tet bound disjunct: %d\n", tri_tet_disjoint(&bound, &tet,dim));
+  printf("Tet tri   disjunct: %d\n", tri_tet_disjoint(&tri,   &tet,dim));
+
+
 }
 
 int main(void){
