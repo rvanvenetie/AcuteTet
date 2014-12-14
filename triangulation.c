@@ -424,7 +424,7 @@ ptriangulation triangulate_cube(tri_list * list) {
      * Then we add a random tetrahedron to our triangulation, update the conform list and repeat.
      */
     int rand_bound = rand() % result->bound_len;
-    printf("\n\nExpanding triangulation at boundary triangle: \n");
+    printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", tri_list_count(list));
     print_triangle(result->bound_tri + rand_bound);
 
     //Calculate the conform tetrahedrons above and below
