@@ -19,6 +19,33 @@
 #include "vector.h"
 
 
+/*
+ * Returns how many points of vert1 are also in vert2. If one of the arrays
+ * contains multiple instances of the same point, all those instances are counted.
+ */
+int vert_vert_share_count(arr3 * vert1, int len1, arr3 * vert2, int len2) {
+  int cnt = 0;
+  for (int i  = 0; i < len1; i++)
+    for (int j = 0; j < len2; j++)
+      if (equalArr3(vert1[i], vert2[j]))
+	cnt++;
+  return cnt;
+}
+/*
+ * Returns how many points are contained in the plane given by the normal and a point
+ * in the plane.
+ *
+ * (Points in the plane satisfy equation dot(normal, pt) = dot(normal, pt_in_plane))
+ * Where d = dot(normal, pt_in_plane)
+ */
+int vert_in_plane_count(arr3 normal, int d, arr3 * pts, int len_pts) {
+  int cnt = 0;
+  for (int i = 0; i < len_pts; i++)
+    if (dotArr3(normal, pts[i]) == d)
+      cnt++;
+
+  return cnt;
+}
 #ifndef INLINE_MACROS
 void subArr3(arr3 u, arr3 v, arr3 result) {
   result[0] = u[0] - v[0];

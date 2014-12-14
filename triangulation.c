@@ -33,10 +33,13 @@ void tetra_edges(ptetra tet, arr3 * edges) {
   subArr3(tet->vertices[3], tet->vertices[2], edges[5]);     
 }
 /*
- * Returns whether two sets of vertices are disjoint by this axis.
- * Touching counts as being disjoint.
+ * Returns the relationship between two sets of vertices and this separation axis. 
+ * Assuming we have simplices, we test if they touch face-to-face.
+ * - Disjoint
+ * - Touch
+ * - Intersect
  */
-int vert_vert_disjoint_axis(arr3 * vert1, int len1, arr3 * vert2, int len2,arr3 axis) {
+int vert_vert_separation_axis(arr3 * vert1, int len1, arr3 * vert2, int len2,arr3 axis) {
   int min_1 = INT_MAX, max_1 = INT_MIN;
   int min_2 = INT_MAX, max_2 = INT_MIN;
   //Calculate projections of the first vertices set
@@ -50,62 +53,89 @@ int vert_vert_disjoint_axis(arr3 * vert1, int len1, arr3 * vert2, int len2,arr3 
     if (dot2 < min_2) min_2 = dot2;
     if (dot2 > max_2) max_2 = dot2;
   }
-  //Now we know the scalar projections on the axis, test for overlap
-
   /*
-   * Disjoint if range A is completely after range B, or that range A is completely before B.
+   * Disjoint if either range [min_1, max_1] is before [min_2, max_2] or
+   * [min_2, max_2] is before [min_1, max_1]
    */
-  if (min_1 > max_2 || max_1 < min_1)
+  if (max_1 < min_2 || max_2 < min_1)
     return DISJOINT;
-  else if (min_1 >= max_2 || max_1 <= min_1)
-    return TOUCH;
-  else
+  else if (max_1 > min_2 && max_2 > min_1) //!(max_1 <= min_2 || max_2 <= min_1)
     return INTERSECT;
-}
-
-int tet_tet_disjoint_axis(ptetra t1, ptetra t2, arr3 axis, int dim) {
-  /*
-   * Check if we have a TOUCH, then insert code that checks if t1 and t2 share a face. If
-   * TOUCH but no shared face, we have a collision.
-   */
-  int collision = vert_vert_disjoint_axis(t1->vertices, 4, t2->vertices, 4, axis);
-  if (collision == TOUCH) {
-    if (tet_tet_share_facet(t1,t2,dim))
-      collision = DISJOINT;
+  else { 
+    /*
+     * The objects touch, this implies that some vertices of vert1 and vert2 lie in the sepation plane, while
+     * the other vertices are separated by this plane. We have a different knd of touches:
+     * face-to-face, edge-to-edge, vertex-to-vertex, and all mixed combinations. 
+     * Note that the equation of a plane is given by dot(normal, vertex) = dot(normal, point_in_plane)
+     * We now have that axis defines a (semi)-separating plane: vertices are split by the plane, or lie on the plane.
+     * Now in our case dot(normal, point_in_plane) is given by either max_1 (if max_1 == min_2) or max_2 (if max_2 == min_1)
+     *
+     * Now we need to check if the vertices match. For example a face-to-face touch should have 3 points in the separating plane, with
+     * all 3 matching. On the other hand, for a face-to-vertex touch, we should have 2 matching points.
+     *
+     * To do this, we calculate the amount of points in the plane for both simplices and the amount of points matched.
+     * Next we calculate whether the amount of points matched equals the min of points in the plane of both simplices.
+     */
+    int dot_plane = (max_1 == min_2)? max_1 : max_2;
+    int cnt_1 = vert_in_plane_count(axis, dot_plane, vert1, len1);
+    int cnt_2 = vert_in_plane_count(axis, dot_plane, vert2, len2);
+    int min_cnt = (cnt_1 < cnt_2)? cnt_1 : cnt_2;
+    if (min_cnt == vert_vert_share_count(vert1,len1,vert2,len2))
+      return DISJOINT;
     else
-      collision = INTERSECT;
+      return INTERSECT;//TOUCH
   }
-  return collision;
 }
 
 /*
- * Applies the above function for a series of axes. If we found a seperating axes
- * return true.
+ * Applies the above function for a series of axis. Note that two objects can be only one of the three
+ * states (DISJOINT/TOUCHING/INTERSECTING). Also, if for one axis we are TOUCHING, then the objects touch.
+ * Similiary DISJOINT means the objects are disjoint. If we find no axis where we are TOUCHING/DISJOINT, then
+ * we must INTERSECT
  */
-int tet_tet_disjoint_axes(ptetra t1, ptetra t2, arr3 * axes, int len, int dim) {
-  for (int i = 0; i < len; i++) {
-    if (tet_tet_disjoint_axis(t1,t2,axes[i],dim))
-      return DISJOINT;
+int vert_vert_separation_axes(arr3 * vert1, int len1, arr3 * vert2, int len2,arr3 * axis,int len_axis) {
+  for (int i = 0; i < len_axis; i++) {
+    int sep = vert_vert_separation_axis(vert1, len1, vert2, len2, axis[i]);
+    if (sep != INTERSECT) //We are TOUCHING/DISJOINT
+      return sep;
   }
   return INTERSECT;
 }
 
 /*
- * Returns whether this two tetrahedra are disjoint. Touching counts
- * as being disjoint
+ * Wrapper for the above functions in case we are checking tetra vs tetra or tri vs tetra
  */
-int tet_tet_disjoint(ptetra t1, ptetra t2, int dim) {
+int tet_tet_separation_axis(ptetra t1, ptetra t2, arr3 axis) {
+  return vert_vert_separation_axis(t1->vertices, 4, t2->vertices, 4, axis);
+}
+int tet_tet_separation_axes(ptetra t1, ptetra t2, arr3 * axis, int len_axis) {
+  return vert_vert_separation_axes(t1->vertices,4, t2->vertices,4, axis, len_axis);
+}
+
+int tri_tet_separation_axis(ptriangle t1, ptetra t2, arr3 axis) {
+  return vert_vert_separation_axis(t1->vertices,3, t2->vertices,4, axis);
+}
+int tri_tet_separation_axes(ptriangle t1, ptetra t2, arr3 * axis, int len_axis) {
+  return vert_vert_separation_axes(t1->vertices,3, t2->vertices,4, axis, len_axis);
+}
+
+/*
+ * Returns whether this two tetrahedra are disjoint (in a face2face way). This means
+ * that if two tetrahedra have a touching face they are disjoint iff they share this face.
+ * If two tetrahedra have a touching edge they are disjoint iff they share this edge.
+ */
+int tet_tet_disjoint(ptetra t1, ptetra t2) {
   arr3 normals[4];
   /*
    * First check facet normals for separating axes.
    * This covers face-face and face-edge.
    */
   tetra_normals(t1, normals); 
-  if (tet_tet_disjoint_axes(t1,t2,normals, 4, dim))
+  if (tet_tet_separation_axes(t1,t2,normals, 4) == DISJOINT)
     return DISJOINT;
 
   tetra_normals(t2, normals);
-  if (tet_tet_disjoint_axes(t1,t2,normals,4, dim))
+  if (tet_tet_separation_axes(t1,t2,normals, 4) == DISJOINT)
     return DISJOINT;
 
   /*
@@ -138,61 +168,25 @@ int tet_tet_disjoint(ptetra t1, ptetra t2, int dim) {
         if (zeroArr3(perp_axis)) //Still zero, all points lie on the same line, not a separation axis, IS TRUE?
           continue;
       }     
-      if (tet_tet_disjoint_axis(t1,t2, perp_axis,dim))
-        return DISJOINT;
+      if (tet_tet_separation_axis(t1,t2,perp_axis) == DISJOINT)
+	return DISJOINT;
     }
   }
   return INTERSECT; //No separation axis found, thus we are not disjoint
 }
 
-int tet_tet_list_disjoint(ptetra tet, ptetra  tet_list, int list_len, int dim) {
-  for (int i = 0; i < list_len; i++) 
-    if (tet_tet_disjoint(tet,tet_list+ i,dim) == INTERSECT)
-      return INTERSECT;  
-
-  //No intersection, so tetrahedron must be disjoint from the list
-  return DISJOINT;
-}
-
-int tri_tet_disjoint_axis(ptriangle tri, ptetra tet, arr3 axis, int dim) {
-  /*
-   * Insert code that handles touch
-   */
-  int collision = vert_vert_disjoint_axis(tri->vertices, 3, tet->vertices, 4, axis);
-  if (collision == TOUCH) {
-    if (tri_tet_share_facet(tri, tet,dim))
-      collision = DISJOINT;
-    else
-      collision = INTERSECT;
-  }
-  return collision;
-}
-
-/*
- * Applies the above function for a series of axes. If we found a seperating axes
- * return true.
- */
-int tri_tet_disjoint_axes(ptriangle tri, ptetra tet, arr3 * axes, int len,int dim) {
-  for (int i = 0; i < len; i++) 
-    if (tri_tet_disjoint_axis(tri,tet,axes[i],dim))
-      return DISJOINT;
-
-  return INTERSECT;
-}
-
-
-int tri_tet_disjoint(ptriangle tri, ptetra tet, int dim) {
+int tri_tet_disjoint(ptriangle tri, ptetra tet) {
   arr3 normals[4];
   /*
    * First check facet normals for separating axes.
    * This covers face-face and face-edge.
    */
-  tetra_normals(tet, normals); 
-  if (tri_tet_disjoint_axes(tri,tet,normals, 4,dim))
+  triangle_normal(tri,normals[0]);
+  if (tri_tet_separation_axis(tri,tet,normals[0]) == DISJOINT)
     return DISJOINT;
 
-  triangle_normal(tri,normals[0]);
-  if (tri_tet_disjoint_axis(tri,tet,normals[0],dim))
+  tetra_normals(tet, normals); 
+  if (tri_tet_separation_axes(tri,tet,normals, 4) == DISJOINT)
     return DISJOINT;
 
   /*
@@ -226,17 +220,28 @@ int tri_tet_disjoint(ptriangle tri, ptetra tet, int dim) {
         if (zeroArr3(perp_axis)) //Still zero, all points lie on the same line, not a separation axis, IS TRUE?
           continue;
       }     
-      if (tri_tet_disjoint_axis(tri,tet, perp_axis,dim))
-        return DISJOINT;
+      if (tri_tet_separation_axis(tri,tet, perp_axis) == DISJOINT)
+	return DISJOINT;
     }
   }
   return INTERSECT; //No separation axis found, thus we are not disjoint
 }
 
 
+int tet_tet_list_disjoint(ptetra tet, ptetra  tet_list, int list_len) {
+  for (int i = 0; i < list_len; i++) 
+    if (tet_tet_disjoint(tet,tet_list+ i) == INTERSECT)
+      return INTERSECT;  
+
+  //No intersection, so tetrahedron must be disjoint from the list
+  return DISJOINT;
+}
+
+
+
 int tet_triangulation_disjoint(ptetra tet, ptriangulation triang) {
   for (size_t i = 0; i < triang->tetra_len; i++)
-    if (tet_tet_disjoint(tet, triang->tetra + i, triang->dim) == INTERSECT)
+    if (tet_tet_disjoint(tet, triang->tetra + i) == INTERSECT)
       return INTERSECT;
 
   return DISJOINT;
@@ -244,24 +249,18 @@ int tet_triangulation_disjoint(ptetra tet, ptriangulation triang) {
 
 int tri_triangulation_disjoint(ptriangle tri, ptriangulation triang) {
   for (size_t i = 0; i < triang->tetra_len; i++)
-    if (tri_tet_disjoint(tri, triang->tetra + i, triang->dim) == INTERSECT)
+    if (tri_tet_disjoint(tri, triang->tetra + i) == INTERSECT)
       return INTERSECT;
 
   return DISJOINT;
 }
 
-int tri_equals(ptriangle t1, ptriangle t2, int dim) {
-  tri_index idx1, idx2;
-  triangle_to_index_cube((*t1),dim, idx1);
-  triangle_to_index_cube((*t2),dim, idx2);
-  return equalArr3(idx1,idx2);
-}
 /*
  * Returns -1 if not found
  */
-int tri_arr_idx(ptriangle tri, ptriangle list, size_t list_len, int dim) {
+int tri_arr_idx(ptriangle tri, ptriangle list, size_t list_len) {
   for (size_t i = 0; i < list_len; i++)
-    if (tri_equals(tri, list + i,dim))
+    if (tri_tri_equal(tri, list + i))
       return i;
   return -1;
 }
@@ -278,7 +277,7 @@ void rem_boundary_triangulation(int rem_bound, ptriangulation result) {
 
 int update_boundary_triangulation(arr3 v1, arr3 v2, arr3 v3, ptriangulation triang) {
   triangle tri = (triangle) {{{v1[0],v1[1],v1[2]}, {v2[0],v2[1],v2[2]}, {v3[0],v3[1],v3[2]}}};
-  int idx = (tri_arr_idx(&tri, triang->bound_tri, triang->bound_len, triang->dim));
+  int idx = (tri_arr_idx(&tri, triang->bound_tri, triang->bound_len));
   if (idx > -1) //Wanting to add a boundary again, actually remove!
   {
     rem_boundary_triangulation(idx, triang);
@@ -359,7 +358,7 @@ size_t filter_tri_list_disjoint_tet(ptriangulation triang,facet_acute_data * par
 
         vertex_from_index_cube(k, list->dim, cur_tri.vertices[2]);
         //Cur_tri is the l-th triangle with points(i,j,*)
-        if (!tri_tet_disjoint(&cur_tri, tet, list->dim)) {//If not disjoint with new tetrahedron, delete
+        if (!tri_tet_disjoint(&cur_tri, tet)) {//If not disjoint with new tetrahedron, delete
           tri_list_remove(list, &cur_tri); //Thread safe, as only one processor acces [i][j]
           if (!consistent_triangulation(triang,parameters)) {
             printf("Somehoew removing this triangle resulted in incorrect triangulation\n");

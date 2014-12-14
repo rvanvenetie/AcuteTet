@@ -8,32 +8,21 @@
 #include "omp.h"
 
 
-/*
- * Returns whether two triangles are equal
- */
-int arr3_triangle_equals(arr3 v0, arr3 v1, arr3 v2,arr3 w0, arr3 w1, arr3 w2, int dim) {
-  tri_index idx1, idx2;
-  vertices_to_index_cube(v0,v1,v2,dim,idx1);
-  vertices_to_index_cube(w0,w1,w2,dim,idx2);
-  return equalArr3(idx1,idx2);
+
+int tet_tet_share_edge(ptetra t1, ptetra t2) {
+  return (vert_vert_share_count(t1->vertices, 4, t2->vertices, 4) >= 2);
 }
 
-int arr3_tet_share_facet(ptetra tet, arr3 v0, arr3 v1, arr3 v2, int dim) {
-  return (arr3_triangle_equals(tet->vertices[0], tet->vertices[1], tet->vertices[2], v0,v1,v2,dim) ||
-          arr3_triangle_equals(tet->vertices[1], tet->vertices[2], tet->vertices[3],v0,v1,v2,dim) ||
-          arr3_triangle_equals(tet->vertices[0], tet->vertices[2], tet->vertices[3],v0,v1,v2,dim) ||
-          arr3_triangle_equals(tet->vertices[0], tet->vertices[1], tet->vertices[3],v0,v1,v2,dim));
+int tet_tet_share_facet(ptetra t1, ptetra t2){
+  return (vert_vert_share_count(t1->vertices, 4, t2->vertices, 4) >= 3);
 }
 
-int tri_tet_share_facet(ptriangle tri, ptetra tet, int dim) {
-  return (arr3_tet_share_facet(tet, tri->vertices[0], tri->vertices[1], tri->vertices[2], dim));
+int tri_tet_share_edge(ptriangle tri, ptetra tet){
+  return (vert_vert_share_count(tri->vertices,3, tet->vertices,4) >= 2);
 }
 
-int tet_tet_share_facet(ptetra t1, ptetra t2, int dim) {
-  return (arr3_tet_share_facet(t2,t1->vertices[0], t1->vertices[1], t1->vertices[2], dim) ||
-          arr3_tet_share_facet(t2,t1->vertices[1], t1->vertices[2], t1->vertices[3],dim) ||
-          arr3_tet_share_facet(t2,t1->vertices[0], t1->vertices[2], t1->vertices[3],dim) ||
-          arr3_tet_share_facet(t2,t1->vertices[0], t1->vertices[1], t1->vertices[3],dim));
+int tri_tet_share_facet(ptriangle tri, ptetra tet) {
+  return (vert_vert_share_count(tri->vertices,3, tet->vertices,4) == 3);
 }
 /*
  * Calculates the normal vector for each facet of tet. All vectors

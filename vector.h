@@ -114,6 +114,8 @@ typedef vert_index ***vert_index_array;
   int equalArr3(arr3 u,arr3 v); 
 #endif
 
+int vert_vert_share_count(arr3 * vert1, int len1, arr3 * vert2, int len2);
+int vert_in_plane_count(arr3 normal, int d, arr3 * pts, int len_pts);
 void negArr3(arr3 result);
 void printVector(vec3 u);
 int dotVector(vec3 u, vec3 v);

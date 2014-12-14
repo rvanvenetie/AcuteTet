@@ -5,6 +5,10 @@
 #include "vector.h"
 #include "triangle.h"
 
+int tri_tri_equal(ptriangle t1, ptriangle t2) {
+  return (vert_vert_share_count(t1->vertices, 3, t2->vertices, 3) == 3);
+}
+
 int arr3_triangle_acute(arr3 v0, arr3 v1, arr3 v2) {
   arr3 P[3];
   triangle_sides(v0,v1,v2,P);

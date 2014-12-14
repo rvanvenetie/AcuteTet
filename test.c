@@ -362,32 +362,102 @@ void test_prism(int dim) {
 }
 
 
-void test_tetra_disjunct(void) {
-  int dim = 16;
+void test_tetra_disjoint(void) {
+  tetra tet;
+  triangle tri;
+
+  tet = (tetra) {{{0,0,0},{16,0,0},{12,9,0},{10,5,9}}};
+  tri =(triangle) {{{0,0,0},{16,0,0},{12,9,0}}};
+  //This triangle and tetrahedron share a facet. So they must be disjoint
+  if (!tri_tet_disjoint(&tri, &tet))
+    printf("ERROR1IN DISJOINT TEST");
+
+
+  tri =(triangle) {{{0,0,0},{8,8,9},{12,9,0}}};
+  //This triangle and tetrahedron share an edge and are disjoint
+  if (!tri_tet_disjoint(&tri, &tet)) 
+    printf("ERROR2IN DISJOINT TEST");
+
+  tri =(triangle) {{{0,0,0},{12,5,9},{12,9,0}}};
+  //This triangle and tetrahedron share an edge, but not disjoint, third point outside the tetrahedron
+  if (tri_tet_disjoint(&tri, &tet)) 
+    printf("ERROR3IN DISJOINT TEST");
+
+  tri =(triangle) {{{0,0,0},{12,5,1},{12,9,0}}};
+  //This triangle and tetrahedron share an edge, but not disjoint, third point inside the tetrahedron
+  if (tri_tet_disjoint(&tri, &tet))
+    printf("ERROR4IN DISJOINT TEST");
+
+  tet = (tetra) {{{0,0,0},{2,0,0},{1,1,0},{0,0,5}}};
+  tri = (triangle) {{{0,0,0},{3,0,0},{2,2,0}}};
+  //This triangle lies in the same plane as a facet, however the triangle is not a facet. So not disjoint.
+  if (tri_tet_disjoint(&tri, &tet))
+    printf("ERROR5 IN DISJOINT TEST");
+
+  tet = (tetra) {{{0,0,0},{2,0,0},{1,1,0},{0,0,5}}};
+  tri = (triangle) {{{0,0,0},{2,0,0},{1,5,0}}};
+  //This triangle lies in the same plane as a facet and shares an edge. Should not be disjoint
+  if (tri_tet_disjoint(&tri, &tet))
+    printf("ERROR5.5 IN DISJOINT TEST");
+
+  tri = (triangle) {{{2,0,0},{4,0,0},{3,1,0}}};
+  //Triangle lies in the same plane as a facet, shares an vertex. Should be disjoint
+  if (!tri_tet_disjoint(&tri, &tet))
+    printf("ERROR 5.55 IN DISJOINT TEST");
+
+  tri = (triangle) {{{2,0,0},{3,0,0},{1,1,0}}};
+  //Triangle lies in the same plane as a facet, shares an edge. Should be disjoint
+  if (!tri_tet_disjoint(&tri, &tet))
+    printf("ERROR 5.555 IN DISJOINT TEST");
+
+  tet = (tetra) {{{0,0,0}, {2,0,0}, {1,1,0},{1,1,9}}};
+  tri = (triangle) {{{0,2,0},{1,1,0},{2,2,0}}};
+  //Triangle and tetra share a point, should be disjoint
+  if (!tri_tet_disjoint(&tri, &tet))
+    printf("ERROR. 5555 IN DISJOINT TEST");
+
+  tet = (tetra) {{{0,0,0}, {1,0,0}, {0,1,0},{0,0,9}}};
+  tri = (triangle) {{{1,0,0},{2,0,0},{2,1,0}}};
+  //Triangle and tetra share a point, should be disjoint
+  if (!tri_tet_disjoint(&tri, &tet))
+    printf("ERROR. 5555 IN DISJOINT TEST");
+
   tetra t1 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,6}}};
-  triangle tri = (triangle) {{{5,5,5},{6,5,5},{5,6,5}}};
-  triangle tri2 = (triangle) {{{5,6,5},{6,5,5},{5,5,6}}};
   tetra t2 = (tetra) {{{5,5,5},{6,5,5},{5,6,5},{5,5,4}}};
+  //These two tetrahedrons share a facet, and disjoint
+  if (!tet_tet_disjoint(&t1,&t2))
+    printf("ERROR 6 IN DISJOINT TEST");
 
-  printf("Test disjunct: %d\n", tet_tet_disjoint(&t1,&t2,dim));
-  printf("Tri tet distjunct: %d %d\n", tri_tet_disjoint(&tri,&t1,dim), tri_tet_disjoint(&tri,&t1,dim));
 
-  tetra t3 = (tetra) {{{0,0,0}, {1,1,0},{2,0,0},{0,0,5}}};
-  triangle tri3= (triangle) {{{0,0,0}, {2,2,0},{3,0,0}}};
-  printf("Tri tet disjunct: %d\n", tri_tet_disjoint(&tri3, &t3,dim));
-  //THIS IS PROBLEM!!
-  dim = 30;
-  tetra tet = (tetra) {{{0,0,0},{16,0,0},{12,9,0},{10,5,9}}};
-  triangle bound = (triangle) {{{0,0,0},{12,9,0},{10,5,9}}};
-  tri   = (triangle) {{{0,0,0},{8,8,9},{12,9,0}}};
-  printf("Tet bound disjunct: %d\n", tri_tet_disjoint(&bound, &tet,dim));
-  printf("Tet tri   disjunct: %d\n", tri_tet_disjoint(&tri,   &tet,dim));
+  t1 = (tetra) {{{0,0,0},{16,0,0},{12,9,0},{10,5,9}}};
+  t2 = (tetra) {{{0,0,0},{0,16,0},{12,9,0},{10,5,9}}};
+  //These two tetrahedrons share a edge, base triangle lies in the same plane and are disjoint
+  if (!tet_tet_disjoint(&t1,&t2))
+    printf("ERROR 7 IN DISJOINT TEST");
 
+  t1 = (tetra) {{{5, 5, 5}, {21, 5, 5},{17,14, 5},{15,10,14}}};
+  t2 = (tetra) {{{ 5, 5, 5},{13,13,14},{ 5,15, 1},{17,14, 5}}};
+  //These two tetrahedrons share an edge, base triangle lies in a different plane, and disjoint
+  if (!tet_tet_disjoint(&t1,&t2))
+    printf("ERROR 8 IN DISJOINT TEST");
+  t1 = (tetra) {{{1,2,1},{0,2,1},{2,1,1},{0,1,0}}};
+  t2 = (tetra) {{{1,0,0},{0,0,2},{2,1,0},{2,0,0}}};
+  //These two tetrahedrons are disjoint, but not trivially
+  if (!tet_tet_disjoint(&t1,&t2)) {
+    printf("ERROR 9 IN DISJOINT TEST");
+    return;
+  }
+
+  t1 = (tetra) {{{0,0,0}, {1,0,0}, {1,1,0},{1,0,1}}};
+  t2 = (tetra) {{{0,0,0}, {1,0,0}, {1,1,0},{0,1,1}}};
+  //These two tetrahedrons have a facet in the same plane, but not same facet, so not disjoint
+  if (tet_tet_disjoint(&t1, &t2))
+    printf("ERROR 10 IN DISJOINT TEST");
 
 }
 
 int main(void){
-  test_tetra_disjunct();
+  test_tetra_disjoint();
   /*
   test_mem_list_fund();
   

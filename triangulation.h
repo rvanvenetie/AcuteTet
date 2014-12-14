@@ -18,8 +18,8 @@ typedef struct triangulation {
 #define DISJOINT 1
 #define INTERSECT 0
 
-int tet_tet_disjoint(ptetra t1, ptetra t2, int dim);
-int tri_tet_disjoint(ptriangle tri, ptetra tet, int dim);
+int tet_tet_disjoint(ptetra t1, ptetra t2);
+int tri_tet_disjoint(ptriangle tri, ptetra tet);
 void triangulation_free(ptriangulation triang);
 ptriangulation triangulate_cube(tri_list * list);
 #endif
