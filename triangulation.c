@@ -346,7 +346,7 @@ size_t filter_tri_list_disjoint_tet(ptriangulation triang,facet_acute_data * par
   size_t i,j,k;
   int l;
 
-  //#pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri) 
+  #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri) 
   for (i = 0; i < dim_size; i++) {
     vertex_from_index_cube(i,list->dim, cur_tri.vertices[0]);
 
@@ -360,12 +360,13 @@ size_t filter_tri_list_disjoint_tet(ptriangulation triang,facet_acute_data * par
         //Cur_tri is the l-th triangle with points(i,j,*)
         if (!tri_tet_disjoint(&cur_tri, tet)) {//If not disjoint with new tetrahedron, delete
           tri_list_remove(list, &cur_tri); //Thread safe, as only one processor acces [i][j]
+	  /*
           if (!consistent_triangulation(triang,parameters)) {
             printf("Somehoew removing this triangle resulted in incorrect triangulation\n");
             print_triangle(&cur_tri);
             exit(0);
           }
-                
+	  */
         }
       }
     }
