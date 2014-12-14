@@ -415,7 +415,7 @@ ptriangulation triangulate_cube(tri_list * list) {
   printf("Triangle acute? %d\n", triangle_acute(start_facet));
   result->bound_len = 1;
   result->bound_tri = start_facet;
-  ptetra tet_list;
+  ptetra tet_list = NULL;
   //While we have triangles on the boundary..
   while (result->bound_len > 0) {
     /*
