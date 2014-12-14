@@ -42,6 +42,6 @@ int main(int argc, char *argv[]) {
     triangulation_free(triang);
   }
 
-
+  tri_list_free(&list);
   return 0;
 }

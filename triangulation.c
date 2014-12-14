@@ -325,6 +325,7 @@ void filter_tet_list_disjoint_triangulation(ptetra   list, size_t * list_len, pt
 
 int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
   int consistent = 1;
+  data->store_tetra = 0;
   for (size_t i = 0; i < triang->bound_len; i++) {
     if (!facet_conform(triang->bound_tri + i, data))  {
       printf("Somehow we have a non conform facet on the boundary.. WTF?\n");
@@ -337,6 +338,7 @@ int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
       consistent = 0;
     }
   }
+  data->store_tetra = 1;
   return consistent;
 }
 size_t filter_tri_list_disjoint_tet(ptriangulation triang,facet_acute_data * parameters, tri_list * list, ptetra tet) {
@@ -413,7 +415,7 @@ ptriangulation triangulate_cube(tri_list * list) {
   printf("Triangle acute? %d\n", triangle_acute(start_facet));
   result->bound_len = 1;
   result->bound_tri = start_facet;
-
+  ptetra tet_list;
   //While we have triangles on the boundary..
   while (result->bound_len > 0) {
     /*
@@ -432,7 +434,7 @@ ptriangulation triangulate_cube(tri_list * list) {
 
     // Concentanate ... Do this in face_cube_acute already I guess 
     size_t list_len = parameters.tet_above_len + parameters.tet_below_len;
-    ptetra tet_list = malloc(list_len * sizeof(tetra));
+    tet_list = realloc(tet_list,list_len * sizeof(tetra));
     memcpy(tet_list                             , parameters.tet_above, parameters.tet_above_len * sizeof(tetra));
     memcpy(tet_list + parameters.tet_above_len, parameters.tet_below, parameters.tet_below_len * sizeof(tetra));
     free(parameters.tet_below); free(parameters.tet_above);
@@ -444,10 +446,10 @@ ptriangulation triangulate_cube(tri_list * list) {
     printf("Amount of tetrahedrons left after filtering: %zu\n\n",list_len);
     if (list_len == 0) {
       printf("Waarom is deze lijst nu al fucking leeggefilterd?\n");
-      exit(0);
       printf("Dead end, helaas pindakaas. Got to %zu\n", result->tetra_len);
       free(cube.points);
       triangulation_free(result);
+      free(tet_list);
       return NULL;
     }
 
@@ -481,9 +483,7 @@ ptriangulation triangulate_cube(tri_list * list) {
      * what is a good measure?
      */
     
-    //facets_conform(&data, NULL);
-
-    free(tet_list);
+    facets_conform(&data, NULL);
 
   }
   free(cube.points);
