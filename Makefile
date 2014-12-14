@@ -11,7 +11,7 @@ TRIANG_OBJ= triangulate.o $(OBJ)
 %.o : %.c
 	$(CC) -c $(CFLAGS) $<
 
-all: main
+all: main triang test
 main: $(MAIN_OBJ) 
 	$(CC) -o main $(MAIN_OBJ) $(LDFLAGS)
 
