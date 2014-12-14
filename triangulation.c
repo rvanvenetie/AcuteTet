@@ -278,14 +278,15 @@ void rem_boundary_triangulation(int rem_bound, ptriangulation result) {
 
 int update_boundary_triangulation(arr3 v1, arr3 v2, arr3 v3, ptriangulation triang) {
   triangle tri = (triangle) {{{v1[0],v1[1],v1[2]}, {v2[0],v2[1],v2[2]}, {v3[0],v3[1],v3[2]}}};
-  if (triangle_boundary_cube(&tri,triang->dim))
-    return -1;
   int idx = (tri_arr_idx(&tri, triang->bound_tri, triang->bound_len, triang->dim));
   if (idx > -1) //Wanting to add a boundary again, actually remove!
   {
     rem_boundary_triangulation(idx, triang);
     return -2;
   }
+  if (triangle_boundary_cube(&tri,triang->dim)) //Triangle on the boundary of the cube
+    return -1;
+
   printf("New boundary for triangulation:\n");
   print_triangle(&tri);
   triang->bound_len++;
@@ -312,26 +313,41 @@ void add_tet_triangulation(ptetra tet, ptriangulation result) {
 } 
 
 
-void filter_tet_list_disjoint_triangulation(ptetra *  list, size_t * list_len, ptriangulation triang) {
+void filter_tet_list_disjoint_triangulation(ptetra   list, size_t * list_len, ptriangulation triang) {
   size_t c = 0;
   for (size_t i = 0; i< *list_len; i++)
-    if (tet_triangulation_disjoint((*list) + i, triang)) {
-      (*list)[c] = (*list)[i];
+    if (tet_triangulation_disjoint(list+ i, triang)) {
+      list[c] = list[i];
       c++;
     }
 
   *list_len = c;
-  *list = realloc(*list, c * sizeof(tetra));  
 }
 
-size_t filter_tri_list_disjoint_tet(tri_list * list, ptetra tet) {
+int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
+  int consistent = 1;
+  for (size_t i = 0; i < triang->bound_len; i++) {
+    if (!facet_conform(triang->bound_tri + i, data))  {
+      printf("Somehow we have a non conform facet on the boundary.. WTF?\n");
+      print_triangle(triang->bound_tri + i);
+      consistent = 0;
+    }
+    if (!tri_list_contains(&data->data->list, triang->bound_tri + i)) {
+      printf("Somehow the bondary triangle is not in the list anymore.. WTF?\n");
+      print_triangle(triang->bound_tri + i);
+      consistent = 0;
+    }
+  }
+  return consistent;
+}
+size_t filter_tri_list_disjoint_tet(ptriangulation triang,facet_acute_data * parameters, tri_list * list, ptetra tet) {
   size_t cnt = tri_list_count(list);
   triangle cur_tri;
   size_t dim_size = (list->dim + 1) * (list->dim + 1) * (list->dim + 1);
   size_t i,j,k;
   int l;
 
-  #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri) 
+  //#pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri) 
   for (i = 0; i < dim_size; i++) {
     vertex_from_index_cube(i,list->dim, cur_tri.vertices[0]);
 
@@ -342,8 +358,16 @@ size_t filter_tri_list_disjoint_tet(tri_list * list, ptetra tet) {
         k = list->t_arr[i][j-i].p_arr[l] +  j;
 
         vertex_from_index_cube(k, list->dim, cur_tri.vertices[2]);
-        if (!tri_tet_disjoint(&cur_tri, tet, list->dim))
-          tri_list_remove(list, &cur_tri);
+        //Cur_tri is the l-th triangle with points(i,j,*)
+        if (!tri_tet_disjoint(&cur_tri, tet, list->dim)) {//If not disjoint with new tetrahedron, delete
+          tri_list_remove(list, &cur_tri); //Thread safe, as only one processor acces [i][j]
+          if (!consistent_triangulation(triang,parameters)) {
+            printf("Somehoew removing this triangle resulted in incorrect triangulation\n");
+            print_triangle(&cur_tri);
+            exit(0);
+          }
+                
+        }
       }
     }
   }
@@ -415,7 +439,7 @@ ptriangulation triangulate_cube(tri_list * list) {
 
     printf("Total amount of tetrahedrons found: %zu\n", list_len);
     //Remove all the tetrahedrons that collide with current triangulation.
-    filter_tet_list_disjoint_triangulation(&tet_list, &list_len,result);
+    filter_tet_list_disjoint_triangulation(tet_list, &list_len,result);
 
     printf("Amount of tetrahedrons left after filtering: %zu\n\n",list_len);
     if (list_len == 0) {
@@ -437,16 +461,21 @@ ptriangulation triangulate_cube(tri_list * list) {
     print_tetra(tet_list + rand_tet);
     printf("\n\n");
     add_tet_triangulation(tet_list + rand_tet, result);
-    printf("\n\n");
+    printf("\nNew amount of tet in triang %zu. New amount of boundaries %zu.\n\n", result->tetra_len, result->bound_len);
+
+    //Consistency check
+    consistent_triangulation(result, &parameters);
+
     /*
      * Remove all the triangles in list that collide with this tetrahedron.
      * Maybe save a list of triangles we have removed? This allows us to restore them,
      * in case we get a dead end.
      */
     printf("Removing all triangles that intersect with the new tetra\n");
-    size_t removed =  filter_tri_list_disjoint_tet(list, tet_list+rand_tet);
+    size_t removed =  filter_tri_list_disjoint_tet(result,&parameters,list, tet_list+rand_tet);
     printf("Removed %zu triangles not disjoint with new tetrahedron\n\n", removed);
 
+    consistent_triangulation(result, &parameters);
     /*
      * Conform the resulting set of triangles. We probably do not want to do this step every time,
      * what is a good measure?
