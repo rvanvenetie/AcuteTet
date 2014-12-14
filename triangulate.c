@@ -13,7 +13,10 @@
 #include "triangulation.h"
 #include "omp.h"
 
+#define REDIRECT_OUTPUT 1
+#define LOG "triang_%d.log"
 int main(int argc, char *argv[]) {
+  char log_file[100];
   int dim = 10;
   tri_list list;
   if (argc == 2 && isdigit(argv[1][0]))
@@ -30,6 +33,12 @@ int main(int argc, char *argv[]) {
   } else {
     printf("Creating new tri_list\n");
     list = tri_list_init(dim, MEM_LIST_TRUE);
+  }
+  sprintf(log_file, LOG, list.dim);
+  if (REDIRECT_OUTPUT) {
+    if (freopen(log_file,"a",stdout) == NULL)
+      printf("Redirecting output failed\n");
+    setvbuf(stdout, NULL,_IOLBF, 1024);
   }
   printf("Triangulation for p = %d\n", list.dim);
   printf("Amount of triangles in the list = %zu\n", tri_list_count(&list));
