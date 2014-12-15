@@ -189,7 +189,7 @@ long long C(int n, int r) {
   return ans;
 }
 void test_tri_list(void) {
-  int dim = 15;
+  int dim = 3;
   int len = 2500;
   tri_list list = tri_list_init(dim, MEM_LIST_FALSE);
   if (tri_list_count(&list) != 0)
@@ -197,9 +197,24 @@ void test_tri_list(void) {
   triangle * triang_list = malloc(sizeof(triangle)  * len);
   for (int i = 0; i < len; i++) {
     triang_list[i] = rand_triangle_tet(dim);
-    tri_list_insert(&list, triang_list + i);
-  } //Inserted all the triangles
-  int count = tri_list_count(&list);
+    tri_list_insert(&list, triang_list + i,TRI_LIST_NO_RESIZE);
+    triang_list[i] = rand_triangle_tet(dim);
+    tri_list_insert(&list, triang_list + i,TRI_LIST_NO_RESIZE);
+  } //Inserted all the triangles + some random other shit
+  size_t mem = tri_list_memory(&list);
+  tri_list_empty(&list); //Empty the list.. Should leave some space, so reinserting should not create any new memory.
+  if (tri_list_count(&list))
+    printf("ERROR TRI SHOULD BE EMPTY\n");
+  for (int i = 0; i < len; i++)
+    tri_list_insert(&list, triang_list + i, TRI_LIST_NO_RESIZE);
+
+  if (tri_list_memory(&list) != mem)
+    printf("MEMORY SHOULD NOT BE DIFFERENT");
+
+  for (int i = 0; i < len; i++)
+    if (!tri_list_contains(&list, triang_list +i))
+      printf("ERROR, LIST SHOULD CONTAIN THIS TRIANGLE\n");
+  size_t count = tri_list_count(&list);
   tri_list_to_file(&list, "test.tmp");
   tri_list_free(&list);
   tri_list_from_file(&list, "test.tmp");
@@ -212,7 +227,7 @@ void test_tri_list(void) {
     }
   } 
   for (int i = 0; i < len; i++)  {
-    tri_list_remove(&list, triang_list + i );
+    tri_list_remove(&list, triang_list + i, TRI_LIST_NO_RESIZE );
   }
   if (tri_list_count(&list) > 0)
     printf("ERROR 2 IN TRI_LIST\n");
@@ -245,7 +260,7 @@ void test_tri_list(void) {
   {
     triangle sym_triangle;
     triangle_symmetry(&start_triangle, i, dim, &sym_triangle);
-    tri_list_remove(&list, &sym_triangle);
+    tri_list_remove(&list, &sym_triangle, TRI_LIST_NO_RESIZE);
   }
 
   if (tri_list_count(&list) != 0)
@@ -469,5 +484,5 @@ int main(void){
   test_triangle_indices();
   test_tetra_disjunct();
   */
-//  test_tri_list();
+  test_tri_list();
 }

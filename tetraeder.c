@@ -485,7 +485,7 @@ void facets_conform_tri_list(data_list * data, char * save_file){
                                  {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
           if (!facet_conform(&cur_tri,&parameters)) {
             changed = 1;
-            tri_list_remove(conf_list, &cur_tri);
+            tri_list_remove(conf_list, &cur_tri, TRI_LIST_NO_RESIZE);
           }
         }
         if (omp_get_thread_num() == 0 && //Only let master save to the file

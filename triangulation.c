@@ -361,7 +361,7 @@ size_t filter_tri_list_disjoint_tet(ptriangulation triang,facet_acute_data * par
         vertex_from_index_cube(k, list->dim, cur_tri.vertices[2]);
         //Cur_tri is the l-th triangle with points(i,j,*)
         if (!tri_tet_disjoint(&cur_tri, tet)) {//If not disjoint with new tetrahedron, delete
-          tri_list_remove(list, &cur_tri); //Thread safe, as only one processor acces [i][j]
+          tri_list_remove(list, &cur_tri, TRI_LIST_NO_RESIZE); //Thread safe, as only one processor acces [i][j]
 	  /*
           if (!consistent_triangulation(triang,parameters)) {
             printf("Somehoew removing this triangle resulted in incorrect triangulation\n");
