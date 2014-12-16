@@ -5,6 +5,7 @@
 #include "mem_list.h"
 
 
+#define tri_list_dim_size(dim) ((dim + 1) * (dim + 1) * (dim + 1))
 typedef struct int_arr_old{
   unsigned short * p_arr;
   size_t len;

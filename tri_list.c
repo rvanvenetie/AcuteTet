@@ -4,7 +4,6 @@
 #include "tri_list.h"
 #include "omp.h"
 
-#define tri_list_dim_size(dim) ((dim + 1) * (dim + 1) * (dim + 1))
 /*
  * Assumes we have a sorted array. Uses binary search
  * to find the index of i in the array. Returns -1 if the
