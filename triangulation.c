@@ -401,20 +401,29 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
   
   /*
    * During this method we are going to operate data that is not thread-safe.
-   * To avoid race conditions we need an array of locks. We use a lock for the
-   * first two points of a triangle (so need 2d array of locks).
+   * To avoid race conditions we need an array of locks. We only initalize locks that we can possibly
+   * use during the process (e.g. ones with list->p_arr[i][j].len != 0
    */
-  omp_lock_t * locks = malloc(sizeof(omp_lock_t) * cube.len);
-  //Initalize the locks
-  for (size_t i = 0; i < cube.len; i++)
-    omp_init_lock(locks + i);
+  omp_lock_t ** locks = calloc(sizeof(omp_lock_t *) , cube.len);
+  for (vert_index i = 0; i < cube.len; i++)
+    for (vert_index j = 0; j < cube.len - i; j++)
+    {
+      if (list->t_arr[i][j].data_len) //This row has non-zeros!
+      {
+	if (!locks[i]) //Initalize if not yet happened
+	  locks[i] = calloc(sizeof(omp_lock_t) , (cube.len - i));
+
+	//Init lock for this row
+	omp_init_lock(&locks[i][j]);
+      }
+    }
 
   int iter = 0;
   double time_start, time_end, time_check;
   while (tri_list_count(remove_list)) //While we have triangles to be removed)
   {
     time_start = omp_get_wtime();
-    printf("\n\nLoop %d of conform dynamic\n", iter);
+    printf("\n\nLoop %d of conform dynamic\n", iter++);
     printf("Size of entire list %zu\n", tri_list_count(list));
     printf("Size of remove list %zu\n", tri_list_count(remove_list));
 
@@ -473,9 +482,9 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
 	       * Or only invoke locks[i][j] that correspond to a non-zero row in list? <-- Probably the best
 	       */  
 	      triangle_to_index_cube((sides[n]), list->dim, idx);
-	      omp_set_lock(locks + idx[0]);//Thread-safe now! As we edit the data check_list.p_arr[idx[0]][idx[1]]
+	      omp_set_lock(&locks[idx[0]][idx[1]]);//Thread-safe now! As we edit the data check_list.p_arr[idx[0]][idx[1]];
 	      tri_list_insert(check_list, sides + n, TRI_LIST_NO_RESIZE);
-	      omp_unset_lock(locks + idx[0]);
+	      omp_unset_lock(&locks[idx[0]][idx[1]]);
 	    }
 	  }
 	}
@@ -512,8 +521,14 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
     printf("Took %f seconds to construct new remove list\n", time_end - time_check);
     printf("Took %f seconds for the entire loop.\n", time_end-time_start);
   }
-  for (size_t i = 0; i < cube.len; i++)
-    omp_destroy_lock(locks + i);
+  for (vert_index i = 0; i < cube.len; i++) 
+    if (locks[i]) {
+      for (vert_index j = 0; j < cube.len - i; j++)
+	if (list->t_arr[i][j].data_len) //This row has non-zeros, so lock was initalized.
+	  omp_destroy_lock(&locks[i][j]);
+      free(locks[i]);
+    }
+  free(locks);
 
   free(cube.points);
   free(parameters.acute_ind);
