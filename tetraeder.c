@@ -24,6 +24,13 @@ int tri_tet_share_edge(ptriangle tri, ptetra tet){
 int tri_tet_share_facet(ptriangle tri, ptetra tet) {
   return (vert_vert_share_count(tri->vertices,3, tet->vertices,4) == 3);
 }
+
+void tet_sides(ptetra tet, ptriangle triang) {
+  arr3_to_triangle(tet->vertices[0], tet->vertices[1], tet->vertices[2], triang + 0);
+  arr3_to_triangle(tet->vertices[0], tet->vertices[1], tet->vertices[3], triang + 1);
+  arr3_to_triangle(tet->vertices[0], tet->vertices[2], tet->vertices[3], triang + 2);
+  arr3_to_triangle(tet->vertices[1], tet->vertices[2], tet->vertices[3], triang + 3);
+}
 /*
  * Calculates the normal vector for each facet of tet. All vectors
  * point inwards or outwards.
@@ -154,13 +161,8 @@ int facet_tetra_list(ptriangle triang, arr3 apex, data_list * data) {
  * 
  */
 int facet_conform(ptriangle triang, facet_acute_data * data) {
-  if (data->store_tetra)
-  {
-    data->tet_above = NULL;
-    data->tet_above_len = 0;
-    data->tet_below = NULL;
-    data->tet_below_len = 0;
-  }
+  if (data->store_acute_ind)
+    data->acute_ind_len = 0;
   arr3 P[3];
   //Calculate the three edges of this triangle
   triangle_sides(triang->vertices[0], triang->vertices[1], triang->vertices[2],P);
@@ -186,10 +188,18 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
   
   data->boundary_triangle = data->boundary_func(triang, data->cube->dim); //Boundary plane only needs acute tetra on 1 side
   int dotprod;
+  /*
+   * Initalize to zero
+   */
   data->acute_above = 0;
   data->acute_below = 0;
-  
-  for (size_t i = 0; i < data->cube->len; i++){
+  /*
+   * In case we work store the acute indices, we need to locally store
+   * if we found above and below. As we later put them into the data struct.
+   */
+  int acute_above = 0;
+  int acute_below = 0;
+  for (unsigned short i = 0; i < data->cube->len; i++){
     dotprod = dotArr3(data->cube->points[i], tri_normal); //Calculate angle between normal and vector from plane to cube_pt
     //Check if current point lies on side of the triangle which isn't sharp yet and check if point lies in the
     //prism of possible sharp tetrahedron
@@ -202,26 +212,20 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
           facet_tetra_list(triang, data->cube->points[i], data->data)) //All facets are in the conf_mem_list
       { //Passed all tests, we have found a correct tetrahedron on this side.
 
-        if (data->store_tetra) { //We need to store al tetra
-          tetra tet = (tetra)  {{{triang->vertices[0][0],triang->vertices[0][1],triang->vertices[0][2]},
-                                 {triang->vertices[1][0],triang->vertices[1][1],triang->vertices[1][2]},
-                                 {triang->vertices[2][0],triang->vertices[2][1],triang->vertices[2][2]},
-                                 {data->cube->points[i][0],data->cube->points[i][1],data->cube->points[i][2]}}};
-          if (dotprod > tri_d) 
-          {
-            data->tet_above = realloc(data->tet_above, (data->tet_above_len + 1 ) * sizeof(tet));
-            data->tet_above[data->tet_above_len++] = tet;
-          } else {
-            data->tet_below = realloc(data->tet_below, (data->tet_below_len + 1 ) * sizeof(tet));
-            data->tet_below[data->tet_below_len++] = tet;
-          }
+        if (data->store_acute_ind) { //We need to store all apices
+
+	  data->acute_ind[data->acute_ind_len++] = i;
+	  if (dotprod > tri_d)
+	    acute_above = 1;
+	  else
+	    acute_below = 1;
+
         } else {
 
           if (dotprod > tri_d) 
             data->acute_above = 1;
           else 
             data->acute_below = 1;
-
           if ((data->acute_above && data->acute_below) || data->boundary_triangle)
             return 1;    
         }
@@ -231,16 +235,17 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
   }
 
   //If we stored all tetrahedrons, we now need to check if this facet is conform
-  if (data->store_tetra) {
-    data->acute_above = (data->tet_above_len > 0);
-    data->acute_below = (data->tet_below_len > 0);
-    
+  if (data->store_acute_ind) {
+    data->acute_above = acute_above;
+    data->acute_below = acute_below;
+
     if (data->acute_above && data->acute_below)
       return 1;
 
     if (data->boundary_triangle && (data->acute_above || data->acute_below))
       return 1;
   }
+
   return 0;  
 }
 //if save_file is set. The conf_mem_list is saved to this file every hour
@@ -269,7 +274,7 @@ void facets_conform_cube(data_list * data, char * save_file){
   cube_points cube = gen_cube_points(conf_mem_list->dim);
   cube_points fund = gen_fund_points(conf_mem_list->dim);
   parameters.cube = &cube;
-  parameters.store_tetra = 0;
+  parameters.store_acute_ind= 0;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.data = data;
   
@@ -323,7 +328,7 @@ void facets_conform_tet(data_list * data, char * save_file){
   parameters.cube = &tet;
   parameters.boundary_func = &triangle_boundary_tet;
   parameters.data = data;
-  parameters.store_tetra = 0;
+  parameters.store_acute_ind = 0;
   
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -397,7 +402,7 @@ void facets_conform_fund(data_list * data, char * save_file){
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.data = data;
-  parameters.store_tetra = 0;
+  parameters.store_acute_ind = 0;
   
   double time_start =0 , time_end = 0, time_save;
   while (changed) {
@@ -448,7 +453,6 @@ void facets_conform_fund(data_list * data, char * save_file){
     printf("Conform loop took %f seconds.\n\n", time_end-time_start);
   }
 }
-
 void facets_conform_tri_list(data_list * data, char * save_file){
   int changed = 1;
   char tmp_file[100];
@@ -464,7 +468,7 @@ void facets_conform_tri_list(data_list * data, char * save_file){
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.data = data;
-  parameters.store_tetra = 0;
+  parameters.store_acute_ind = 0;
 
   double time_start =0 , time_end = 0, time_save;
   while (changed) {

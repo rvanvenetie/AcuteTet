@@ -133,11 +133,9 @@ int tet_tet_disjoint(ptetra t1, ptetra t2) {
   tetra_normals(t1, normals); 
   if (tet_tet_separation_axes(t1,t2,normals, 4) == DISJOINT)
     return DISJOINT;
-
   tetra_normals(t2, normals);
   if (tet_tet_separation_axes(t1,t2,normals, 4) == DISJOINT)
     return DISJOINT;
-
   /*
    * Check all cross produts of edges of both tetrahedra as separting axes.
    * This covers edge-edge.
@@ -312,9 +310,9 @@ void add_tet_triangulation(ptetra tet, ptriangulation result) {
 } 
 
 
-void filter_tet_list_disjoint_triangulation(ptetra   list, size_t * list_len, ptriangulation triang) {
-  size_t c = 0;
-  for (size_t i = 0; i< *list_len; i++)
+void filter_tet_list_disjoint_triangulation(ptetra   list, unsigned short * list_len, ptriangulation triang) {
+  unsigned short c = 0;
+  for (unsigned short i = 0; i< *list_len; i++)
     if (tet_triangulation_disjoint(list+ i, triang)) {
       list[c] = list[i];
       c++;
@@ -325,7 +323,7 @@ void filter_tet_list_disjoint_triangulation(ptetra   list, size_t * list_len, pt
 
 int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
   int consistent = 1;
-  data->store_tetra = 0;
+  data->store_acute_ind = 0;
   for (size_t i = 0; i < triang->bound_len; i++) {
     if (!facet_conform(triang->bound_tri + i, data))  {
       printf("Somehow we have a non conform facet on the boundary.. WTF?\n");
@@ -338,7 +336,7 @@ int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
       consistent = 0;
     }
   }
-  data->store_tetra = 1;
+  data->store_acute_ind = 1;
   return consistent;
 }
 size_t filter_tri_list_disjoint_tet(ptriangulation triang,facet_acute_data * parameters, tri_list * list, ptetra tet) {
@@ -376,6 +374,100 @@ size_t filter_tri_list_disjoint_tet(ptriangulation triang,facet_acute_data * par
   return (cnt - tri_list_count(list));
 }
 
+void facets_conform_dynamic_remove(data_list * data, ptriangle tri_remove, size_t len_remove) {
+  tri_list * list = &data->list;
+  tri_list check_list = tri_list_init(list->dim, MEM_LIST_FALSE);
+
+  facet_acute_data parameters;
+  cube_points cube = gen_cube_points(list->dim);
+  parameters.cube = &cube;
+  parameters.boundary_func = &triangle_boundary_cube;
+  parameters.data = data;
+  parameters.acute_ind  = malloc(sizeof(vert_index) * cube.len);
+
+  ptriangle rem_arr;
+  size_t   rem_arr_len = len_remove;
+  size_t   rem_arr_capacity = len_remove;
+  rem_arr = malloc(rem_arr_capacity * sizeof(triangle));
+  memcpy(rem_arr,tri_remove, rem_arr_capacity * sizeof(triangle));
+
+  while (rem_arr_len != 0) //While we have triangles to be removed
+  {
+    printf("Going to remove triangles from the datastructure");
+    printf("Adding all possible triangles not conform to the check list\n");
+    printf("Current size check list %zu\n", tri_list_count(&check_list));
+
+    parameters.store_acute_ind = 1;
+    for (size_t i = 0; i < rem_arr_len; i++) {
+      if (tri_list_contains(&check_list, rem_arr + i))
+	printf("Removing a triangle that is also on the to check list.. wtf?");
+
+      if (!tri_list_contains(list, rem_arr + i))
+	printf("Triangle already removed from the list.. dafuq?");
+      else { 
+	//Calculate the conform tetra
+	if (facet_conform(rem_arr + i,  &parameters))
+	  printf("Trying to remove a facet that is still conform.. WTF?");
+
+	//We can form a list of all the tetrahedrons that are conform and have the triangle
+	//we are going to remove as a side. We will now add all the sides of all these tetrahedrons to
+	//the check_list as they might be non-conform anymore after removing this triangle
+
+	for (unsigned short j = 0; j < parameters.acute_ind_len; j++)
+	{
+	  triangle sides[3];
+
+	  arr3_to_triangle(rem_arr[i].vertices[0], rem_arr[i].vertices[1], cube.points[parameters.acute_ind[j]], &sides[0]);
+	  arr3_to_triangle(rem_arr[i].vertices[1], rem_arr[i].vertices[2], cube.points[parameters.acute_ind[j]], &sides[0]);
+	  arr3_to_triangle(rem_arr[i].vertices[0], rem_arr[i].vertices[2], cube.points[parameters.acute_ind[j]], &sides[0]);
+	  for (int k = 0; k < 3; k++)
+	    tri_list_insert(&check_list, sides + k, TRI_LIST_NO_RESIZE);
+	}
+
+	//Calculated all the triangles for this tetra. We can now finally remove this triangle
+	//from the list
+	tri_list_remove(list, rem_arr + i, TRI_LIST_NO_RESIZE);
+      }
+    }
+
+    rem_arr_len = 0;
+    printf("New size check list: %zu\n", tri_list_count(&check_list));
+
+    /*
+     * Loop over the list of triangles we needed to check.
+     * If any of them is not conform anymore, we add it to the remove list
+     */
+    triangle cur_tri;
+    int l;
+    size_t i,j,k;
+    parameters.store_acute_ind = 0;
+    #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri)  firstprivate(parameters)
+    for (i = 0; i < cube.len; i++) {
+      for (j = i; j < cube.len; j++) {
+        for (l = check_list.t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
+          k = check_list.t_arr[i][j-i].p_arr[l] +  j;
+          //Just vertex_from_index_cube?
+          cur_tri = (triangle) {{{cube.points[i][0],cube.points[i][1],cube.points[i][2]},
+                                 {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
+                                 {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
+          if (!facet_conform(&cur_tri,&parameters)) {
+	    #pragma omp critical(rem_update)
+	    {
+	      if (rem_arr_len == rem_arr_capacity)
+		rem_arr = realloc(rem_arr, (++rem_arr_capacity) * sizeof(triangle));
+	      rem_arr[rem_arr_len++] = cur_tri;
+	    }
+          }
+        }
+      }
+    }
+    printf("Triangles we have found to be removed %zu\n", rem_arr_len);
+    tri_list_empty(&check_list);
+  }
+  tri_list_free(&check_list);
+  free(cube.points);
+  free(parameters.acute_ind);
+}
 ptriangulation triangulate_cube(tri_list * list) {
 
   ptriangulation result = calloc(sizeof(triangulation), 1);
@@ -407,7 +499,12 @@ ptriangulation triangulate_cube(tri_list * list) {
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
   parameters.data = &data;
-  parameters.store_tetra = 1;
+  parameters.store_acute_ind = 1;
+  parameters.acute_ind = malloc(sizeof(unsigned short) * cube.len);
+
+  //This list holds all conform tetrahedrons for a given triangle, max size = cube.len
+  ptetra tet_list = malloc(sizeof(tetra) * cube.len);
+  unsigned short tet_list_len = 0;
 
   //Start triangle (0,0,0), (rand,0,0), (rand,rand,0)
   printf("Starting triangulation with facet:\n");
@@ -415,7 +512,6 @@ ptriangulation triangulate_cube(tri_list * list) {
   printf("Triangle acute? %d\n", triangle_acute(start_facet));
   result->bound_len = 1;
   result->bound_tri = start_facet;
-  ptetra tet_list = NULL;
   //While we have triangles on the boundary..
   while (result->bound_len > 0) {
     /*
@@ -430,31 +526,36 @@ ptriangulation triangulate_cube(tri_list * list) {
     print_triangle(result->bound_tri + rand_bound);
 
     //Calculate the conform tetrahedrons above and below
-    facet_conform(&result->bound_tri[rand_bound], &parameters);
-
-    // Concentanate ... Do this in face_cube_acute already I guess 
-    size_t list_len = parameters.tet_above_len + parameters.tet_below_len;
-    tet_list = realloc(tet_list,list_len * sizeof(tetra));
-    memcpy(tet_list                             , parameters.tet_above, parameters.tet_above_len * sizeof(tetra));
-    memcpy(tet_list + parameters.tet_above_len, parameters.tet_below, parameters.tet_below_len * sizeof(tetra));
-    free(parameters.tet_below); free(parameters.tet_above);
-
-    printf("Total amount of tetrahedrons found: %zu\n", list_len);
-    //Remove all the tetrahedrons that collide with current triangulation.
-    filter_tet_list_disjoint_triangulation(tet_list, &list_len,result);
-
-    printf("Amount of tetrahedrons left after filtering: %zu\n\n",list_len);
-    if (list_len == 0) {
-      printf("Waarom is deze lijst nu al fucking leeggefilterd?\n");
-      printf("Dead end, helaas pindakaas. Got to %zu\n", result->tetra_len);
-      free(cube.points);
-      triangulation_free(result);
-      free(tet_list);
-      return NULL;
+    if (!facet_conform(&result->bound_tri[rand_bound], &parameters))
+    {
+      printf("We have a triangle on the boundary that is not conform anymore.\n");
+      printf("Whatthefuck? Breaking!\n");
+      break;
     }
 
+    tet_list_len = parameters.acute_ind_len;
+    printf("Total amount of conform tetrahedrons found for this boundary: %hu\n", tet_list_len);
+    //Form explicit list of the tetrahedrons
+    for (unsigned short i = 0; i < tet_list_len; i++) 
+    {
+      copyArr3(tet_list[i].vertices[0], result->bound_tri[rand_bound].vertices[0]);
+      copyArr3(tet_list[i].vertices[1], result->bound_tri[rand_bound].vertices[1]);
+      copyArr3(tet_list[i].vertices[2], result->bound_tri[rand_bound].vertices[2]);
+      copyArr3(tet_list[i].vertices[3], cube.points[parameters.acute_ind[i]]);
+    }
 
-    int rand_tet = rand() % list_len;
+    //Remove all the tetrahedrons that intersect with current triangulation.
+    filter_tet_list_disjoint_triangulation(tet_list, &tet_list_len,result);
+
+    printf("Amount of tetrahedrons left after filtering: %hu\n\n",tet_list_len);
+    if (tet_list_len == 0) {
+      printf("Waarom is deze lijst nu al fucking leeggefilterd?\n");
+      printf("Dead end, helaas pindakaas. Got to %zu\n", result->tetra_len);
+      break;
+    }
+
+    //From the left tetrahedrons
+    int rand_tet = rand() % tet_list_len;
     /*
      * Add one of the tetrahedrons to the triangulation.
      * This removes all the boundary triangles that are covered by this tetrahedron
@@ -483,10 +584,12 @@ ptriangulation triangulate_cube(tri_list * list) {
      * what is a good measure?
      */
     
-    facets_conform(&data, NULL);
+    //facets_conform(&data, NULL);
 
   }
   free(cube.points);
+  free(parameters.acute_ind);
+  free(tet_list);
   printf("Triangulation has length of %zu\n", result->tetra_len);
   return result;
 }

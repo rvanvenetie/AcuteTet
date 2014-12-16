@@ -18,6 +18,7 @@ typedef struct triangle_list
 
 
 
+void arr3_to_triangle(arr3 v0, arr3 v1, arr3 v2, ptriangle triang);
 int tri_tri_equal(ptriangle t1, ptriangle t2);
 int arr3_triangle_acute(arr3 v0, arr3 v1, arr3 v2);
 int triangle_acute(ptriangle triang);

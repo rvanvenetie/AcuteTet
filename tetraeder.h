@@ -37,12 +37,16 @@ typedef struct facet_acute_data {
   //int (*facets_list)(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
 
   int boundary_triangle;
-  
-  int store_tetra;
-  ptetra tet_above;
-  ptetra tet_below;
-  size_t tet_above_len;
-  size_t tet_below_len;
+
+  /*
+   * In case we want to reconstruct all the conform tetrahedrons, we can store the indices,
+   * in cube points, of the apices that form the acute tetrahedron with this base triangle.
+   * One must ensure that the array allows enough storage. (upper bound given by the amount of points
+   * in cube).
+   */
+  int store_acute_ind; 
+  vert_index * acute_ind;
+  int acute_ind_len;
 } facet_acute_data;
 
 
@@ -51,6 +55,7 @@ int tet_tet_share_facet(ptetra t1, ptetra t2);
 int tri_tet_share_edge(ptriangle tri, ptetra tet);
 int tri_tet_share_facet(ptriangle tri, ptetra tet);
 
+void tet_sides(ptetra tet, ptriangle triang);
 void tetra_normals(ptetra tet, arr3 * normals);
 int tetra_acute(ptetra tet);
 int tetra_acute_optimized(ptriangle tet, arr3 cube_pt);

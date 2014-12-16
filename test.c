@@ -468,7 +468,9 @@ void test_tetra_disjoint(void) {
   //These two tetrahedrons have a facet in the same plane, but not same facet, so not disjoint
   if (tet_tet_disjoint(&t1, &t2))
     printf("ERROR 10 IN DISJOINT TEST");
-
+  //The same tetrahedrons.. Should intersect
+  if (tet_tet_disjoint(&t1, &t2))
+    printf("ERROR 11 IN DISJOINT TEST");
 }
 
 int main(void){

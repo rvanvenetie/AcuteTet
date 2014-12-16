@@ -5,6 +5,12 @@
 #include "vector.h"
 #include "triangle.h"
 
+void arr3_to_triangle(arr3 v0, arr3 v1, arr3 v2, ptriangle triang) {
+  copyArr3(triang->vertices[0], v0);
+  copyArr3(triang->vertices[1], v1);
+  copyArr3(triang->vertices[2], v2);
+}
+
 int tri_tri_equal(ptriangle t1, ptriangle t2) {
   return (vert_vert_share_count(t1->vertices, 3, t2->vertices, 3) == 3);
 }
