@@ -417,7 +417,7 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
   while (tri_list_count(remove_list)) //While we have triangles to be removed)
   {
     time_start = omp_get_wtime();
-    printf("\n\nLoop %d of conform dynamic\n", iter);
+    printf("\n\nLoop %d of conform dynamic\n", iter++);
     printf("Size of entire list %zu\n", tri_list_count(list));
     printf("Size of remove list %zu\n", tri_list_count(remove_list));
 
