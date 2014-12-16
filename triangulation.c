@@ -435,7 +435,6 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
     //Loop over remove list
     #pragma omp parallel for  schedule(dynamic,list->dim) shared(locks) private(sides,j,k,i,l,m,n,idx,cur_tri)
     for (i = 0; i < cube.len; i++) {
-      printf("Thread[%d] acute_ind %d data_loc %d\n", omp_get_thread_num(), parameters.store_acute_ind, parameters.acute_ind);
       for (j = i; j < cube.len; j++) {
         for (l = remove_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
           k = remove_list->t_arr[i][j-i].p_arr[l] +  j;
@@ -506,7 +505,6 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
     }
     #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri)  
     for (i = 0; i < cube.len; i++) {
-      printf("Thread[%d] acute_ind %d data_loc %d\n", omp_get_thread_num(), parameters.store_acute_ind, parameters.acute_ind);
       for (j = i; j < cube.len; j++) {
         for (l = check_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
           k = check_list->t_arr[i][j-i].p_arr[l] +  j;
