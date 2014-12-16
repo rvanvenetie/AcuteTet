@@ -401,18 +401,22 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
   
   /*
    * During this method we are going to operate data that is not thread-safe.
-   * To avoid race conditions we need an array of locks.
+   * To avoid race conditions we need an array of locks. We use a lock for the
+   * first two points of a triangle (so need 2d array of locks).
    */
   omp_lock_t * locks = malloc(sizeof(omp_lock_t) * cube.len);
   //Initalize the locks
   for (size_t i = 0; i < cube.len; i++)
     omp_init_lock(locks + i);
 
+  int iter = 0;
+  double time_start, time_end, time_check;
   while (tri_list_count(remove_list)) //While we have triangles to be removed)
   {
-    printf("\n\nConform dynamic loop\n");
-    printf("Current size of entire list %zu\n", tri_list_count(list));
-    printf("Current size of remove list %zu\n", tri_list_count(remove_list));
+    time_start = omp_get_wtime();
+    printf("\n\nLoop %d of conform dynamic\n", iter);
+    printf("Size of entire list %zu\n", tri_list_count(list));
+    printf("Size of remove list %zu\n", tri_list_count(remove_list));
 
 
     triangle cur_tri;
@@ -481,8 +485,9 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
     //Remove_list should now be empty and check_list should be nonempty
     if (tri_list_count(remove_list) > 0)
       printf("Why on earth is the remove_list not empty?:%zu\n", tri_list_count(remove_list));
-    printf("Size of the check list: %zu\n", tri_list_count(check_list));
-
+    printf("Size of check list  %zu\n", tri_list_count(check_list));
+    time_check = omp_get_wtime();
+    printf("\nTook %f seconds to construct check list\n",time_check - time_start);
     /*
      * Loop over the list of triangles we needed to check.
      * If any of them is not conform anymore, we add it to the remove list
@@ -498,16 +503,14 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
                                  {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
                                  {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
 
-          if (!facet_conform(&cur_tri,&parameters)) {
-	    //We need to add cur_tri to the remove_list in a thread-safe way
-	    triangle_to_index_cube(cur_tri, list->dim, idx);
+          if (!facet_conform(&cur_tri,&parameters)) 
+	    tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE); //Tread-safe as cur-thread only edits triangle(i,*,*)
 
-	    omp_set_lock(locks + idx[0]);//Thread-safe now! As we edit the data check_list.p_arr[idx[0]][idx[1]]
-	    tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE);
-	    omp_unset_lock(locks + idx[0]);
-          }
         }
     tri_list_empty(check_list);
+    time_end   = omp_get_wtime();
+    printf("Took %f seconds to construct new remove list\n", time_end - time_check);
+    printf("Took %f seconds for the entire loop.\n", time_end-time_start);
   }
   for (size_t i = 0; i < cube.len; i++)
     omp_destroy_lock(locks + i);
