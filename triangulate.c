@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL,_IOLBF, 1024);
   }
   printf("Triangulation for p = %d\n", list.dim);
-  printf("Amount of triangles in the list = %zu\n", mem_list_count(&list));
+  //printf("Amount of triangles in the list = %zu\n", mem_list_count(&list));
   printf("Memory of the triangle list = %zu\n", mem_list_memory(&list));
 
   ptriangulation triang;
