@@ -330,7 +330,7 @@ int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
       print_triangle(triang->bound_tri + i);
       consistent = 0;
     }
-    if (!tri_list_contains(&data->data->list, triang->bound_tri + i)) {
+    if (!mem_list_cube_contains(&data->data->mem_list, triang->bound_tri + i)) {
       printf("Somehow the bondary triangle is not in the list anymore.. WTF?\n");
       print_triangle(triang->bound_tri + i);
       consistent = 0;
