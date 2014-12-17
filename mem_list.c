@@ -519,11 +519,12 @@ tri_mem_list mem_list_fund_to_cube(tri_mem_list * fund_list){
 
   omp_lock_t ** locks = malloc(sizeof(omp_lock_t *) * fund_list->mem_fund.cube_len);
   //Initalize the locks
-  for (size_t i = 0; i < fund_list->mem_fund.cube_len; i++) {
-    locks[i] = malloc(sizeof(omp_lock_t) * (fund_list->mem_fund.cube_len - i));
-    for (size_t j = 0; j < fund_list->mem_fund.cube_len - i; j++)
+  for (size_t i = 0; i < mem_list_dim_size(&result,0,-1,-1); i++){
+    locks[i] = malloc(sizeof(omp_lock_t) * (mem_list_dim_size(&result,1,i,-1)));
+    for (size_t j = 0; j < mem_list_dim_size(&result,1,i,-1); j++)
       omp_init_lock(&locks[i][j]);
   }
+
   {
   int i,j,k,s;
   #pragma omp parallel for schedule(dynamic) shared(locks)\
@@ -533,7 +534,7 @@ tri_mem_list mem_list_fund_to_cube(tri_mem_list * fund_list){
         for (k = 0; k < mem_list_dim_size(fund_list,2,i,j); k++) {
           cur_idx[0] = i;
 	  cur_idx[1] = j;
-	    cur_idx[2] = k;
+	  cur_idx[2] = k;
 	  if (!GMI(fund_list->t_arr, cur_idx))
 	    continue;
 	  cur_tri = triangle_from_index_fund(cur_idx, vert_from_index);

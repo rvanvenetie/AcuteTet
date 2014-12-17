@@ -50,9 +50,9 @@ int main(int argc, char *argv[]) {
   //fprintf(stdout,"Conform %zu\n", mem_list_count(&mem_list));
   fprintf(stdout,"Starting the big list shit!");
   tri_mem_list cube_list = mem_list_fund_to_cube(&mem_list);
-  fprintf(stdout,"Memory %zu\n", mem_list_memory(&mem_list));
-  fprintf(stdout,"Conform %zu\n", mem_list_count(&mem_list));
-  mem_list_to_file(&mem_list, "/local/rvveneti/cube_conf__30.tet",MEM_LIST_SAVE_CLEAN);
+  fprintf(stdout,"Memory %zu\n", cube_list_memory(&cube_list));
+  fprintf(stdout,"Conform %zu\n", cube_list_count(&cube_list));
+  cube_list_to_file(&cube_list, "/local/rvveneti/cube_conf__30.tet",MEM_LIST_SAVE_CLEAN);
   return 0;
   char tmp_file[70],log_file[70],data_file[70];
   data_list face_list;
