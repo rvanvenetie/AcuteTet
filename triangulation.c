@@ -356,8 +356,10 @@ void intersection_data_list_tet(data_list * list, tri_list * remove_list, ptetra
           l = list->list.t_arr[i][j].p_arr[k];
         else
           l = k;
-
-        cur_idx = (tri_index) {i, i + j, i + j + l};
+	
+	cur_idx[0] = i;
+	cur_idx[1] = i + j;
+	cur_idx[2] = i + j + l;
         cur_tri = triangle_from_index_cube(cur_idx, dim);
         if (!tri_tet_disjoint(&cur_tri, tet)) //If not disjoint with new tetrahedron, delete
 	  tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE); //Thread safe, as only one processor acces [i][j]
@@ -412,7 +414,7 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
     }
     triangle sides[3];
     //Loop over remove list
-    #pragma omp parallel for  schedule(dynamic,dim) shared(locks) private(sides,j,k,i,l,m,n,idx,cur_tri)
+    #pragma omp parallel for  schedule(dynamic,list->dim) shared(locks) private(sides,j,k,i,l,m,n,idx,cur_tri)
     for (i = 0; i < cube.len; i++) {
       for (j = i; j < cube.len; j++) {
         for (l = remove_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
@@ -533,13 +535,13 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
     if (!triangle_acute(start_facet))
       continue;
     //found_start =  (tri_list_contains(list, start_facet));
-    found_start = mem_list_contains(list,start_facet);
+    found_start = mem_list_cube_contains(list,start_facet);
   }
 
   facet_acute_data parameters;
   data_list data;
   data.mode = DATA_MEM_LIST_CUBE;
-  data.list = *list;
+  data.mem_list = *list;
   //data.mode = DATA_TRI_LIST;
   //data.list = *list;
 

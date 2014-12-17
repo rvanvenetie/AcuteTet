@@ -13,18 +13,18 @@
 #include "triangulation.h"
 #include "omp.h"
 
-#define REDIRECT_OUTPUT 1
+#define REDIRECT_OUTPUT 0
 #define LOG "triang_%d.log"
 int main(int argc, char *argv[]) {
   char log_file[100];
   int dim = 10;
-  tri_list list;
+  tri_mem_list list;
   if (argc == 2 && isdigit(argv[1][0]))
     dim = atoi(argv[1]);
   if (argc == 2 && !isdigit(argv[1][0]))
   {
     printf("Loading from: %s\n", argv[1]);
-    if (tri_list_from_file(&list,argv[1]))
+    if (mem_list_from_file(&list,argv[1]))
       printf("Loaded succesfully from file\n");
     else {
       printf("Failed loading from file\n");
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     }
   } else {
     printf("Creating new tri_list\n");
-    list = tri_list_init(dim, MEM_LIST_TRUE);
+    list = mem_list_init(dim, MEM_LIST_CUBE_SPARSE, MEM_LIST_TRUE);
   }
   sprintf(log_file, LOG, list.dim);
   if (REDIRECT_OUTPUT) {
@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL,_IOLBF, 1024);
   }
   printf("Triangulation for p = %d\n", list.dim);
-  printf("Amount of triangles in the list = %zu\n", tri_list_count(&list));
-  printf("Memory of the triangle list = %zu\n", tri_list_memory(&list));
+  printf("Amount of triangles in the list = %zu\n", mem_list_count(&list));
+  printf("Memory of the triangle list = %zu\n", mem_list_memory(&list));
 
   ptriangulation triang;
   triang = triangulate_cube(&list);
@@ -51,6 +51,6 @@ int main(int argc, char *argv[]) {
     triangulation_free(triang);
   }
 
-  tri_list_free(&list);
+  mem_list_free(&list);
   return 0;
 }
