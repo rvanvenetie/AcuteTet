@@ -339,31 +339,29 @@ int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
   data->store_acute_ind = 1;
   return consistent;
 }
-void intersection_data_list_tet(data_list * list, tri_list * remove_list, ptetra tet){
+void intersection_data_list_tet(tri_mem_list * list, tri_list * remove_list, ptetra tet){
   if (tri_list_count(remove_list) > 0)
     printf("The remove list is not empty.. Oke?");
 
-  int dim = data_list_dim(list);
   tri_index cur_idx;
   triangle cur_tri;
-  int i,j,k,l;
-  #pragma omp parallel for schedule(dynamic,dim) private(j,k,i,l,cur_tri, cur_idx)
-  for (i = 0; i < data_list_dim_size(list,0,-1,-1); i++) {
-    for (j = 0; j < data_list_dim_size(list, 1, i, -1); j++) {
-      for (k = data_list_dim_size(list,2,i,j) - 1; k>=0 ; k--)
-      {
-        if (list->mode == DATA_TRI_LIST)
-          l = list->list.t_arr[i][j].p_arr[k];
-        else
-          l = k;
-	
-	cur_idx[0] = i;
-	cur_idx[1] = i + j;
-	cur_idx[2] = i + j + l;
-        cur_tri = triangle_from_index_cube(cur_idx, dim);
-        if (!tri_tet_disjoint(&cur_tri, tet)) //If not disjoint with new tetrahedron, delete
-	  tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE); //Thread safe, as only one processor acces [i][j]
-      }
+  int i,j,k;
+  #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,cur_tri, cur_idx)
+  for (i = 0; i < mem_list_dim_size(list,0,-1,-1); i++) {
+    for (j = 0; j < mem_list_dim_size(list, 1, i, -1); j++) {
+      if (list->t_arr[i][j])
+        for (k = 0; k < mem_list_dim_size(list,2,i,j); k++) {
+          cur_idx[0] = i;
+          cur_idx[1] = j;
+          cur_idx[2] = k;
+          if (!GMI(list->t_arr, cur_idx))
+            continue;
+          cur_idx[1] = i + j;
+          cur_idx[2] = i + j + k;
+          cur_tri = triangle_from_index_cube(cur_idx, list->dim);
+          if (!tri_tet_disjoint(&cur_tri, tet)) //If not disjoint with new tetrahedron, delete
+            tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE); //Thread safe, as only one processor acces [i][j]
+        }
     }
   }
 }
@@ -577,7 +575,7 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
      * Then we add a random tetrahedron to our triangulation, update the conform list and repeat.
      */
     int rand_bound = rand() % result->bound_len;
-    //printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", mem_list_count(list));
+    printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", mem_list_count(list));
     print_triangle(result->bound_tri + rand_bound);
 
     //Calculate the conform tetrahedrons above and below
@@ -623,11 +621,10 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
 
     //Consistency check
     consistent_triangulation(result, &parameters);
-    fprintf(stderr,"Komt hier nog gewoon heur.. Maar wtf?");
     /*
      * Calculate a list of all the triangles we are going to remove
      */
-    intersection_data_list_tet(&data, &remove_list, tet_list + rand_tet);
+    intersection_data_list_tet(list, &remove_list, tet_list + rand_tet);
     printf("Amountf of triangles not disjoint with new tetrahedron:%zu\n\n", tri_list_count(&remove_list));
     printf("Now calling the facets conform loop with this remove list.. Should re-conform the dataset!\n");
     
