@@ -196,8 +196,8 @@ int tri_list_to_file(tri_list * list, char * filename) {
   if (fwrite(list,sizeof(tri_list), 1,stream) < 1)
     return 0;
 
-  for (int i = 0; i < dim_size; i++) {
-    for (int j = 0; j < dim_size - i; j++) {
+  for (size_t i = 0; i < dim_size; i++) {
+    for (size_t j = 0; j < dim_size - i; j++) {
       fwrite(&list->t_arr[i][j].len, sizeof(list->t_arr[i][j].len), 1, stream);
       if (fwrite(list->t_arr[i][j].p_arr, sizeof(unsigned short), list->t_arr[i][j].len, stream) < (size_t) list->t_arr[i][j].len)
         return 0;
@@ -283,13 +283,6 @@ int tri_list_old_from_file_to_new(tri_list * list, char * filename) {
   return 1;
 }
 
-//Returns sparse tri_mem_list
-tri_mem_list tri_list_to_mem_list(tri_list * list) {
-
-
-
-
-}
 tri_list mem_list_to_tri_list(tri_mem_list * list) {
   if (list->mode != MEM_LIST_FUND) 
     return *(tri_list * )NULL;
@@ -358,13 +351,13 @@ data_list data_list_init(int dim, int mode, int init_value) {
       result.list = tri_list_init(dim,init_value);
       break;
     case DATA_MEM_LIST_FUND:
-      result.mem_list = mem_list_init_fund(dim, init_value);
+      result.mem_list = mem_list_fund_init(dim, init_value);
       break;
     case DATA_MEM_LIST_TET:
-      result.mem_list = mem_list_init_tet(dim, init_value);
+      result.mem_list = mem_list_tet_init(dim, init_value);
       break;
     case DATA_MEM_LIST_CUBE:
-      result.mem_list = mem_list_init_cube(dim, init_value);
+      result.mem_list = mem_list_cube_init(dim, init_value, MEM_LIST_CUBE);
       break;
   }
   return result;

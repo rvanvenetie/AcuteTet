@@ -125,24 +125,24 @@ void randomize_triangle(ptriangle triang) {
 }
 void test_mem_list_fund(void){
   int dim = 15;
-  tri_mem_list mem_list = mem_list_init_fund(dim,MEM_LIST_FALSE);
+  tri_mem_list mem_list = mem_list_fund_init(dim,MEM_LIST_FALSE);
   triangle * triang_list = malloc(sizeof(triangle)  * 750);
   for (int i = 0; i < 750; i++) {
     triang_list[i] = rand_triangle(dim);
-    mem_list_set_fund(&mem_list,triang_list + i);
+    mem_list_fund_set(&mem_list,triang_list + i);
   } //Inserted all the triangles.
   
   //Check if all set
   for (int i = 0; i < 750; i++) {
     randomize_triangle(triang_list + i);
     triangle_symmetry(triang_list + i, rand() % 48,dim, triang_list + i); 
-    if (!mem_list_get_fund(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
+    if (!mem_list_fund_get(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
       printf("ERROR IN MEM_LIST_FUND");
     }
   } 
   //Delete all
   for (int i = 0; i < 750; i++) 
-    mem_list_clear_fund(&mem_list, triang_list + i);
+    mem_list_fund_clear(&mem_list, triang_list + i);
   //Check if all deleted
   if (mem_list_count(&mem_list) > 0)
     printf("ERROR 2 IN MEM_LIST_FUND\n");
@@ -154,21 +154,21 @@ void test_mem_list_fund(void){
 void test_mem_list_tet(void) {
   int dim = 15;
   int len = 2500;
-  tri_mem_list mem_list = mem_list_init_tet(dim,MEM_LIST_FALSE);
+  tri_mem_list mem_list = mem_list_tet_init(dim,MEM_LIST_FALSE);
   triangle * triang_list = malloc(sizeof(triangle)  * len);
   for (int i = 0; i < len; i++) {
     triang_list[i] = rand_triangle_tet(dim);
-    mem_list_set_tet(&mem_list,triang_list + i);
+    mem_list_tet_set(&mem_list,triang_list + i);
   } //Inserted all the triangles
 
   for (int i = 0; i < len; i++) {
     randomize_triangle(triang_list + i);
-    if (!mem_list_get_tet(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
+    if (!mem_list_tet_get(&mem_list, triang_list[i].vertices[2], triang_list[i].vertices[1], triang_list[i].vertices[0])) {
       printf("ERROR 1 IN MEM_LIST_TET");
     }
   } 
   for (int i = 0; i < len; i++)  {
-    mem_list_clear_tet(&mem_list, triang_list + i);
+    mem_list_tet_clear(&mem_list, triang_list + i);
   }
   if (mem_list_count(&mem_list) > 0)
     printf("ERROR 2 IN MEM_LIST_TET\n");
@@ -235,16 +235,16 @@ void test_tri_list(void) {
   free(triang_list);
 
   dim = 5;
-  tri_mem_list mem_list = mem_list_init_fund(dim, MEM_LIST_TRUE);
+  tri_mem_list mem_list = mem_list_fund_init(dim, MEM_LIST_TRUE);
   list = mem_list_to_tri_list(&mem_list);
   if (C((dim + 1) * (dim + 1)  * (dim + 1), 3) != tri_list_count(&list))
     printf("ERROR 4 IN TRI_LIST\n");
   mem_list_free(&mem_list);
   tri_list_free(&list);
 
-  mem_list = mem_list_init_fund(dim, MEM_LIST_FALSE);
+  mem_list = mem_list_fund_init(dim, MEM_LIST_FALSE);
   triangle start_triangle = rand_triangle_tet(dim);
-  mem_list_set_fund(&mem_list, &start_triangle);
+  mem_list_fund_set(&mem_list, &start_triangle);
   printf("Mem_list_count: %zu\n", mem_list_count(&mem_list));
   list = mem_list_to_tri_list(&mem_list);
   printf("Tri_list count: %zu\n", tri_list_count(&list));

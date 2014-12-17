@@ -137,17 +137,17 @@ void print_tetra(ptetra tet) {
 
 int facet_tetra_list(ptriangle triang, arr3 apex, data_list * data) {
   if (data->mode == DATA_MEM_LIST_FUND)
-    return (mem_list_get_fund(&data->mem_list, triang->vertices[0], triang->vertices[1], apex) &&
-            mem_list_get_fund(&data->mem_list, triang->vertices[0], triang->vertices[2], apex) &&
-            mem_list_get_fund(&data->mem_list, triang->vertices[1], triang->vertices[2], apex));
+    return (mem_list_fund_get(&data->mem_list, triang->vertices[0], triang->vertices[1], apex) &&
+            mem_list_fund_get(&data->mem_list, triang->vertices[0], triang->vertices[2], apex) &&
+            mem_list_fund_get(&data->mem_list, triang->vertices[1], triang->vertices[2], apex));
   else if (data->mode == DATA_MEM_LIST_CUBE) 
-    return (mem_list_get_cube(&data->mem_list, triang->vertices[0], triang->vertices[1], apex) &&
-            mem_list_get_cube(&data->mem_list, triang->vertices[0], triang->vertices[2], apex) &&
-            mem_list_get_cube(&data->mem_list, triang->vertices[1], triang->vertices[2], apex));
+    return (mem_list_cube_get(&data->mem_list, triang->vertices[0], triang->vertices[1], apex) &&
+            mem_list_cube_get(&data->mem_list, triang->vertices[0], triang->vertices[2], apex) &&
+            mem_list_cube_get(&data->mem_list, triang->vertices[1], triang->vertices[2], apex));
   else if (data->mode == DATA_MEM_LIST_TET)
-    return (mem_list_get_tet(&data->mem_list, triang->vertices[0], triang->vertices[1],apex) &&
-            mem_list_get_tet(&data->mem_list, triang->vertices[0], triang->vertices[2],apex) &&
-            mem_list_get_tet(&data->mem_list, triang->vertices[1], triang->vertices[2],apex)); 
+    return (mem_list_tet_get(&data->mem_list, triang->vertices[0], triang->vertices[1],apex) &&
+            mem_list_tet_get(&data->mem_list, triang->vertices[0], triang->vertices[2],apex) &&
+            mem_list_tet_get(&data->mem_list, triang->vertices[1], triang->vertices[2],apex)); 
   else if (data->mode == DATA_TRI_LIST) 
     return (tri_list_get(&data->list, triang->vertices[0], triang->vertices[1],apex) &&
             tri_list_get(&data->list, triang->vertices[0], triang->vertices[2],apex) &&
@@ -299,7 +299,7 @@ void facets_conform_cube(data_list * data, char * save_file){
                                  {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
           if (!facet_conform(&cur_tri,&parameters)) { //remove from list
             changed = 1;
-            mem_list_clear_cube_sym(conf_mem_list, &cur_tri);
+            mem_list_cube_clear_sym(conf_mem_list, &cur_tri);
           }
         }
       }
@@ -431,7 +431,7 @@ void facets_conform_fund(data_list * data, char * save_file){
               
           if (!facet_conform(&cur_tri,&parameters)) { //remove from list
             changed = 1;
-            mem_list_clear_fund(conf_mem_list, &cur_tri);
+            mem_list_fund_clear(conf_mem_list, &cur_tri);
           }
         }
         if (save_file && //Do we want to save the file?

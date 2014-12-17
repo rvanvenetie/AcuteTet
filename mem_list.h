@@ -122,9 +122,9 @@ triangle triangle_from_index_fund(tri_index indices,arr3 * index_vertex);
 #define MEM_LIST_TRUE 1
 
 tri_mem_list mem_list_init(int dim, int mode, int init_value);
-tri_mem_list mem_list_init_cube(int dim, int init_value, int sparse);
-tri_mem_list mem_list_init_fund(int dim, int init_value);
-tri_mem_list mem_list_init_tet(int dim, int init_value);
+tri_mem_list mem_list_cube_init(int dim, int init_value, int sparse);
+tri_mem_list mem_list_fund_init(int dim, int init_value);
+tri_mem_list mem_list_tet_init(int dim, int init_value);
 void mem_list_free(tri_mem_list * list);
 
 
@@ -136,10 +136,13 @@ int mem_list_dim_size(tri_mem_list * list, int dim, int idx1, int idx2);
 int mem_list_row_empty(tri_mem_list * list,int i, int j);
 size_t mem_list_count(tri_mem_list * list);
 size_t mem_list_memory(tri_mem_list * list);
-void mem_list_clean(tri_mem_list * list);
 size_t mem_list_indices(tri_mem_list * list, tri_index_list * index_list);
 triangle_list mem_list_to_triangle_list(tri_mem_list * list);
 
+/*
+ * mem_list conversion operators
+ */
+tri_mem_list mem_list_fund_to_cube(tri_mem_list * fund_list);
 
 /*
  * mem_list file functions
@@ -158,26 +161,28 @@ int mem_list_to_file(tri_mem_list * list, char * filename, int mode);
 
 
 /*
- * mem_list set/get/clear cube functions
+ * mem_list set/get/clear +  cube functions
  */
-void mem_list_clear_cube(tri_mem_list * list, ptriangle triang);
-void mem_list_set_cube(tri_mem_list * list, ptriangle triang);
-int  mem_list_get_cube(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
-void mem_list_clear_cube_sym(tri_mem_list * list, ptriangle triang);
+void mem_list_cube_compress(tri_mem_list * list);
+void mem_list_cube_clear(tri_mem_list * list, ptriangle triang);
+void mem_list_cube_set(tri_mem_list * list, ptriangle triang);
+int  mem_list_cube_get(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
+void mem_list_cube_clear_sym(tri_mem_list * list, ptriangle triang);
+void mem_list_cube_set_sym(tri_mem_list * list, ptriangle triang);
 
 /*
  * mem_list set/get/clear tet functions
  */
-void mem_list_clear_fund(tri_mem_list * list, ptriangle triang);
-void mem_list_set_fund(tri_mem_list * list, ptriangle triang);
-int mem_list_get_fund(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
+void mem_list_fund_clear(tri_mem_list * list, ptriangle triang);
+void mem_list_fund_set(tri_mem_list * list, ptriangle triang);
+int mem_list_fund_get(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
 
 /*
  * mem_list set/get/clear tet functions
  */
-int mem_list_get_tet(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
-void mem_list_set_tet(tri_mem_list * list, ptriangle triang);
-void mem_list_clear_tet(tri_mem_list * list, ptriangle triang);
+int mem_list_tet_get(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
+void mem_list_tet_set(tri_mem_list * list, ptriangle triang);
+void mem_list_tet_clear(tri_mem_list * list, ptriangle triang);
 /*
  * old
  */

@@ -44,23 +44,16 @@
 #define LOOP_TRI  DATA_TRI_LIST
 
 int main(int argc, char *argv[]) {
-/*
-  if (freopen("/local/rvveneti/mem_to_tri_list.log","a",stdout) == NULL)
-    printf("Redirecting output failed\n");
-  setvbuf(stdout, NULL,_IOLBF, 1024);
   tri_mem_list mem_list;
-
-  mem_list_from_file(&mem_list, "/mnt/ssd/rvveneti/fund_conf_30.tet");
+  mem_list_from_file(&mem_list, "/local/rvveneti/fund_conf_30.tet");
   fprintf(stdout,"Memory %zu\n", mem_list_memory(&mem_list));
   //fprintf(stdout,"Conform %zu\n", mem_list_count(&mem_list));
   fprintf(stdout,"Starting the big list shit!");
-  tri_list list =  mem_list_to_tri_list(&mem_list);
-  fprintf(stdout,"Memory %zu\n", tri_list_memory(&list));
-  fprintf(stdout,"Conform %zu\n", tri_list_count(&list));
-  tri_list_to_file(&list, "/local/rvveneti/tri_conf_30.tet");
-
-return 0;
-*/
+  tri_mem_list cube_list = mem_list_fund_to_cube(&mem_list);
+  fprintf(stdout,"Memory %zu\n", mem_list_memory(&mem_list));
+  fprintf(stdout,"Conform %zu\n", mem_list_count(&mem_list));
+  mem_list_to_file(&mem_list, "/local/rvveneti/cube_conf__30.tet",MEM_LIST_SAVE_CLEAN);
+  return 0;
   char tmp_file[70],log_file[70],data_file[70];
   data_list face_list;
   double time_start,time_end;
