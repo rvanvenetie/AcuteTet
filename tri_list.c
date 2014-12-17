@@ -161,18 +161,12 @@ void tri_list_free(tri_list * list) {
 }
 
 size_t tri_list_count(tri_list * list) {
-  size_t comp_row_size = 0;
   size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   size_t result = 0;
   for (size_t i = 0; i < dim_size; i++) {
     for (size_t j = 0; j < dim_size - i; j++) 
-    {
-      if(list->t_arr[i][j].len)
-	comp_row_size +=  (dim_size - i - j) / 8 + 1;
       result += list->t_arr[i][j].len;
-    }
   }
-  printf("Storage of tri_list if using compressed rows: %zu\n", comp_row_size);
   return result;
 }
 

@@ -13,7 +13,7 @@
 #include "triangulation.h"
 #include "omp.h"
 
-#define REDIRECT_OUTPUT 0
+#define REDIRECT_OUTPUT 1
 #define LOG "triang_%d.log"
 int main(int argc, char *argv[]) {
   char log_file[100];
