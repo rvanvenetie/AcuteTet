@@ -339,57 +339,36 @@ int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
   data->store_acute_ind = 1;
   return consistent;
 }
-void intersection_tri_list_tet(tri_list * list, tri_list * remove_list, ptetra tet){
+void intersection_data_list_tet(data_list * list, tri_list * remove_list, ptetra tet){
   if (tri_list_count(remove_list) > 0)
     printf("The remove list is not empty.. Oke?");
 
-  size_t dim_size=  tri_list_dim_size(list->dim);
+  int dim = data_list_dim(list);
+  tri_index cur_idx;
   triangle cur_tri;
-  size_t i,j,k;
-  int l;
+  int i,j,k,l;
+  #pragma omp parallel for schedule(dynamic,dim) private(j,k,i,l,cur_tri, cur_idx)
+  for (i = 0; i < data_list_dim_size(list,0,-1,-1); i++) {
+    for (j = 0; j < data_list_dim_size(list, 1, i, -1); j++) {
+      for (k = data_list_dim_size(list,2,i,j) - 1; k>=0 ; k--)
+      {
+        if (list->mode == DATA_TRI_LIST)
+          l = list->list.t_arr[i][j].p_arr[k];
+        else
+          l = k;
 
-  #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri) 
-  for (i = 0; i < dim_size; i++) {
-    vertex_from_index_cube(i,list->dim, cur_tri.vertices[0]);
-
-    for (j = i; j < dim_size; j++) {
-      vertex_from_index_cube(j, list->dim, cur_tri.vertices[1]);
-
-      for (l = list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
-        k = list->t_arr[i][j-i].p_arr[l] +  j;
-
-        vertex_from_index_cube(k, list->dim, cur_tri.vertices[2]);
-        //Cur_tri is the l-th triangle with points(i,j,*)
+        cur_idx = (tri_index) {i, i + j, i + j + l};
+        cur_tri = triangle_from_index_cube(cur_idx, dim);
         if (!tri_tet_disjoint(&cur_tri, tet)) //If not disjoint with new tetrahedron, delete
 	  tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE); //Thread safe, as only one processor acces [i][j]
       }
     }
   }
 }
-void filter_tri_list_remove_list(tri_list * list, tri_list * remove_list) {
-  size_t dim_size = tri_list_dim_size(list->dim);
-  triangle cur_tri;
-  size_t i,j,k;
-  int l;
 
-  #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri) 
-  for (i = 0; i < dim_size; i++) {
-    vertex_from_index_cube(i,remove_list->dim, cur_tri.vertices[0]);
-    for (j = i; j < dim_size; j++) {
-      vertex_from_index_cube(j, remove_list->dim, cur_tri.vertices[1]);
-      for (l = remove_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
-        k = remove_list->t_arr[i][j-i].p_arr[l] +  j;
-        vertex_from_index_cube(k, remove_list->dim, cur_tri.vertices[2]);
-        //Cur_tri is the l-th triangle with points(i,j,*)
-	//Remove cur_tri from list
-	tri_list_remove(list, &cur_tri, TRI_LIST_NO_RESIZE);
-      }
-    }
-  }
-}
 
 void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri_list * check_list) {
-  tri_list * list = &data->list;
+  tri_mem_list * list = &data->mem_list;
 
   cube_points cube = gen_cube_points(list->dim);
   //Initalize the parameter. Every thread should have it's own copy
@@ -418,7 +397,7 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
   {
     time_start = omp_get_wtime();
     printf("\n\nLoop %d of conform dynamic\n", iter++);
-    printf("Size of entire list %zu\n", tri_list_count(list));
+    printf("Size of entire list %zu\n", data_list_count(data));
     printf("Size of remove list %zu\n", tri_list_count(remove_list));
 
 
@@ -433,7 +412,7 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
     }
     triangle sides[3];
     //Loop over remove list
-    #pragma omp parallel for  schedule(dynamic,list->dim) shared(locks) private(sides,j,k,i,l,m,n,idx,cur_tri)
+    #pragma omp parallel for  schedule(dynamic,dim) shared(locks) private(sides,j,k,i,l,m,n,idx,cur_tri)
     for (i = 0; i < cube.len; i++) {
       for (j = i; j < cube.len; j++) {
         for (l = remove_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
@@ -443,7 +422,7 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
                                  {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
 	  
 	  //Cur_tri now holds the triangle we should remove
-	  if (!tri_list_contains(list, &cur_tri))  
+	  if (!mem_list_cube_contains(list, &cur_tri))  
 	    continue; //This triangle was already removed.. Skip :-)
 	  
 	  //Calculate the conform tetra
@@ -451,7 +430,8 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
 
 	  //Calculated all the triangles for this tetra. We can remove this triangle
 	  //from the actual data list
-	  tri_list_remove(list, &cur_tri, TRI_LIST_NO_RESIZE);
+          mem_list_cube_clear(list, &cur_tri);
+	  //tri_list_remove(list, &cur_tri, TRI_LIST_NO_RESIZE);
 
 
 	  //We can form a list of all the tetrahedrons that are conform and have the triangle
@@ -513,7 +493,7 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
                                  {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
                                  {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
 
-          if (tri_list_contains(list,&cur_tri) && !facet_conform(&cur_tri,&parameters))
+          if (mem_list_cube_contains(list,&cur_tri) && !facet_conform(&cur_tri,&parameters))
 	    tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE); //Tread-safe as cur-thread only edits triangle(i,*,*)
 
         }
@@ -533,7 +513,7 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
     free(parameters.acute_ind);
   }
 }
-ptriangulation triangulate_cube(tri_list * list) {
+ptriangulation triangulate_cube(tri_mem_list * list) {
 
   ptriangulation result = calloc(sizeof(triangulation), 1);
   result->dim = list->dim;
@@ -552,13 +532,16 @@ ptriangulation triangulate_cube(tri_list * list) {
 
     if (!triangle_acute(start_facet))
       continue;
-    found_start =  (tri_list_contains(list, start_facet));
+    //found_start =  (tri_list_contains(list, start_facet));
+    found_start = mem_list_contains(list,start_facet);
   }
 
   facet_acute_data parameters;
   data_list data;
-  data.mode = DATA_TRI_LIST;
+  data.mode = DATA_MEM_LIST_CUBE;
   data.list = *list;
+  //data.mode = DATA_TRI_LIST;
+  //data.list = *list;
 
   cube_points cube = gen_cube_points(list->dim);
   parameters.cube = &cube;
@@ -592,7 +575,7 @@ ptriangulation triangulate_cube(tri_list * list) {
      * Then we add a random tetrahedron to our triangulation, update the conform list and repeat.
      */
     int rand_bound = rand() % result->bound_len;
-    printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", tri_list_count(list));
+    printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", mem_list_count(list));
     print_triangle(result->bound_tri + rand_bound);
 
     //Calculate the conform tetrahedrons above and below
@@ -642,7 +625,7 @@ ptriangulation triangulate_cube(tri_list * list) {
     /*
      * Calculate a list of all the triangles we are going to remove
      */
-    intersection_tri_list_tet(list, &remove_list, tet_list + rand_tet);
+    intersection_data_list_tet(&data, &remove_list, tet_list + rand_tet);
     printf("Amountf of triangles not disjoint with new tetrahedron:%zu\n\n", tri_list_count(&remove_list));
     printf("Now calling the facets conform loop with this remove list.. Should re-conform the dataset!\n");
     
@@ -673,8 +656,31 @@ ptriangulation triangulate_cube(tri_list * list) {
   printf("Triangulation has length of %zu\n", result->tetra_len);
   return result;
 }
-
 /*
+void filter_tri_list_remove_list(tri_list * list, tri_list * remove_list) {
+  size_t dim_size = tri_list_dim_size(list->dim);
+  triangle cur_tri;
+  size_t i,j,k;
+  int l;
+
+  #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri) 
+  for (i = 0; i < dim_size; i++) {
+    vertex_from_index_cube(i,remove_list->dim, cur_tri.vertices[0]);
+    for (j = i; j < dim_size; j++) {
+      vertex_from_index_cube(j, remove_list->dim, cur_tri.vertices[1]);
+      for (l = remove_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
+        k = remove_list->t_arr[i][j-i].p_arr[l] +  j;
+        vertex_from_index_cube(k, remove_list->dim, cur_tri.vertices[2]);
+        //Cur_tri is the l-th triangle with points(i,j,*)
+	//Remove cur_tri from list
+	tri_list_remove(list, &cur_tri, TRI_LIST_NO_RESIZE);
+      }
+    }
+  }
+}
+*/
+/*
+ *
  * Semi-random triangulation of the cube. Start with the fundamental index list.
  */
 //ptriangulation triangulate_cube_random(int dim, tri_index_list   * fund_ind_list) {

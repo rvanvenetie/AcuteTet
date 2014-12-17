@@ -209,7 +209,7 @@ int mem_list_dim_size(tri_mem_list * list, int axis, int idx1, int idx2) {
       else if (axis == 1)
         return list->mem_cube.dim_size - idx1;
       else if (axis == 2) //If we have a sparse matrix, thirds axis might be empty.
-	return list->mem_cube.dim_size - idx1 - idx2 ;
+        return list->mem_cube.dim_size - idx1 - idx2 ;
     case MEM_LIST_FUND:
       if (axis == 0)
         return list->mem_fund.fund_len;
@@ -411,7 +411,7 @@ int mem_list_row_empty(tri_mem_list * list,int i, int j) {
   if  (list->t_arr[i][j])
     for (int k = 0; k < (mem_list_dim_size(list,2,i,j)/ 8 + 1); k++)
       if (list->t_arr[i][j][k])
-	return 0;
+        return 0;
   return 1;
 }
 
@@ -527,30 +527,32 @@ tri_mem_list mem_list_fund_to_cube(tri_mem_list * fund_list){
 
   #pragma omp parallel for schedule(dynamic) shared(locks)\
     private(cur_idx, sym_idx, cur_tri, sym_triang,i,j,k,s)
-  for (i = 0; i < mem_list_dim_size(fund_list,0,-1,-1); i++) {
+  for (i = 0; i < mem_list_dim_size(fund_list,0,-1,-1); i++)  {
     for (j = 0; j < mem_list_dim_size(fund_list,1,i,-1); j++) 
-        for (k = 0; k < mem_list_dim_size(fund_list,2,i,j); k++) {
-          cur_idx[0] = i;
-	  cur_idx[1] = j;
-	  cur_idx[2] = k;
-	  if (!GMI(fund_list->t_arr, cur_idx))
-	    continue;
-	  cur_tri = triangle_from_index_fund(cur_idx, vert_from_index);
+      for (k = 0; k < mem_list_dim_size(fund_list,2,i,j); k++) {
+        cur_idx[0] = i;
+        cur_idx[1] = j;
+        cur_idx[2] = k;
+        if (!GMI(fund_list->t_arr, cur_idx))
+          continue;
+        cur_tri = triangle_from_index_fund(cur_idx, vert_from_index);
 
-	  for (s = 0; s < 48; s++) {
-	    triangle_symmetry(&cur_tri,s,fund_list->dim,&sym_triang);
-	    triangle_to_index_cube((sym_triang), fund_list->dim, sym_idx);
+        for (s = 0; s < 48; s++) {
+          triangle_symmetry(&cur_tri,s,fund_list->dim,&sym_triang);
+          triangle_to_index_cube((sym_triang), fund_list->dim, sym_idx);
 
-	    omp_set_lock(&locks[i][j]);
-	    if (!EMI(result.t_arr, sym_idx)) //This row does not exist.. Calloc it!
-	      result.t_arr[sym_idx[0]][sym_idx[1]] = calloc(mem_list_dim_size(&result,2,sym_idx[0],sym_idx[1]) / 8 + 1,sizeof(unsigned char));
-	    //Set this triangle in the cube list!
-	    SMI(result.t_arr,sym_idx);
-	    omp_unset_lock(&locks[i][j]);
-	  }
-	}
-    printf("Thread %d finished fund %d\n", omp_get_thread_num(), i);
+          omp_set_lock(&locks[sym_idx[0]][sym_idx[1]]);
+          if (!EMI(result.t_arr, sym_idx)) //This row does not exist.. Calloc it! {
+              result.t_arr[sym_idx[0]][sym_idx[1]]=calloc(mem_list_dim_size(&result,2,sym_idx[0],sym_idx[1])/8+1,sizeof(unsigned char));
+          //Set this triangle in the cube list!
+          SMI(result.t_arr,sym_idx);
+          omp_unset_lock(&locks[sym_idx[0]][sym_idx[1]]);
+        }
+      }
+    printf("Thread %d is finnished with %d/%zu\n", omp_get_thread_num(), i, fund_list->mem_fund.fund_len);
   }
+
+  
   for (i = 0; i < mem_list_dim_size(&result,0,-1,-1); i++){
     for (j = 0; j < mem_list_dim_size(&result,1,i,-1); j++)
       omp_destroy_lock(&locks[i][j]);
@@ -640,8 +642,8 @@ void mem_list_cube_compress(tri_mem_list * list) {
       continue;
     for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++) {
       if (list->t_arr[i][j] &&  mem_list_row_empty(list,i,j)){ //Initalized and empty
-	free(list->t_arr[i][j]);
-	list->t_arr[i][j] = NULL;
+        free(list->t_arr[i][j]);
+        list->t_arr[i][j] = NULL;
       }
     }
   }
@@ -687,7 +689,13 @@ int  mem_list_cube_get(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3) {
   return 0;
 }
 
-
+int mem_list_cube_contains(tri_mem_list * list, ptriangle triang) {
+  tri_index indices;
+  triangle_to_index_cube((*triang), list->dim, indices);
+  if (EMI(list->t_arr,indices) && GMI(list->t_arr, indices))
+    return 1;
+  return 0;
+}
 /*
  * Clear triangle and all of it's symmetries from the mem_list
  */

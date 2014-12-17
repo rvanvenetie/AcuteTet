@@ -5,7 +5,6 @@
 #include "mem_list.h"
 
 
-#define tri_list_dim_size(dim) ((dim + 1) * (dim + 1) * (dim + 1))
 typedef struct int_arr_old{
   unsigned short * p_arr;
   size_t len;
@@ -45,6 +44,7 @@ int tri_list_contains(tri_list * list, ptriangle  triang);
 int tri_list_get(tri_list * list, arr3 v1, arr3 v2, arr3 v3);
 size_t tri_list_count(tri_list * list);
 size_t tri_list_memory(tri_list * list);
+int tri_list_dim_size(tri_list* list, int axis, int idx1, int idx2);
 #define TRI_LIST_NO_RESIZE 0
 #define TRI_LIST_RESIZE 1
 void tri_list_remove(tri_list * list, ptriangle  triang, int resize);
@@ -80,6 +80,9 @@ int data_list_from_file(data_list * result, int mode, char * filename);
 int data_list_to_file(data_list * list, char * filename, int mode);
 size_t data_list_count(data_list * list);
 size_t data_list_memory(data_list * list);
+int data_list_dim(data_list * list);
+int data_list_dim_size(data_list * list, int dim, int idx1, int idx2);
+
 void data_list_free(data_list * list);
 #endif
 

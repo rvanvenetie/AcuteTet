@@ -27,8 +27,8 @@ int int_arr_idx(p_int_arr arr, int i) {
 
 tri_list tri_list_init(int dim, int init_value) {
   tri_list result;
-  int dim_size = tri_list_dim_size(dim);
   result.dim = dim;
+  int dim_size = tri_list_dim_size(&result, 0, -1,-1);
 
   int_arr ** t_arr = malloc(sizeof(int_arr *) * dim_size);
  
@@ -134,14 +134,14 @@ void tri_list_remove(tri_list * list, ptriangle  triang, int resize) {
 }
 
 void tri_list_empty(tri_list * list) {
-  int dim_size = tri_list_dim_size(list->dim);
+  int dim_size = tri_list_dim_size(list, 0, -1,-1);
   for (int i = 0; i < dim_size; i++) 
     for (int j = 0; j < dim_size - i; j++) 
       list->t_arr[i][j].len = 0;
 }
 
 void tri_list_resize(tri_list * list) {
-  int dim_size = tri_list_dim_size(list->dim);
+  int dim_size = tri_list_dim_size(list, 0, -1,-1);
   for (int i = 0; i < dim_size; i++) 
     for (int j = 0; j < dim_size - i; j++)  {
       list->t_arr[i][j].p_arr = realloc(list->t_arr[i][j].p_arr, list->t_arr[i][j].len * sizeof(vert_index));
@@ -161,33 +161,52 @@ void tri_list_free(tri_list * list) {
 }
 
 size_t tri_list_count(tri_list * list) {
+  size_t non_zero_rows = 0;
+  size_t non_zero_cols = 0;
   size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   size_t result = 0;
   for (size_t i = 0; i < dim_size; i++) {
+    size_t begin = non_zero_rows;
     for (size_t j = 0; j < dim_size - i; j++) 
-      result += list->t_arr[i][j].len;
+      if (list->t_arr[i][j].len) {
+        result += list->t_arr[i][j].len;
+        non_zero_rows++;
+      }
+    if (begin == non_zero_rows)
+      non_zero_cols++;
   }
+  printf("Zero rows: %zu. Zero cols: %zu\n", non_zero_rows, non_zero_cols);
   return result;
 }
 
 size_t tri_list_memory(tri_list * list) {
-  size_t dim_size = tri_list_dim_size(list->dim);
+  int dim_size = tri_list_dim_size(list, 0, -1,-1);
   size_t result = 0;
 
   result += sizeof(int_arr *) * dim_size;
   
  
-  for (size_t i = 0; i < dim_size; i++)  {
+  for (int i = 0; i < dim_size; i++)  {
     result += sizeof(int_arr) * (dim_size - i);
-    for (size_t j = 1; j < dim_size - i; j++){
+    for (int j = 1; j < dim_size - i; j++){
       result += sizeof(vert_index) * list->t_arr[i][j].data_len;
     }
   }
   return result;
 }
 
+int tri_list_dim_size(tri_list* list, int axis, int idx1, int idx2) {
+  int dim_size = ((list->dim + 1) * (list->dim + 1) * (list->dim + 1));
+  if (axis == 0)
+    return dim_size;
+  else if (axis == 1)
+    return dim_size - idx1;
+  else if (axis == 2) //If we have a sparse matrix, thirds axis might be empty
+    return list->t_arr[idx1][idx2].len;
+  return -1;
+}
 int tri_list_to_file(tri_list * list, char * filename) {
-  size_t dim_size = tri_list_dim_size(list->dim);
+  int dim_size = tri_list_dim_size(list, 0, -1, -1);
   FILE * stream;
   stream = fopen(filename, "wb");
   if (stream == NULL)
@@ -196,8 +215,8 @@ int tri_list_to_file(tri_list * list, char * filename) {
   if (fwrite(list,sizeof(tri_list), 1,stream) < 1)
     return 0;
 
-  for (size_t i = 0; i < dim_size; i++) {
-    for (size_t j = 0; j < dim_size - i; j++) {
+  for (int i = 0; i < dim_size; i++) {
+    for (int j = 0; j < dim_size - i; j++) {
       fwrite(&list->t_arr[i][j].len, sizeof(list->t_arr[i][j].len), 1, stream);
       if (fwrite(list->t_arr[i][j].p_arr, sizeof(unsigned short), list->t_arr[i][j].len, stream) < (size_t) list->t_arr[i][j].len)
         return 0;
@@ -217,11 +236,11 @@ int tri_list_from_file(tri_list * list, char * filename) {
   if (fread(list, sizeof(tri_list), 1, stream) < 1)
     return 0;
   
-  size_t dim_size = tri_list_dim_size(list->dim);
+  int dim_size = tri_list_dim_size(list,0,-1,-1);
   *list = tri_list_init(list->dim,MEM_LIST_FALSE);
  
-  for (size_t i = 0; i < dim_size; i++) {
-    for (size_t j = 0; j < dim_size - i; j++) {
+  for (int i = 0; i < dim_size; i++) {
+    for (int j = 0; j < dim_size - i; j++) {
       if (fread(&list->t_arr[i][j].len, sizeof(list->t_arr[i][j].len), 1, stream) < 1)
         return 0;
       list->t_arr[i][j].data_len = list->t_arr[i][j].len;
@@ -286,8 +305,7 @@ int tri_list_old_from_file_to_new(tri_list * list, char * filename) {
 tri_list mem_list_to_tri_list(tri_mem_list * list) {
   if (list->mode != MEM_LIST_FUND) 
     return *(tri_list * )NULL;
-
-  size_t dim_size = tri_list_dim_size(list->dim);
+  size_t dim_size = list->mem_fund.cube_len;
   tri_list result = tri_list_init(list->dim, MEM_LIST_FALSE);
   size_t i,j, cntr;
   unsigned short k;
@@ -374,6 +392,19 @@ size_t data_list_memory(data_list * list) {
   else
     return mem_list_memory(&list->mem_list);
 }
+int data_list_dim(data_list * list) {
+  if (list->mode == DATA_TRI_LIST)
+    return list->list.dim;
+  else
+    return list->mem_list.dim;
+}
+int data_list_dim_size(data_list * list, int dim, int idx1, int idx2) {
+  if (list->mode == DATA_TRI_LIST)
+    return tri_list_dim_size(&list->list, dim, idx1, idx2);
+  else
+    return mem_list_dim_size(&list->mem_list, dim, idx1,idx2);
+}
+
 void data_list_free(data_list * list) {
   if (list->mode == DATA_TRI_LIST)
     tri_list_free(&list->list);

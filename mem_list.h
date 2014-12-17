@@ -167,6 +167,7 @@ void mem_list_cube_compress(tri_mem_list * list);
 void mem_list_cube_clear(tri_mem_list * list, ptriangle triang);
 void mem_list_cube_set(tri_mem_list * list, ptriangle triang);
 int  mem_list_cube_get(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
+int mem_list_cube_contains(tri_mem_list * list, ptriangle triang);
 void mem_list_cube_clear_sym(tri_mem_list * list, ptriangle triang);
 void mem_list_cube_set_sym(tri_mem_list * list, ptriangle triang);
 

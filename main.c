@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
   tri_mem_list mem_list;
   mem_list_from_file(&mem_list, "/local/rvveneti/fund_conf_30.tet");
   fprintf(stdout,"Memory %zu\n", mem_list_memory(&mem_list));
-  fprintf(stdout,"Conform %zu\n", mem_list_count(&mem_list));
+//  fprintf(stdout,"Conform %zu\n", mem_list_count(&mem_list));
   fprintf(stdout,"Starting the big list shit!");
   tri_mem_list cube_list = mem_list_fund_to_cube(&mem_list);
   fprintf(stdout,"Memory %zu\n", mem_list_memory(&cube_list));
