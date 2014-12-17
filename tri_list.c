@@ -283,6 +283,13 @@ int tri_list_old_from_file_to_new(tri_list * list, char * filename) {
   return 1;
 }
 
+//Returns sparse tri_mem_list
+tri_mem_list tri_list_to_mem_list(tri_list * list) {
+
+
+
+
+}
 tri_list mem_list_to_tri_list(tri_mem_list * list) {
   if (list->mode != MEM_LIST_FUND) 
     return *(tri_list * )NULL;

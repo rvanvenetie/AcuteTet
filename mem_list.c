@@ -203,12 +203,18 @@ triangle triangle_from_index_fund(tri_index indices,arr3 * index_vertex) {
 int mem_list_dim_size(tri_mem_list * list, int axis, int idx1, int idx2) {
   switch (list->mode) {
     case MEM_LIST_CUBE:
+    case MEM_LIST_CUBE_SPARSE:
       if (axis == 0)
         return list->mem_cube.dim_size;
       else if (axis == 1)
         return list->mem_cube.dim_size - idx1;
-      else if (axis == 2)
-        return list->mem_cube.dim_size - idx1 - idx2 ;
+      else if (axis == 2) //If we have a sparse matrix, thirds axis might be empty.
+      {
+        if(list->t_arr[idx1][idx2])
+          return list->mem_cube.dim_size - idx1 - idx2 ;
+        else
+          return 0;
+      }
     case MEM_LIST_FUND:
       if (axis == 0)
         return list->mem_fund.fund_len;
@@ -240,11 +246,13 @@ tri_mem_list mem_list_init(int dim, int mode, int init_value) {
   //printf("Initalizing memory_list: dim = %d, mode = %d, init_value =  %d\n", dim, mode, init_value);
   switch (mode) {
     case MEM_LIST_CUBE:
-      return mem_list_init_cube(dim,init_value);
+      return mem_list_init_cube(dim,init_value, MEM_LIST_CUBE);
     case MEM_LIST_FUND:
       return mem_list_init_fund(dim, init_value);
     case MEM_LIST_TET:
       return mem_list_init_tet(dim, init_value);
+    case MEM_LIST_CUBE_SPARSE:
+      return mem_list_init_cube(dim, init_value, MEM_LIST_CUBE_SPARSE);
   }
   printf("Should not come here..!!\n");
   exit(0);
@@ -254,7 +262,7 @@ tri_mem_list mem_list_init(int dim, int mode, int init_value) {
 /*
  * Initalize memory_list of type cube
  */
-tri_mem_list mem_list_init_cube(int dim,int init_value) { 
+tri_mem_list mem_list_init_cube(int dim,int init_value, int sparse) { 
   int dim_size = (dim + 1) * (dim + 1) * (dim + 1);
   tri_mem_cube mem_cube = {dim_size};
                            
@@ -262,19 +270,20 @@ tri_mem_list mem_list_init_cube(int dim,int init_value) {
                          {mem_cube},
                         dim,
                         MEM_LIST_CUBE};
-                        
+  if (sparse)
+    result.mode = MEM_LIST_CUBE_SPARSE;
   unsigned char *** t_arr = calloc(dim_size, sizeof(unsigned char **));
  
   for (int i = 0; i < dim_size; i++) {
     t_arr[i] = calloc(dim_size - i , sizeof(unsigned char *));
     for (int j = i; j < dim_size; j++) {
-      t_arr[i][j - i] = calloc((dim_size - j) / 8 + 1, sizeof(unsigned char));
+      if (!sparse || (init_value == MEM_LIST_TRUE)) //Only calloc if not sparse, or we want to store all the elements
+        t_arr[i][j - i] = calloc((dim_size - j) / 8 + 1, sizeof(unsigned char));
       if (init_value == MEM_LIST_TRUE) 
         for (int k = j+1; k < dim_size; k++) {
-          if (i < j && j < k) {
-            tri_index tmp_index = {i,j - i ,k - j };
-            SMI(t_arr,tmp_index);
-          }
+          //if (i < j && j < k) {
+          tri_index tmp_index = {i,j - i ,k - j };
+          SMI(t_arr,tmp_index);
         }
     }
   }
@@ -583,7 +592,8 @@ int mem_list_from_file(tri_mem_list * result, char * filename) {
 void mem_list_clear_cube(tri_mem_list * list, ptriangle triang){
   tri_index indices;
   triangle_to_index_cube((*triang), list->dim, indices);
-  CMI(list->t_arr, indices);
+  if (EMI(list->t_arr, indices))
+    CMI(list->t_arr, indices);
 }
 
 /*
@@ -591,18 +601,23 @@ void mem_list_clear_cube(tri_mem_list * list, ptriangle triang){
  */
 void mem_list_set_cube(tri_mem_list * list, ptriangle triang)
 {
-  tri_index index;
-  triangle_to_index_cube((*triang), list->dim, index);
-  SMI(list->t_arr,index);
+  tri_indices indices;
+  triangle_to_indices_cube((*triang), list->dim, indices);
+  if (!EMI(list->t_arr, indices))
+    list->t_arr[indices[0]][indices[1]] = calloc(
+    t_arr[i][j - i] = calloc((dim_size - j) / 8 + 1, sizeof(unsigned char));
+    SMI(list->t_arr,index);
 }
 
 /*
  * Return whether the given triangle is inside the mem_list of type CUBE
  */
 int  mem_list_get_cube(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3) {
-  tri_index index;
-  vertices_to_index_cube(v1,v2,v3,list->dim,index);
-  return GMI(list->t_arr, index);
+  tri_indices indices;
+  vertices_to_indices_cube(v1,v2,v3,list->dim,indices);
+  if (EMI(list->t_arr, indices) && GMI(list->t_arr, indices))
+    return 1;
+  return 0;
 }
 
 
@@ -615,7 +630,8 @@ void mem_list_clear_cube_sym(tri_mem_list * list, ptriangle triang){
     triangle_symmetry(triang,i,list->dim,&sym_triang);
     tri_index indices;
     triangle_to_index_cube(sym_triang, list->dim, indices);
-    CMI(list->t_arr, indices);
+    if (EMI(list->t_arr, indices))
+      CMI(list->t_arr, indices);
   }
 }
 
@@ -714,7 +730,7 @@ void mem_list_clear_tet(tri_mem_list * list, ptriangle triang){
  * Sets all the symmetries of the indices as well.
  */
 tri_mem_list mem_list_from_index_list(tri_index_list * list) {
-  tri_mem_list result = mem_list_init_cube(list->dim, MEM_LIST_FALSE);
+  tri_mem_list result = mem_list_init_cube(list->dim, MEM_LIST_FALSE, MEM_LIST_CUBE_SPARSE);
   //Now lets set all the nodes, exciting!
   for (size_t i = 0; i < list->len; i++) {
     triangle cur_triang = triangle_from_index_cube(list->index_list[i], list->dim);
