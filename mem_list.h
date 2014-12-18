@@ -38,8 +38,8 @@ typedef struct tri_mem_list
 #define MEM_LIST_FUND 2
 #define MEM_LIST_TET  3
 #define MEM_LIST_CUBE_SPARSE 4
-typedef unsigned short tri_index[3];
-typedef unsigned short tet_index[4];
+typedef vert_index tri_index[3];
+typedef vert_index tet_index[4];
 
 typedef struct tri_index_list
 {

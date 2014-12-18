@@ -339,37 +339,93 @@ int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
   data->store_acute_ind = 1;
   return consistent;
 }
-void intersection_data_list_tet(data_list * list, tri_list * remove_list, ptetra tet){
-  if (tri_list_count(remove_list) > 0)
-    printf("The remove list is not empty.. Oke?");
-
-  int dim = data_list_dim(list);
-  tri_index cur_idx;
-  triangle cur_tri;
-  int i,j,k,l;
-  #pragma omp parallel for schedule(dynamic,dim) private(j,k,i,l,cur_tri, cur_idx)
-  for (i = 0; i < data_list_dim_size(list,0,-1,-1); i++) {
-    for (j = 0; j < data_list_dim_size(list, 1, i, -1); j++) {
-      for (k = data_list_dim_size(list,2,i,j) - 1; k>=0 ; k--)
-      {
-        if (list->mode == DATA_TRI_LIST)
-          l = list->list.t_arr[i][j].p_arr[k];
-        else
-          l = k;
-	
-	cur_idx[0] = i;
-	cur_idx[1] = i + j;
-	cur_idx[2] = i + j + l;
-        cur_tri = triangle_from_index_cube(cur_idx, dim);
-        if (!tri_tet_disjoint(&cur_tri, tet)) //If not disjoint with new tetrahedron, delete
-	  tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE); //Thread safe, as only one processor acces [i][j]
-      }
+/*
+ * Everything is given by indices.
+ * The function below constructs an array of tetra given by the base_triangle and the apices.
+ * It adds all the facets != base_triangle to a given list.
+ *
+ * 2D Array of locks given as parameter, in case this function gets called in OpenMP
+ */
+void facets_tetra_list(tri_list * list, tri_index base_idx, vert_index * ind_apices, int apices_len, omp_lock_t ** locks) {
+  for (int i = 0; i < apices_len; i++)
+  {
+    tri_index  facets[3] = {{base_idx[0], base_idx[1], ind_apices[i]},
+			    {base_idx[1], base_idx[2], ind_apices[i]},
+			    {base_idx[0], base_idx[2], ind_apices[i]}};
+    for (int s= 0; s < 3; s++)
+    {
+      triangle  cur_facet = triangle_from_index_cube(facets[s], list->dim);
+      tri_index idx;
+      indices_unique_cube(facets[s][0], facets[s][1], facets[s][2], idx); //Convert triangle to it's data_structure index
+      /*
+       * Insert all of these sides into the tri_list. Note that this may cause race conditions!
+       * We avoid these by looking up the first vertex of this triangle, and aquiring this lock.
+       */  
+      omp_set_lock(&locks[idx[0]][idx[1]]);//Thread-safe now! As we edit the data check_list.p_arr[idx[0]][idx[1]]
+      tri_list_insert(list, &cur_facet, TRI_LIST_NO_RESIZE);
+      omp_unset_lock(&locks[idx[0]][idx[1]]);
     }
   }
 }
+/*
+ * This function removes all the triangles from the data list that intersect with the given tetra.
+ * All the possible new triangles that might be non-conform are added to the check_list.
+ */
+size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list, ptetra tet, omp_lock_t ** locks) {
+  tri_mem_list * list = &data->mem_list;
+  size_t result = 0;
 
+  cube_points cube = gen_cube_points(list->dim);
+  static facet_acute_data parameters;
+  #pragma omp threadprivate(parameters)
+  #pragma omp parallel 
+  {
+    parameters.cube = &cube;
+    parameters.boundary_func = &triangle_boundary_cube;
+    parameters.data = data;
+    parameters.store_acute_ind = 1;
+    parameters.acute_ind  = malloc(sizeof(vert_index) * cube.len);
+  }
 
-void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri_list * check_list) {
+  if (tri_list_count(check_list) > 0)
+    printf("The check list is not empty.. Oke?");
+
+  tri_index cur_idx;
+  triangle cur_tri;
+  size_t i,j,k;
+  #pragma omp parallel for  schedule(dynamic,list->dim) shared(locks) private(cur_tri, cur_idx, i,j,k)
+  for (i = 0; i < cube.len; i++) 
+    for (j = 0; j < cube.len - i; j++)
+      if (list->t_arr[i][j])
+	for (k = 0; k < cube.len - j - i; k++)
+	{
+	  cur_idx[0] = i;
+	  cur_idx[1] = j;
+	  cur_idx[2] = k;
+	  if (!GMI(list->t_arr, cur_idx))
+	    continue; 
+	  cur_idx[1] = i + j;
+	  cur_idx[2] = i + j + k;
+	  cur_tri = triangle_from_index_cube(cur_idx, list->dim);
+	  if (!tri_tet_disjoint(&cur_tri, tet)){ //If not disjoint with new tetrahedron, delete
+	  {
+	    facet_conform(&cur_tri, &parameters);
+	    //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
+	    facets_tetra_list(check_list, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
+	    //Cur_tri is not conform, remove from the data structure.
+	    mem_list_cube_clear(list, &cur_tri);
+            #pragma omp atomic
+	    result++;
+	  }
+	  }
+	}
+  #pragma omp parallel 
+  {
+    free(parameters.acute_ind);
+  }
+  return result;
+}
+void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri_list * check_list_new, omp_lock_t ** locks) {
   tri_mem_list * list = &data->mem_list;
 
   cube_points cube = gen_cube_points(list->dim);
@@ -381,133 +437,58 @@ void facets_conform_dynamic_remove(data_list * data, tri_list * remove_list, tri
     parameters.cube = &cube;
     parameters.boundary_func = &triangle_boundary_cube;
     parameters.data = data;
+    parameters.store_acute_ind = 1;
     parameters.acute_ind  = malloc(sizeof(vert_index) * cube.len);
   }
-  /*
-   * During this method we are going to operate data that is not thread-safe.
-   * To avoid race conditions we need an array of locks. We use a lock for the
-   * first two points of a triangle (so need 2d array of locks).
-   */
-  omp_lock_t * locks = malloc(sizeof(omp_lock_t) * cube.len);
-  //Initalize the locks
-  for (size_t i = 0; i < cube.len; i++)
-    omp_init_lock(locks + i);
 
+  
   int iter = 0;
-  double time_start, time_end, time_check;
-  while (tri_list_count(remove_list)) //While we have triangles to be removed)
+  double time_start, time_check;
+  while (tri_list_count(check_list)) //While we have triangles to be removed)
   {
     time_start = omp_get_wtime();
     printf("\n\nLoop %d of conform dynamic\n", iter++);
     printf("Size of entire list %zu\n", data_list_count(data));
-    printf("Size of remove list %zu\n", tri_list_count(remove_list));
+    printf("Size of check list %zu\n", tri_list_count(check_list));
 
-
+    /*
+     * Loop over all the triangles in the check list. Check if they are not conform
+     * if so, add all the possible new non-conform edges to the tmp_check_list.
+     */
     triangle cur_tri;
-    int l,m;
-    unsigned short n;
-    size_t i,j,k;
-    tri_index idx;
-    #pragma omp parallel
-    {
-      parameters.store_acute_ind = 1;
-    }
-    triangle sides[3];
-    //Loop over remove list
-    #pragma omp parallel for  schedule(dynamic,list->dim) shared(locks) private(sides,j,k,i,l,m,n,idx,cur_tri)
-    for (i = 0; i < cube.len; i++) {
-      for (j = i; j < cube.len; j++) {
-        for (l = remove_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
-          k = remove_list->t_arr[i][j-i].p_arr[l] +  j;
-          cur_tri = (triangle) {{{cube.points[i][0],cube.points[i][1],cube.points[i][2]},
-                                 {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
-                                 {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
-	  
-	  //Cur_tri now holds the triangle we should remove
+    tri_index cur_idx;
+    int l,k;
+    size_t i,j;
+    #pragma omp parallel for  schedule(dynamic,list->dim) shared(locks) private(cur_tri, cur_idx, i,j,k,l)
+    for (i = 0; i < cube.len; i++) 
+      for (j = i; j < cube.len; j++)
+        for (l = check_list->t_arr[i][j- i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
+	  k = check_list->t_arr[i][j - i].p_arr[l] + j;
+	  cur_idx[0] = i;
+	  cur_idx[1] = j;
+	  cur_idx[2] = k;
+	  cur_tri = triangle_from_index_cube(cur_idx, list->dim);
+	  //Cur_tri now holds the triangle we should check
 	  if (!mem_list_cube_contains(list, &cur_tri))  
 	    continue; //This triangle was already removed.. Skip :-)
-	  
-	  //Calculate the conform tetra
-	  facet_conform(&cur_tri, &parameters); //Only non-conform if it is disjoint triangulation
 
-	  //Calculated all the triangles for this tetra. We can remove this triangle
-	  //from the actual data list
-          mem_list_cube_clear(list, &cur_tri);
-	  //tri_list_remove(list, &cur_tri, TRI_LIST_NO_RESIZE);
-
-
-	  //We can form a list of all the tetrahedrons that are conform and have the triangle
-	  //we are going to remove as a side. We will now add all the sides of all these tetrahedrons to
-	  //the check_list as they might be non-conform anymore after removing this triangle
-
-	  for (m= 0; m < parameters.acute_ind_len; m++)
-	  {
-	    arr3_to_triangle(cur_tri.vertices[0], cur_tri.vertices[1], cube.points[parameters.acute_ind[m]], &sides[0]);
-	    arr3_to_triangle(cur_tri.vertices[1], cur_tri.vertices[2], cube.points[parameters.acute_ind[m]], &sides[1]);
-	    arr3_to_triangle(cur_tri.vertices[0], cur_tri.vertices[2], cube.points[parameters.acute_ind[m]], &sides[2]);
-
-	    for (n= 0; n < 3; n++)
-	    {
-	      /*
-	       * Not thread-safe?
-	      if (tri_list_contains(check_list, sides + n) || //Already added this triangle.
-		  tri_list_contains(remove_list, sides + n)) //Already on the remove list
-		continue;
-		*/
-	      /*
-	       * Insert all of these sides into the tri_list. Note that this may cause race conditions!
-	       * We avoid these by looking up the first vertex of this triangle, and aquiring this lock.
-	       * Note that this blocks lots of other locks as well.. Might want to make a 2D-array of locks?
-	       * Or only invoke locks[i][j] that correspond to a non-zero row in list? <-- Probably the best
-	       */  
-	      triangle_to_index_cube((sides[n]), list->dim, idx);
-	      omp_set_lock(locks + idx[0]);//Thread-safe now! As we edit the data check_list.p_arr[idx[0]][idx[1]]
-	      tri_list_insert(check_list, sides + n, TRI_LIST_NO_RESIZE);
-	      omp_unset_lock(locks + idx[0]);
-	    }
+	  if (!facet_conform(&cur_tri, &parameters)) {
+	    //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
+	    facets_tetra_list(check_list_new, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
+	    //Cur_tri is not conform, remove from the data structure.
+	    mem_list_cube_clear(list, &cur_tri);
 	  }
 	}
-      }
-    }
-    //Removed all the triangles from remove_list, so we can empty it
-    tri_list_empty(remove_list);
-    //Remove_list should now be empty and check_list should be nonempty
-    if (tri_list_count(remove_list) > 0)
-      printf("Why on earth is the remove_list not empty?:%zu\n", tri_list_count(remove_list));
-    printf("Size of check list  %zu\n", tri_list_count(check_list));
-    time_check = omp_get_wtime();
-    printf("\nTook %f seconds to construct check list\n",time_check - time_start);
-    /*
-     * Loop over the list of triangles we needed to check.
-     * If any of them is not conform anymore, we add it to the remove list
-     */
-    #pragma omp parallel
-    {
-      parameters.store_acute_ind = 0;
-    }
-    #pragma omp parallel for schedule(dynamic,list->dim) private(j,k,i,l,cur_tri)  
-    for (i = 0; i < cube.len; i++) {
-      for (j = i; j < cube.len; j++) {
-        for (l = check_list->t_arr[i][j-i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
-          k = check_list->t_arr[i][j-i].p_arr[l] +  j;
-          //Just vertex_from_index_cube?
-          cur_tri = (triangle) {{{cube.points[i][0],cube.points[i][1],cube.points[i][2]},
-                                 {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
-                                 {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
-
-          if (mem_list_cube_contains(list,&cur_tri) && !facet_conform(&cur_tri,&parameters))
-	    tri_list_insert(remove_list, &cur_tri, TRI_LIST_NO_RESIZE); //Tread-safe as cur-thread only edits triangle(i,*,*)
-
-        }
-      }
-    }
+    //Checked all the triangles from check_list. Empty it and swap the lists.
     tri_list_empty(check_list);
-    time_end   = omp_get_wtime();
-    printf("Took %f seconds to construct new remove list\n", time_end - time_check);
-    printf("Took %f seconds for the entire loop.\n", time_end-time_start);
+
+    tri_list tmp = *check_list;
+    *check_list = *check_list_new;
+    *check_list_new = tmp;
+
+    time_check = omp_get_wtime();
+    printf("\nTook %f seconds to construct new check list\n",time_check - time_start);
   }
-  for (size_t i = 0; i < cube.len; i++)
-    omp_destroy_lock(locks + i);
 
   free(cube.points);
   #pragma omp parallel
@@ -557,9 +538,9 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
   unsigned short tet_list_len = 0;
 
   //This list holds all the triangles we are going to remove from a triangulation
-  tri_list remove_list = tri_list_init(list->dim, MEM_LIST_FALSE);
+  tri_list check_list = tri_list_init(list->dim, MEM_LIST_FALSE);
   //This list holds all the triangles we are going to check for removal
-  tri_list check_list  = tri_list_init(list->dim, MEM_LIST_FALSE);
+  tri_list check_list_new  = tri_list_init(list->dim, MEM_LIST_FALSE);
 
   //Start triangle (0,0,0), (rand,0,0), (rand,rand,0)
   printf("Starting triangulation with facet:\n");
@@ -568,6 +549,18 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
   result->bound_len = 1;
   result->bound_tri = start_facet;
   //While we have triangles on the boundary..
+  /*
+   * During this method we are going to operate data that is not thread-safe.
+   * To avoid race conditions we need an array of locks. We use a lock for the
+   * first two points of a triangle (so need 2d array of locks).
+   */
+  omp_lock_t ** locks = malloc(sizeof(omp_lock_t *) * list->mem_fund.cube_len);
+  //Initalize the locks
+  for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++){
+    locks[i] = malloc(sizeof(omp_lock_t) * (mem_list_dim_size(list,1,i,-1)));
+    for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++)
+      omp_init_lock(&locks[i][j]);
+  }
   while (result->bound_len > 0) {
     /*
      * We are going to add a tetrahedron on the boundary triangle.
@@ -627,12 +620,12 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
     /*
      * Calculate a list of all the triangles we are going to remove
      */
-    intersection_data_list_tet(&data, &remove_list, tet_list + rand_tet);
-    printf("Amountf of triangles not disjoint with new tetrahedron:%zu\n\n", tri_list_count(&remove_list));
-    printf("Now calling the facets conform loop with this remove list.. Should re-conform the dataset!\n");
+    size_t removed = filter_intersection_data_list_tet(&data, &check_list, tet_list + rand_tet, locks);
+    printf("Removed %zu triangles that are not disjoint with the new tetrahedron\n", removed);
+    printf("The check_list has size %zu\n", tri_list_count(&check_list));
     
     
-    facets_conform_dynamic_remove(&data, &remove_list, &check_list);
+    facets_conform_dynamic_remove(&data, &check_list, &check_list_new, locks);
     
     
     consistent_triangulation(result, &parameters);
@@ -642,7 +635,7 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
      */
     //facets_conform(&data, NULL);
 	/*
-    //filter_tri_list_remove_list(list, &remove_list);
+    //filter_tri_list_check_list(list, &check_list);
     //printf("Removed those triangles from the original datastructure\n");
     consistent_triangulation(result, &parameters);
     printf("Removing all triangles that intersect with the new tetra\n");
@@ -650,11 +643,18 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
     printf("Removed %zu triangles not disjoint with new tetrahedron\n\n", removed);
     */
   }
+
+  for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++){
+    for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++)
+      omp_destroy_lock(&locks[i][j]);
+    free(locks[i]);
+  }
+  free(locks);
   free(cube.points);
   free(parameters.acute_ind);
   free(tet_list);
-  tri_list_free(&remove_list);
   tri_list_free(&check_list);
+  tri_list_free(&check_list_new);
   printf("Triangulation has length of %zu\n", result->tetra_len);
   return result;
 }
