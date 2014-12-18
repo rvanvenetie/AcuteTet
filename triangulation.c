@@ -486,38 +486,43 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
   while (tri_list_count(check_list)) //While we have triangles to be removed)
   {
     time_start = omp_get_wtime();
-    printf("\n\nLoop %d of conform dynamic\n", iter++);
-    printf("Size of entire list %zu\n", data_list_count(data));
-    printf("Size of check list %zu\n", tri_list_count(check_list));
-
-    /*
-     * Loop over all the triangles in the check list. Check if they are not conform
-     * if so, add all the possible new non-conform edges to the tmp_check_list.
-     */
     triangle cur_tri;
     tri_index cur_idx;
     int l,k;
     size_t i,j;
-    #pragma omp parallel for  schedule(dynamic,list->dim) shared(locks) private(cur_tri, cur_idx, i,j,k,l)
-    for (i = 0; i < cube.len; i++) 
-      for (j = i; j < cube.len; j++)
-        for (l = check_list->t_arr[i][j- i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
-	  k = check_list->t_arr[i][j - i].p_arr[l] + j;
-	  cur_idx[0] = i;
-	  cur_idx[1] = j;
-	  cur_idx[2] = k;
-	  cur_tri = triangle_from_index_cube(cur_idx, list->dim);
-	  //Cur_tri now holds the triangle we should check
-	  if (!mem_list_cube_contains(list, &cur_tri))  
-	    continue; //This triangle was already removed.. Skip :-)
+    #pragma omp parallel shared(locks) private(cur_tri, cur_idx, i,j,k,l)
+    {
+      if (omp_get_thread_num() == 0) {
+	printf("\n\nLoop %d of conform dynamic\n", iter++);
+	printf("Size of entire list %zu\n", data_list_count(data));
+	printf("Size of check list %zu\n", tri_list_count(check_list));
 
-	  if (!facet_conform(&cur_tri, &parameters)) {
-	    //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
-	    facets_tetra_list(check_list_new, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
-	    //Cur_tri is not conform, remove from the data structure.
-	    mem_list_cube_clear(list, &cur_tri);
+      }
+      /*
+       * Loop over all the triangles in the check list. Check if they are not conform
+       * if so, add all the possible new non-conform edges to the tmp_check_list.
+       */
+      #pragma omp for  schedule(dynamic,list->dim) 
+      for (i = 0; i < cube.len; i++) 
+	for (j = i; j < cube.len; j++)
+	  for (l = check_list->t_arr[i][j- i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
+	    k = check_list->t_arr[i][j - i].p_arr[l] + j;
+	    cur_idx[0] = i;
+	    cur_idx[1] = j;
+	    cur_idx[2] = k;
+	    cur_tri = triangle_from_index_cube(cur_idx, list->dim);
+	    //Cur_tri now holds the triangle we should check
+	    if (!mem_list_cube_contains(list, &cur_tri))  
+	      continue; //This triangle was already removed.. Skip :-)
+
+	    if (!facet_conform(&cur_tri, &parameters)) {
+	      //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
+	      facets_tetra_list(check_list_new, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
+	      //Cur_tri is not conform, remove from the data structure.
+	      mem_list_cube_clear(list, &cur_tri);
+	    }
 	  }
-	}
+    }
     //Checked all the triangles from check_list. Empty it and swap the lists.
     tri_list_empty(check_list);
 
