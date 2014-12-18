@@ -408,7 +408,6 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
 	  cur_idx[2] = i + j + k;
 	  cur_tri = triangle_from_index_cube(cur_idx, list->dim);
 	  if (!tri_tet_disjoint(&cur_tri, tet)){ //If not disjoint with new tetrahedron, delete
-	  {
 	    facet_conform(&cur_tri, &parameters);
 	    //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
 	    facets_tetra_list(check_list, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
@@ -416,7 +415,6 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
 	    mem_list_cube_clear(list, &cur_tri);
             #pragma omp atomic
 	    result++;
-	  }
 	  }
 	}
   #pragma omp parallel 
@@ -554,11 +552,11 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
    * To avoid race conditions we need an array of locks. We use a lock for the
    * first two points of a triangle (so need 2d array of locks).
    */
-  omp_lock_t ** locks = malloc(sizeof(omp_lock_t *) * list->mem_fund.cube_len);
+  omp_lock_t ** locks = malloc(sizeof(omp_lock_t *) * cube.len);
   //Initalize the locks
-  for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++){
-    locks[i] = malloc(sizeof(omp_lock_t) * (mem_list_dim_size(list,1,i,-1)));
-    for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++)
+  for (size_t i = 0; i < cube.len; i++){
+    locks[i] = malloc(sizeof(omp_lock_t) * (cube.len - i));
+    for (size_t j = 0; j < cube.len - i; j++)
       omp_init_lock(&locks[i][j]);
   }
   while (result->bound_len > 0) {
@@ -642,12 +640,12 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
     printf("Removed %zu triangles not disjoint with new tetrahedron\n\n", removed);
     */
   }
-
-  for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++){
-    for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++)
+  for (size_t i = 0; i < cube.len; i++){
+    for (size_t j = 0; j < cube.len - i; j++)
       omp_destroy_lock(&locks[i][j]);
     free(locks[i]);
   }
+
   free(locks);
   free(cube.points);
   free(parameters.acute_ind);
