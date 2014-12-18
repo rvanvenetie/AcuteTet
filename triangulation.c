@@ -476,7 +476,7 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
     parameters.cube = &cube;
     parameters.boundary_func = &triangle_boundary_cube;
     parameters.data = data;
-    parameters.store_acute_ind = 1;
+    parameters.store_acute_ind = 0;
     parameters.acute_ind  = malloc(sizeof(vert_index) * cube.len);
   }
 
@@ -516,6 +516,9 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
 	      continue; //This triangle was already removed.. Skip :-)
 
 	    if (!facet_conform(&cur_tri, &parameters)) {
+	      parameters.store_acute_ind = 1;
+	      facet_conform(&cur_tri, &parameters);
+	      parameters.store_acute_ind = 0;
 	      //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
 	      facets_tetra_list(check_list_new, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
 	      //Cur_tri is not conform, remove from the data structure.
