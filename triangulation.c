@@ -483,6 +483,7 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
   
   int iter = 0;
   double time_start, time_check;
+  size_t count = 0;
   while (tri_list_count(check_list)) //While we have triangles to be removed)
   {
     time_start = omp_get_wtime();
@@ -493,10 +494,14 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
     #pragma omp parallel shared(locks) private(cur_tri, cur_idx, i,j,k,l)
     {
       if (omp_get_thread_num() == 0) {
+	size_t new_count = data_list_count(data);
+	if (count)
+	  printf("Removed %zu triangles\n", count - new_count);
 	printf("\n\nLoop %d of conform dynamic\n", iter++);
-	printf("Size of entire list %zu\n", data_list_count(data));
-	printf("Size of check list %zu\n", tri_list_count(check_list));
+	printf("Size of entire list %zu\n", new_count);
+	printf("Size of check list  %zu\n", tri_list_count(check_list));
 
+	count = new_count;
       }
       /*
        * Loop over all the triangles in the check list. Check if they are not conform
