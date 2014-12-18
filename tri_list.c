@@ -161,21 +161,12 @@ void tri_list_free(tri_list * list) {
 }
 
 size_t tri_list_count(tri_list * list) {
-  size_t non_zero_rows = 0;
-  size_t non_zero_cols = 0;
   size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   size_t result = 0;
-  for (size_t i = 0; i < dim_size; i++) {
-    size_t begin = non_zero_rows;
+  for (size_t i = 0; i < dim_size; i++) 
     for (size_t j = 0; j < dim_size - i; j++) 
-      if (list->t_arr[i][j].len) {
+      if (list->t_arr[i][j].len) 
         result += list->t_arr[i][j].len;
-        non_zero_rows++;
-      }
-    if (begin == non_zero_rows)
-      non_zero_cols++;
-  }
-  printf("Zero rows: %zu. Zero cols: %zu\n", non_zero_rows, non_zero_cols);
   return result;
 }
 

@@ -570,7 +570,7 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
      * Then we add a random tetrahedron to our triangulation, update the conform list and repeat.
      */
     int rand_bound = rand() % result->bound_len;
-    //printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", mem_list_count(list));
+    printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", mem_list_count(list));
     print_triangle(result->bound_tri + rand_bound);
 
     //Calculate the conform tetrahedrons above and below
@@ -616,7 +616,6 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
 
     //Consistency check
     consistent_triangulation(result, &parameters);
-    fprintf(stderr,"Komt hier nog gewoon heur.. Maar wtf?");
     /*
      * Calculate a list of all the triangles we are going to remove
      */
