@@ -22,6 +22,46 @@ void triangulation_free(ptriangulation triang) {
   free(triang);
 }
 
+void triangulation_print(ptriangulation triang) {
+  printf("Triangulation. Dimension = %d. Boundary triangles = %zu. Tetra = %zu\n", triang->dim,triang-> bound_len, triang->tetra_len);
+}
+
+int triangulation_to_file(ptriangulation triang, char * filename) {
+  FILE * stream;
+  stream = fopen(filename, "wb");
+  if (stream == NULL)
+    return 0;
+  //Write the struct to the file
+  if (fwrite(triang, sizeof(triangulation), 1, stream) < 1)
+    return 0;
+  if (fwrite(triang->bound_tri, sizeof(triangle), triang->bound_len, stream) < triang->bound_len)
+    return 0;
+  if (fwrite(triang->tetra, sizeof(tetra), triang->tetra_len, stream) < triang->tetra_len)
+    return 0;
+
+  return 1;
+}
+
+int triangulation_from_file(ptriangulation triang, char * filename) {
+  FILE * stream;
+  stream = fopen(filename, "rb");
+  if (stream == NULL)
+    return 0;
+    
+  //Reads the entire struct from file
+  if (fread(triang, sizeof(triangulation), 1, stream) < 1)
+    return 0;
+  triang->bound_tri = malloc(sizeof(triangle) * triang->bound_len);
+  if (fread(triang->bound_tri, sizeof(triangle), triang->bound_len, stream) < triang->bound_len)
+    return 0;
+  triang->tetra = malloc(sizeof(tetra) * triang->tetra_len);
+  if (fread(triang->tetra, sizeof(tetra), triang->tetra_len, stream) < triang->tetra_len)
+    return 0;
+
+  return 1;
+}
+
+
 void tetra_edges(ptetra tet, arr3 * edges) {
   //Edges of base triangle
   subArr3(tet->vertices[1], tet->vertices[0], edges[0]);
@@ -421,6 +461,7 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
   {
     free(parameters.acute_ind);
   }
+  free(cube.points);
   return result;
 }
 void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri_list * check_list_new, omp_lock_t ** locks) {
@@ -494,8 +535,10 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
     free(parameters.acute_ind);
   }
 }
-ptriangulation triangulate_cube(tri_mem_list * list) {
 
+
+
+ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, char * tmp_data_file) {
   ptriangulation result = calloc(sizeof(triangulation), 1);
   result->dim = list->dim;
 
@@ -600,20 +643,29 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
       break;
     }
 
-    //From the left tetrahedrons
+    //Select random tetrahedron disjoint with the current triangulation
     int rand_tet = rand() % tet_list_len;
     /*
-     * Add one of the tetrahedrons to the triangulation.
+     * Add the above tetra to the triangulation.
      * This removes all the boundary triangles that are covered by this tetrahedron
      */
     printf("Adding the following tetra to the triangulation\n");
     print_tetra(tet_list + rand_tet);
     printf("\n\n");
     add_tet_triangulation(tet_list + rand_tet, result);
-    printf("\nNew amount of tet in triang %zu. New amount of boundaries %zu.\n\n", result->tetra_len, result->bound_len);
-
+    triangulation_print(result);
+    
+    if (!result->bound_len) //If we have no boundaries left, we must be done!!
+    {
+      printf("No more boundaries left.. WE FINNISHED!??\n");
+      break;
+    }
     //Consistency check
-    consistent_triangulation(result, &parameters);
+    if (!consistent_triangulation(result, &parameters))
+    {
+      printf("Triangulation not consistent. Breaking.\n");
+      break;
+    }
     /*
      * Calculate a list of all the triangles we are going to remove
      */
@@ -621,24 +673,16 @@ ptriangulation triangulate_cube(tri_mem_list * list) {
     printf("Removed %zu triangles that are not disjoint with the new tetrahedron\n", removed);
     printf("The check_list has size %zu\n", tri_list_count(&check_list));
     
-    
+    mem_list_cube_compress(list);
     facets_conform_dynamic_remove(&data, &check_list, &check_list_new, locks);
     
-    
-    consistent_triangulation(result, &parameters);
-    /*
-     * Conform the resulting set of triangles. We probably do not want to do this step every time,
-     * what is a good measure?
-     */
-    //facets_conform(&data, NULL);
-	/*
-    //filter_tri_list_check_list(list, &check_list);
-    //printf("Removed those triangles from the original datastructure\n");
-    consistent_triangulation(result, &parameters);
-    printf("Removing all triangles that intersect with the new tetra\n");
-    size_t removed =  filter_tri_list_disjoint_tet(result,&parameters,list, tet_list+rand_tet);
-    printf("Removed %zu triangles not disjoint with new tetrahedron\n\n", removed);
-    */
+    mem_list_cube_compress(list);
+    if (!consistent_triangulation(result, &parameters)) {
+      printf("Triangulation not consistent anymore.. Breaking");
+      break;
+    }
+    triangulation_to_file(result, tmp_triang_file);
+    mem_list_to_file(list, tmp_data_file, MEM_LIST_SAVE_CLEAN);
   }
   for (size_t i = 0; i < cube.len; i++){
     for (size_t j = 0; j < cube.len - i; j++)

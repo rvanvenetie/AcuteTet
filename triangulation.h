@@ -10,7 +10,6 @@ typedef struct triangulation {
   ptetra    tetra;
   size_t    tetra_len;  
 
-  
   int dim;
 } triangulation, * ptriangulation;
 
@@ -21,5 +20,8 @@ typedef struct triangulation {
 int tet_tet_disjoint(ptetra t1, ptetra t2);
 int tri_tet_disjoint(ptriangle tri, ptetra tet);
 void triangulation_free(ptriangulation triang);
-ptriangulation triangulate_cube(tri_mem_list * list);
+void triangulation_print(ptriangulation triang);
+int triangulation_from_file(ptriangulation triang, char * filename);
+int triangulation_to_file(ptriangulation triang, char * filename);
+ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, char * tmp_data_file);
 #endif
