@@ -52,6 +52,8 @@ void tri_list_free(tri_list * list);
 void tri_list_empty(tri_list * list);
 void tri_list_resize(tri_list * list);
 
+void tri_list_validate(tri_list * list);
+
 int tri_list_from_file(tri_list * result, char * filename);
 int tri_list_to_file(tri_list * list, char * filename);
 tri_list mem_list_to_tri_list(tri_mem_list * list);

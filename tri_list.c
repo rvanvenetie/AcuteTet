@@ -160,6 +160,15 @@ void tri_list_free(tri_list * list) {
   free(list->t_arr);
 }
 
+void tri_list_validate(tri_list * list) {
+  size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
+  size_t result = 0;
+  for (size_t i = 0; i < dim_size; i++) 
+    for (size_t j = 0; j < dim_size - i; j++) 
+      for (size_t l = 1; l < list->t_arr[i][j].len; l++)
+	if (list->t_arr[i][j].p_arr[l-1] >= list->t_arr[i][j].p_arr[l])
+	  printf("List is not valid!\n");
+}
 size_t tri_list_count(tri_list * list) {
   size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
   size_t result = 0;

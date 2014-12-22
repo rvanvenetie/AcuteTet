@@ -231,6 +231,7 @@ void test_tri_list(void) {
   }
   if (tri_list_count(&list) > 0)
     printf("ERROR 2 IN TRI_LIST\n");
+  tri_list_validate(&list);
   tri_list_free(&list);
   free(triang_list);
 
@@ -474,7 +475,9 @@ void test_tetra_disjoint(void) {
 }
 
 int main(void){
+  /*
   tri_mem_list list;
+
   ptriangulation triang;
   list = mem_list_init(30, MEM_LIST_CUBE_SPARSE, MEM_LIST_FALSE);
   tetra tet = (tetra) {{{0,0,0},                                                              
@@ -488,6 +491,7 @@ int main(void){
 
   triang = triangulate_cube(&list, NULL, NULL);
   test_tetra_disjoint();
+  */
   /*
   test_mem_list_fund();
   

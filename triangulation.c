@@ -386,7 +386,10 @@ int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
  *
  * 2D Array of locks given as parameter, in case this function gets called in OpenMP
  */
-void facets_tetra_list(tri_list * list, tri_index base_idx, vert_index * ind_apices, int apices_len, omp_lock_t ** locks) {
+
+
+
+void facets_tetra_list(tri_mem_list * mem_list, tri_list * list, tri_index base_idx, vert_index * ind_apices, int apices_len, omp_lock_t ** locks) {
   for (int i = 0; i < apices_len; i++)
   {
     tri_index  facets[3] = {{base_idx[0], base_idx[1], ind_apices[i]},
@@ -397,6 +400,11 @@ void facets_tetra_list(tri_list * list, tri_index base_idx, vert_index * ind_api
       triangle  cur_facet = triangle_from_index_cube(facets[s], list->dim);
       tri_index idx;
       indices_unique_cube(facets[s][0], facets[s][1], facets[s][2], idx); //Convert triangle to it's data_structure index
+      if (!GMI(mem_list->t_arr,idx)) //Check if this index is still acute
+      {
+	printf("Niet in de lijst..");
+	print_triangle(&cur_facet);
+      }
       /*
        * Insert all of these sides into the tri_list. Note that this may cause race conditions!
        * We avoid these by looking up the first vertex of this triangle, and aquiring this lock.
@@ -451,7 +459,7 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
 	  if (!tri_tet_disjoint(&cur_tri, tet)){ //If not disjoint with new tetrahedron, delete
 	    facet_conform(&cur_tri, &parameters);
 	    //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
-	    facets_tetra_list(check_list, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
+	    facets_tetra_list(list,check_list, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
 	    //Cur_tri is not conform, remove from the data structure.
 	    mem_list_cube_clear(list, &cur_tri);
             #pragma omp atomic
@@ -528,12 +536,13 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
 	      facet_conform(&cur_tri, &parameters);
 	      parameters.store_acute_ind = 0;
 	      //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
-	      facets_tetra_list(check_list_new, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
+	      facets_tetra_list(list,check_list_new, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
 	      //Cur_tri is not conform, remove from the data structure.
 	      mem_list_cube_clear(list, &cur_tri);
 	    }
 	  }
     }
+    tri_list_validate(check_list_new);
     printf("Amount of triangles in new_check_list: %zu\n", tri_list_count(check_list_new));
     //Checked all the triangles from check_list. Empty it and swap the lists.
     tri_list_empty(check_list);
