@@ -444,6 +444,7 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
 	  cur_idx[2] = k;
 	  if (!GMI(list->t_arr, cur_idx))
 	    continue; 
+
 	  cur_idx[1] = i + j;
 	  cur_idx[2] = i + j + k;
 	  cur_tri = triangle_from_index_cube(cur_idx, list->dim);
@@ -491,6 +492,8 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
     tri_index cur_idx;
     int l,k;
     size_t i,j;
+    printf("Amount of triangles in new_check_list: %zu\n", tri_list_count(check_list_new));
+    printf("Amount of triangles in     check_list: %zu\n", tri_list_count(check_list));
     #pragma omp parallel shared(locks) private(cur_tri, cur_idx, i,j,k,l)
     {
       if (omp_get_thread_num() == 0) {
@@ -531,6 +534,7 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
 	    }
 	  }
     }
+    printf("Amount of triangles in new_check_list: %zu\n", tri_list_count(check_list_new));
     //Checked all the triangles from check_list. Empty it and swap the lists.
     tri_list_empty(check_list);
 
@@ -686,7 +690,11 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
     printf("Removed %zu triangles that are not disjoint with the new tetrahedron\n", removed);
     printf("The check_list has size %zu\n", tri_list_count(&check_list));
     
-    mem_list_cube_compress(list);
+    if (!consistent_triangulation(result, &parameters)) {
+      printf("Triangulation not consistent anymore.. Breaking");
+      break;
+    }
+
     facets_conform_dynamic_remove(&data, &check_list, &check_list_new, locks);
     
     mem_list_cube_compress(list);

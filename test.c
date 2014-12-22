@@ -474,6 +474,19 @@ void test_tetra_disjoint(void) {
 }
 
 int main(void){
+  tri_mem_list list;
+  ptriangulation triang;
+  list = mem_list_init(30, MEM_LIST_CUBE_SPARSE, MEM_LIST_FALSE);
+  tetra tet = (tetra) {{{0,0,0},                                                              
+			{14,0,0},                                                             
+			{7,8,0},                                                              
+			{9,5,7}}};
+  triangle sides[4];
+  tet_sides(&tet, sides);
+  for (int i = 0; i < 4; i++)
+    mem_list_cube_set(&list, sides + i);
+
+  triang = triangulate_cube(&list, NULL, NULL);
   test_tetra_disjoint();
   /*
   test_mem_list_fund();
