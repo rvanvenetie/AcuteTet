@@ -39,7 +39,7 @@ typedef struct tri_list
 
 int int_arr_index(int_arr * arr, int i);
 tri_list tri_list_init(int dim, int init_value);
-void tri_list_insert(tri_list * list, ptriangle  triang, int resize);
+int tri_list_insert(tri_list * list, ptriangle  triang, int resize);
 int tri_list_contains(tri_list * list, ptriangle  triang);
 int tri_list_get(tri_list * list, arr3 v1, arr3 v2, arr3 v3);
 size_t tri_list_count(tri_list * list);

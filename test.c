@@ -232,6 +232,14 @@ void test_tri_list(void) {
   if (tri_list_count(&list) > 0)
     printf("ERROR 2 IN TRI_LIST\n");
   tri_list_validate(&list);
+  p_int_arr arr = &(list.t_arr[0][0]);
+  arr->data_len = 3;
+  arr->len = 3;
+  arr->p_arr = malloc(sizeof(vert_index) * 3);
+  arr->p_arr[0] = 0;
+  arr->p_arr[1] = 5;
+  arr->p_arr[2] = 5;
+  tri_list_validate(&list);
   tri_list_free(&list);
   free(triang_list);
 

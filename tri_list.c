@@ -48,9 +48,9 @@ tri_list tri_list_init(int dim, int init_value) {
   return result;
 }
 
-void tri_list_insert(tri_list * list, ptriangle  triang, int resize) {
+int tri_list_insert(tri_list * list, ptriangle  triang, int resize) {
   if (tri_list_contains(list, triang)) //Already have this triangle..
-    return;
+    return 0;
 
   tri_index idx;
   triangle_to_index_cube((*triang), list->dim, idx);
@@ -99,6 +99,7 @@ void tri_list_insert(tri_list * list, ptriangle  triang, int resize) {
     points->p_arr = realloc(points->p_arr, points->len * sizeof(vert_index));
     points->data_len = points->len;
   }
+  return 1;
 }
 
 int tri_list_get(tri_list * list, arr3 v1, arr3 v2, arr3 v3) {
@@ -162,7 +163,6 @@ void tri_list_free(tri_list * list) {
 
 void tri_list_validate(tri_list * list) {
   size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
-  size_t result = 0;
   for (size_t i = 0; i < dim_size; i++) 
     for (size_t j = 0; j < dim_size - i; j++) 
       for (size_t l = 1; l < list->t_arr[i][j].len; l++)

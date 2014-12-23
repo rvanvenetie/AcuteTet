@@ -259,7 +259,7 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
  * Saves the memory_list every save_interval, if save_file is set.
  */
 
-void facets_conform_cube(data_list * data, char * save_file){
+void facets_conform_cube(data_list * data,int fund_domain, char * save_file){
   int changed = 1;
   tri_index indices;
   char tmp_file[100];
@@ -284,24 +284,49 @@ void facets_conform_cube(data_list * data, char * save_file){
     printf("Starting conform loop with %zu facets.\n"
           , mem_list_count(conf_mem_list));   
     time_start = omp_get_wtime();
-    
-    for (i = 0; i < fund.len; i++) {
-      for (j = 0; j < cube.len; j++) {
-        for (k = j;k < cube.len; k++) //All combinations of three vertices in the tet
-        {
-          //Below is the same as indices_unique(i,j,k,indices) because i < j < k, already sorted
-          
-          indices_unique_cube(vertex_to_index_cube(fund.points[i],conf_mem_list->dim),j,k,indices);
-          if (!GMI(conf_mem_list->t_arr,indices)) //Check if this index is still acute
-            continue;
-          cur_tri = (triangle) {{{fund.points[i][0],fund.points[i][1],fund.points[i][2]},
-                                 {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
-                                 {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
-          if (!facet_conform(&cur_tri,&parameters)) { //remove from list
-            changed = 1;
-            mem_list_cube_clear_sym(conf_mem_list, &cur_tri);
-          }
-        }
+
+    if (!fund_domain) {
+      #pragma omp parallel for  schedule(dynamic,conf_mem_list->dim) private(cur_tri, indices, i,j,k) firstprivate(parameters)
+      for (i = 0; i < cube.len; i++) 
+	for (j = 0; j < cube.len - i; j++)
+	  if (conf_mem_list->t_arr[i][j])
+	    for (k = 0; k < cube.len - j - i; k++)
+	    {
+	      indices[0] = i;
+	      indices[1] = j;
+	      indices[2] = k;
+	      if (!GMI(conf_mem_list->t_arr, indices))
+		continue; 
+
+	      indices[1] = i + j;
+	      indices[2] = i + j + k;
+	      cur_tri = triangle_from_index_cube(indices, conf_mem_list->dim);
+
+	      if (!facet_conform(&cur_tri,&parameters)) { //remove from conf_mem_list
+		changed = 1;
+		printf("What! Found a non-conform triangle :-(\n");
+		mem_list_cube_clear(conf_mem_list, &cur_tri);
+	      }
+	  }
+    } else {
+      for (i = 0; i < fund.len; i++) {
+	for (j = 0; j < cube.len; j++) {
+	  for (k = j;k < cube.len; k++) //All combinations of three vertices in the tet
+	  {
+	    //Below is the same as indices_unique(i,j,k,indices) because i < j < k, already sorted
+
+	    indices_unique_cube(vertex_to_index_cube(fund.points[i],conf_mem_list->dim),j,k,indices);
+	    if (!GMI(conf_mem_list->t_arr,indices)) //Check if this index is still acute
+	      continue;
+	    cur_tri = (triangle) {{{fund.points[i][0],fund.points[i][1],fund.points[i][2]},
+				  {cube.points[j][0],cube.points[j][1],cube.points[j][2]},
+				  {cube.points[k][0],cube.points[k][1],cube.points[k][2]}}};
+	    if (!facet_conform(&cur_tri,&parameters)) { //remove from list
+	      changed = 1;
+	      mem_list_cube_clear_sym(conf_mem_list, &cur_tri);
+	    }
+	  }
+	}
       }
     }
     time_end   = omp_get_wtime();
@@ -513,7 +538,7 @@ void facets_conform(data_list * data, char * save_file){
       facets_conform_fund(data, save_file);
       break;
     case DATA_MEM_LIST_CUBE:
-      facets_conform_cube(data, save_file);
+      facets_conform_cube(data,1, save_file);
       break;
     case DATA_MEM_LIST_TET:
       facets_conform_tet(data,save_file);

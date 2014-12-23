@@ -386,7 +386,8 @@ int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
  *
  * 2D Array of locks given as parameter, in case this function gets called in OpenMP
  */
-
+size_t facets_add_cnt;
+#pragma omp threadprivate(facets_add_cnt)
 
 
 void facets_tetra_list(tri_mem_list * mem_list, tri_list * list, tri_index base_idx, vert_index * ind_apices, int apices_len, omp_lock_t ** locks) {
@@ -400,17 +401,18 @@ void facets_tetra_list(tri_mem_list * mem_list, tri_list * list, tri_index base_
       triangle  cur_facet = triangle_from_index_cube(facets[s], list->dim);
       tri_index idx;
       indices_unique_cube(facets[s][0], facets[s][1], facets[s][2], idx); //Convert triangle to it's data_structure index
-      if (!GMI(mem_list->t_arr,idx)) //Check if this index is still acute
-      {
-	printf("Niet in de lijst..");
-	print_triangle(&cur_facet);
-      }
       /*
        * Insert all of these sides into the tri_list. Note that this may cause race conditions!
        * We avoid these by looking up the first vertex of this triangle, and aquiring this lock.
        */  
       omp_set_lock(&locks[idx[0]][idx[1]]);//Thread-safe now! As we edit the data check_list.p_arr[idx[0]][idx[1]]
-      tri_list_insert(list, &cur_facet, TRI_LIST_NO_RESIZE);
+      if (!GMI(mem_list->t_arr,idx)) //Check if this index is still acute
+      {
+	printf("Niet in de lijst..");
+	print_triangle(&cur_facet);
+      } else if (tri_list_insert(list, &cur_facet, TRI_LIST_NO_RESIZE))
+	facets_add_cnt++;
+      
       omp_unset_lock(&locks[idx[0]][idx[1]]);
     }
   }
@@ -500,19 +502,21 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
     tri_index cur_idx;
     int l,k;
     size_t i,j;
-    printf("Amount of triangles in new_check_list: %zu\n", tri_list_count(check_list_new));
-    printf("Amount of triangles in     check_list: %zu\n", tri_list_count(check_list));
+    size_t new_count = data_list_count(data);
+    if (count)
+      printf("Removed %zu triangles\n", count - new_count);
+    printf("\n\nLoop %d of conform dynamic\n", iter++);
+    printf("Size of entire list    %zu\n", new_count);
+    printf("Size of check list     %zu\n", tri_list_count(check_list));
+    printf("Size of new check list %zu\n", tri_list_count(check_list_new));
+    tri_list_validate(check_list);
+    tri_list_validate(check_list_new);
+    count = new_count;
+    size_t facets_add_total = 0;
     #pragma omp parallel shared(locks) private(cur_tri, cur_idx, i,j,k,l)
     {
+      facets_add_cnt = 0;
       if (omp_get_thread_num() == 0) {
-	size_t new_count = data_list_count(data);
-	if (count)
-	  printf("Removed %zu triangles\n", count - new_count);
-	printf("\n\nLoop %d of conform dynamic\n", iter++);
-	printf("Size of entire list %zu\n", new_count);
-	printf("Size of check list  %zu\n", tri_list_count(check_list));
-
-	count = new_count;
       }
       /*
        * Loop over all the triangles in the check list. Check if they are not conform
@@ -541,9 +545,11 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
 	      mem_list_cube_clear(list, &cur_tri);
 	    }
 	  }
+      #pragma omp atomic
+      facets_add_total += facets_add_cnt;
     }
-    tri_list_validate(check_list_new);
-    printf("Amount of triangles in new_check_list: %zu\n", tri_list_count(check_list_new));
+    printf("Amount of triangles in new_check_list: +/-   %zu\n", facets_add_total);
+    printf("Amount of triangles in new_check_list: exact %zu\n", tri_list_count(check_list_new));
     //Checked all the triangles from check_list. Empty it and swap the lists.
     tri_list_empty(check_list);
 
@@ -592,6 +598,9 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
   data.mem_list = *list;
   //data.mode = DATA_TRI_LIST;
   //data.list = *list;
+
+  printf("Checking if the list is conform..\n");
+  facets_conform_cube(&data, 0, NULL);
 
   cube_points cube = gen_cube_points(list->dim);
   parameters.cube = &cube;
