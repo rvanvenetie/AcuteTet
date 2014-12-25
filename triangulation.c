@@ -13,13 +13,18 @@
 
 /*
  * Contains loads of functions which returns whether two objects
- * are disjoint (do not collide). Stuff for tet - tet tests and triangle - tet tests.
+* are disjoint (do not collide). Stuff for tet - tet tests and triangle - tet tests.
  */
+
+triangulation triangulation_init(int dim) {
+  triangulation result = {0};
+  result.dim = dim;
+  return result;
+}
 
 void triangulation_free(ptriangulation triang) {
   free(triang->bound_tri);
   free(triang->tetra);
-  free(triang);
 }
 
 void triangulation_print(ptriangulation triang) {
@@ -422,10 +427,10 @@ void facets_tetra_list(tri_mem_list * mem_list, tri_list * list, tri_index base_
  * All the possible new triangles that might be non-conform are added to the check_list.
  */
 size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list, ptetra tet, omp_lock_t ** locks) {
-  tri_mem_list * list = &data->mem_list;
+  int dim = data_list_dim(data);
   size_t result = 0;
 
-  cube_points cube = gen_cube_points(list->dim);
+  cube_points cube = gen_cube_points(dim);
   static facet_acute_data parameters;
   #pragma omp threadprivate(parameters)
   #pragma omp parallel 
@@ -442,32 +447,47 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
 
   tri_index cur_idx;
   triangle cur_tri;
-  size_t i,j,k;
-  #pragma omp parallel for  schedule(dynamic,list->dim) shared(locks) private(cur_tri, cur_idx, i,j,k)
+  size_t i,j;
+  int k;
+  #pragma omp parallel for  schedule(dynamic,dim) shared(locks) private(cur_tri, cur_idx, i,j,k)
   for (i = 0; i < cube.len; i++) 
     for (j = 0; j < cube.len - i; j++)
-      if (list->t_arr[i][j])
-	for (k = 0; k < cube.len - j - i; k++)
+    {
+      //if mem_list->t_arr[i][j] does not exist
+      if (data->mode == DATA_MEM_LIST_CUBE && !data->mem_list.t_arr[i][j])
+	continue;
+      for (k = data_list_dim_size(data, 2, i, j) - 1; k >= 0; k--) {
+	cur_idx[0] = i;
+	cur_idx[1] = j;
+	if (data->mode == DATA_MEM_LIST_CUBE)
 	{
-	  cur_idx[0] = i;
-	  cur_idx[1] = j;
 	  cur_idx[2] = k;
-	  if (!GMI(list->t_arr, cur_idx))
+	  if (!GMI(data->mem_list.t_arr, cur_idx))
 	    continue; 
+	} else 
+	  cur_idx[2] = data->list.t_arr[i][j].p_arr[k];
 
-	  cur_idx[1] = i + j;
-	  cur_idx[2] = i + j + k;
-	  cur_tri = triangle_from_index_cube(cur_idx, list->dim);
-	  if (!tri_tet_disjoint(&cur_tri, tet)){ //If not disjoint with new tetrahedron, delete
+	cur_idx[1] += i;
+	cur_idx[2] += cur_idx[1];
+
+	cur_tri = triangle_from_index_cube(cur_idx, dim);
+	if (!tri_tet_disjoint(&cur_tri, tet)){ //If not disjoint with new tetrahedron, delete
+	  if (data->mode == DATA_MEM_LIST_CUBE) {
 	    facet_conform(&cur_tri, &parameters);
 	    //Add all the sides of conform tetrahedrons with cur_tri as base to the possible non-conform list.
-	    facets_tetra_list(list,check_list, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
+	    facets_tetra_list(&data->mem_list,check_list, cur_idx, parameters.acute_ind, parameters.acute_ind_len, locks);
 	    //Cur_tri is not conform, remove from the data structure.
-	    mem_list_cube_clear(list, &cur_tri);
-            #pragma omp atomic
-	    result++;
+	    mem_list_cube_clear(&data->mem_list, &cur_tri);
+	  } else {
+	    printf("Add facets to check list");
+	    tri_list_remove(&data->list, &cur_tri, TRI_LIST_NO_RESIZE);
 	  }
+	  
+          #pragma omp atomic
+	  result++;
 	}
+      }
+    }
   #pragma omp parallel 
   {
     free(parameters.acute_ind);
@@ -475,6 +495,7 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
   free(cube.points);
   return result;
 }
+
 void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri_list * check_list_new, omp_lock_t ** locks) {
   tri_mem_list * list = &data->mem_list;
 
@@ -568,12 +589,8 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
   }
 }
 
-
-
-ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, char * tmp_data_file) {
-  ptriangulation result = calloc(sizeof(triangulation), 1);
-  result->dim = list->dim;
-
+ptriangle triangulation_start_facet(data_list  * data) {
+  int dim = data_list_dim(data);
   /* Try to find a start facet on the z = 0 plane */
   ptriangle  start_facet = calloc(sizeof(triangle), 1);
   int found_start = 0;
@@ -582,30 +599,139 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
      * Random triangle with vertices:
      * (0,0,0), (?,0,0), (?,?,0)
      */
-    start_facet->vertices[1][0] = rand() %list->dim;
-    start_facet->vertices[2][0] = rand() %list->dim;
-    start_facet->vertices[2][1] = rand() %list->dim;
+    start_facet->vertices[1][0] = rand() %dim;
+    start_facet->vertices[2][0] = rand() %dim;
+    start_facet->vertices[2][1] = rand() %dim;
 
     if (!triangle_acute(start_facet))
       continue;
-    //found_start =  (tri_list_contains(list, start_facet));
-    found_start = mem_list_cube_contains(list,start_facet);
+    if (data->mode == DATA_MEM_LIST_CUBE)
+      found_start = mem_list_cube_contains(&data->mem_list,start_facet);
+    else
+      found_start = tri_list_contains(&data->list, start_facet);
   }
+  return start_facet;
+}
 
+triangulation triangulate_cube_random(data_list * data) {
+  int dim = data_list_dim(data);
+  cube_points cube = gen_cube_points(dim); 
+  triangulation result;
+  omp_lock_t result_lock;
+  omp_init_lock(&result_lock);  //If we found a triangulation, use this lock!
+
+  facet_acute_data parameters; //Parameters for conform_
+  triangulation tmp_triang; //Triangulation we are expanding in current thread
+  ptetra tet_list; //List of tetrahedrons, used in the parallel section
+  unsigned short tet_list_len; //Holds the length of this list
+  int triangulation_found = 0; //Stop if one of the threads has found a triangulation!
+  int rand_bound, i, rand_tet;
+  //Start the parallel loop!
+  #pragma omp parallel default(none) \
+     private(parameters, tmp_triang, tet_list, tet_list_len, rand_bound, i, rand_tet) \
+     shared(result, result_lock, cube,data,dim, triangulation_found)
+  {
+    //Initalization for each thread
+    parameters.cube = &cube;
+    parameters.boundary_func = &triangle_boundary_cube;
+    parameters.data = data;
+    parameters.store_acute_ind = 1;
+    parameters.acute_ind  = malloc(sizeof(vert_index) * cube.len);
+
+    tet_list = malloc(sizeof(tetra) * cube.len);
+
+    while (!triangulation_found) { //Not found a triangulation
+      //Initalize the triangulation variables
+      tmp_triang = triangulation_init(dim);
+      tet_list_len = 0;
+      //Start triangle (0,0,0), (rand,0,0), (rand,rand,0)
+      tmp_triang.bound_len = 1;
+      tmp_triang.bound_tri = triangulation_start_facet(data);
+      printf("Thread %d starts with facet:\n", omp_get_thread_num());
+      print_triangle(tmp_triang.bound_tri);
+
+      //While we have triangles on the boundary
+      while (tmp_triang.bound_len > 0) {
+	/*
+	 * We are going to add a tetrahedron on the boundary triangle.
+	 * To do so, we select a random triangle on the boundary. Then we generate all the
+	 * acute tetrahedra (above and below) with facets in our possible list.
+	 * From this list we remove all the tetrahedrons that intersect with our current triangulation.
+	 * Then we add a random tetrahedron to our triangulation and repeat.
+	 */
+	rand_bound = rand() % tmp_triang.bound_len;
+	printf("Expanding triangulation at bondary triangule: \n");
+	print_triangle(tmp_triang.bound_tri + rand_bound);
+
+	//Calculate the conform tetrahedrons above and below
+	if (!facet_conform(&tmp_triang.bound_tri[rand_bound], &parameters))
+	{
+	  printf("We have a triangle on the boundary that is not conform anymore.\n");
+	  printf("Whatthefuck? Breaking!\n");
+	  break;
+	}
+
+	tet_list_len = parameters.acute_ind_len;
+	printf("Total amount of conform tetrahedrons found for this boundary: %hu\n", tet_list_len);
+	//Form explicit list of the tetrahedrons
+	for (i = 0; i < tet_list_len; i++) 
+	{
+	  copyArr3(tet_list[i].vertices[0], tmp_triang.bound_tri[rand_bound].vertices[0]);
+	  copyArr3(tet_list[i].vertices[1], tmp_triang.bound_tri[rand_bound].vertices[1]);
+	  copyArr3(tet_list[i].vertices[2], tmp_triang.bound_tri[rand_bound].vertices[2]);
+	  copyArr3(tet_list[i].vertices[3], cube.points[parameters.acute_ind[i]]);
+	}
+
+	//Remove all the tetrahedrons that intersect with current triangulation.
+	filter_tet_list_disjoint_triangulation(tet_list, &tet_list_len, &tmp_triang);
+
+	printf("Amount of tetrahedrons left after filtering: %hu\n\n",tet_list_len);
+	if (tet_list_len == 0) {
+	  printf("Waarom is deze lijst nu al fucking leeggefilterd?\n");
+	  printf("Dead end, helaas pindakaas. Got to %zu\n", tmp_triang.tetra_len);
+	  break;
+	}
+
+	//Select random tetrahedron disjoint with the current triangulation
+	rand_tet = rand() % tet_list_len;
+	/*
+	 * Add the above tetra to the triangulation.
+	 * This removes all the boundary triangles that are covered by this tetrahedron
+	 */
+	printf("Adding the following tetra to the triangulation\n");
+	print_tetra(tet_list + rand_tet);
+	printf("\n\n");
+	add_tet_triangulation(tet_list + rand_tet,&tmp_triang);
+	triangulation_print(&tmp_triang);
+      }
+
+      if (tmp_triang.bound_len == 0)
+      {
+	omp_set_lock(&result_lock);
+	result = tmp_triang;
+	triangulation_found = 1;
+	omp_unset_lock(&result_lock);
+      } else 
+	triangulation_free(&tmp_triang);
+    }
+    free(parameters.acute_ind);
+    free(tet_list);
+  }
+  free(cube.points);
+  omp_destroy_lock(&result_lock);
+  return result;
+}
+
+
+
+triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char * tmp_data_file) {
+  triangulation result = triangulation_init(data_list_dim(data));
+
+  cube_points cube = gen_cube_points(result.dim);
   facet_acute_data parameters;
-  data_list data;
-  data.mode = DATA_MEM_LIST_CUBE;
-  data.mem_list = *list;
-  //data.mode = DATA_TRI_LIST;
-  //data.list = *list;
-
-  printf("Checking if the list is conform..\n");
-  facets_conform_cube(&data, 0, NULL);
-
-  cube_points cube = gen_cube_points(list->dim);
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
-  parameters.data = &data;
+  parameters.data = data;
   parameters.store_acute_ind = 1;
   parameters.acute_ind = malloc(sizeof(unsigned short) * cube.len);
 
@@ -613,18 +739,17 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
   ptetra tet_list = malloc(sizeof(tetra) * cube.len);
   unsigned short tet_list_len = 0;
 
-  //This list holds all the triangles we are going to remove from a triangulation
-  tri_list check_list = tri_list_init(list->dim, MEM_LIST_FALSE);
-  //This list holds all the triangles we are going to check for removal
-  tri_list check_list_new  = tri_list_init(list->dim, MEM_LIST_FALSE);
+  //Lists needed for the dynamic_remove loop
+  tri_list check_list, check_list_new;
+
+  check_list     = tri_list_init(result.dim, MEM_LIST_FALSE);
+  check_list_new = tri_list_init(result.dim, MEM_LIST_FALSE);
 
   //Start triangle (0,0,0), (rand,0,0), (rand,rand,0)
+  result.bound_len = 1;
+  result.bound_tri = triangulation_start_facet(data);
   printf("Starting triangulation with facet:\n");
-  print_triangle(start_facet);
-  printf("Triangle acute? %d\n", triangle_acute(start_facet));
-  result->bound_len = 1;
-  result->bound_tri = start_facet;
-  //While we have triangles on the boundary..
+  print_triangle(result.bound_tri);
   /*
    * During this method we are going to operate data that is not thread-safe.
    * To avoid race conditions we need an array of locks. We use a lock for the
@@ -637,7 +762,8 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
     for (size_t j = 0; j < cube.len - i; j++)
       omp_init_lock(&locks[i][j]);
   }
-  while (result->bound_len > 0) {
+  //While we have triangles on the boundary..
+  while (result.bound_len > 0) {
     /*
      * We are going to add a tetrahedron on the boundary triangle.
      * To do so, we select a random triangle on the boundary. Then we generate all the
@@ -645,12 +771,12 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
      * From this list we remove all the tetrahedrons that intersect with our current triangulation.
      * Then we add a random tetrahedron to our triangulation, update the conform list and repeat.
      */
-    int rand_bound = rand() % result->bound_len;
-    printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", mem_list_count(list));
-    print_triangle(result->bound_tri + rand_bound);
+    int rand_bound = rand() % result.bound_len;
+    printf("\n\nTotal amount of triangles left:%zu\nExpanding triangulation at boundary triangle: \n", data_list_count(data));
+    print_triangle(result.bound_tri + rand_bound);
 
     //Calculate the conform tetrahedrons above and below
-    if (!facet_conform(&result->bound_tri[rand_bound], &parameters))
+    if (!facet_conform(&result.bound_tri[rand_bound], &parameters))
     {
       printf("We have a triangle on the boundary that is not conform anymore.\n");
       printf("Whatthefuck? Breaking!\n");
@@ -662,19 +788,19 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
     //Form explicit list of the tetrahedrons
     for (unsigned short i = 0; i < tet_list_len; i++) 
     {
-      copyArr3(tet_list[i].vertices[0], result->bound_tri[rand_bound].vertices[0]);
-      copyArr3(tet_list[i].vertices[1], result->bound_tri[rand_bound].vertices[1]);
-      copyArr3(tet_list[i].vertices[2], result->bound_tri[rand_bound].vertices[2]);
+      copyArr3(tet_list[i].vertices[0], result.bound_tri[rand_bound].vertices[0]);
+      copyArr3(tet_list[i].vertices[1], result.bound_tri[rand_bound].vertices[1]);
+      copyArr3(tet_list[i].vertices[2], result.bound_tri[rand_bound].vertices[2]);
       copyArr3(tet_list[i].vertices[3], cube.points[parameters.acute_ind[i]]);
     }
 
     //Remove all the tetrahedrons that intersect with current triangulation.
-    filter_tet_list_disjoint_triangulation(tet_list, &tet_list_len,result);
+    filter_tet_list_disjoint_triangulation(tet_list, &tet_list_len, &result);
 
     printf("Amount of tetrahedrons left after filtering: %hu\n\n",tet_list_len);
     if (tet_list_len == 0) {
       printf("Waarom is deze lijst nu al fucking leeggefilterd?\n");
-      printf("Dead end, helaas pindakaas. Got to %zu\n", result->tetra_len);
+      printf("Dead end, helaas pindakaas. Got to %zu\n", result.tetra_len);
       break;
     }
 
@@ -687,41 +813,45 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
     printf("Adding the following tetra to the triangulation\n");
     print_tetra(tet_list + rand_tet);
     printf("\n\n");
-    add_tet_triangulation(tet_list + rand_tet, result);
-    triangulation_print(result);
-    
-    if (!result->bound_len) //If we have no boundaries left, we must be done!!
+    add_tet_triangulation(tet_list + rand_tet, &result);
+    triangulation_print(&result);
+
+    if (!result.bound_len) //If we have no boundaries left, we must be done!!
     {
       printf("No more boundaries left.. WE FINNISHED!??\n");
       break;
     }
     //Consistency check
-    if (!consistent_triangulation(result, &parameters))
+    if (!consistent_triangulation(&result, &parameters))
     {
-      printf("Triangulation not consistent. Breaking.\n");
+      printf("Triangulation not consistent after adding the tetrahedron. Breaking.\n");
       break;
     }
     /*
      * Calculate a list of all the triangles we are going to remove
      */
-    size_t removed = filter_intersection_data_list_tet(&data, &check_list, tet_list + rand_tet, locks);
+    size_t removed = filter_intersection_data_list_tet(data,  &check_list, tet_list + rand_tet, locks);
     printf("Removed %zu triangles that are not disjoint with the new tetrahedron\n", removed);
     printf("The check_list has size %zu\n", tri_list_count(&check_list));
-    
-    if (!consistent_triangulation(result, &parameters)) {
-      printf("Triangulation not consistent anymore.. Breaking");
+
+    if (!consistent_triangulation(&result, &parameters)) {
+      printf("After filtering the memory list we have a non consistent triangulation. Break\n");
       break;
     }
 
-    facets_conform_dynamic_remove(&data, &check_list, &check_list_new, locks);
-    
-    mem_list_cube_compress(list);
-    if (!consistent_triangulation(result, &parameters)) {
-      printf("Triangulation not consistent anymore.. Breaking");
+    facets_conform_dynamic_remove(data, &check_list, &check_list_new, locks);
+
+    if (!consistent_triangulation(&result, &parameters)) {
+      printf("Triangulation not consistent anymore after conforming the data set.. Breaking\n");
       break;
     }
-    triangulation_to_file(result, tmp_triang_file);
-    mem_list_to_file(list, tmp_data_file, MEM_LIST_SAVE_CLEAN);
+
+    mem_list_cube_compress(&data->mem_list);
+
+    if (tmp_triang_file && tmp_data_file) {
+      triangulation_to_file(&result, tmp_triang_file);
+      data_list_to_file(data, tmp_data_file, MEM_LIST_SAVE_CLEAN);
+    }
   }
   for (size_t i = 0; i < cube.len; i++){
     for (size_t j = 0; j < cube.len - i; j++)
@@ -735,7 +865,7 @@ ptriangulation triangulate_cube(tri_mem_list * list, char * tmp_triang_file, cha
   free(tet_list);
   tri_list_free(&check_list);
   tri_list_free(&check_list_new);
-  printf("Triangulation has length of %zu\n", result->tetra_len);
+  printf("Triangulation has length of %zu\n", result.tetra_len);
   return result;
 }
 /*

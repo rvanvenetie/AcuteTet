@@ -44,6 +44,7 @@ int tri_list_contains(tri_list * list, ptriangle  triang);
 int tri_list_get(tri_list * list, arr3 v1, arr3 v2, arr3 v3);
 size_t tri_list_count(tri_list * list);
 size_t tri_list_memory(tri_list * list);
+void tri_list_copy(tri_list * dest, tri_list * source);
 int tri_list_dim_size(tri_list* list, int axis, int idx1, int idx2);
 #define TRI_LIST_NO_RESIZE 0
 #define TRI_LIST_RESIZE 1

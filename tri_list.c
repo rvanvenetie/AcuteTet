@@ -179,6 +179,24 @@ size_t tri_list_count(tri_list * list) {
   return result;
 }
 
+void tri_list_copy(tri_list * dest, tri_list * source) {
+  if (dest->dim != source->dim) {
+    tri_list_free(dest);
+    *dest = tri_list_init(source->dim, MEM_LIST_FALSE);
+  }
+
+  int dim_size = tri_list_dim_size(source, 0, -1, -1);
+  for (int i = 0; i < dim_size; i++)
+    for (int j = 0; j < dim_size - i; j++) {
+      if (source->t_arr[i][j].len > dest->t_arr[i][j].data_len) {
+	free(dest->t_arr[i][j].p_arr);
+	dest->t_arr[i][j].p_arr = malloc(source->t_arr[i][j].len * sizeof(vert_index));
+	dest->t_arr[i][j].data_len = source->t_arr[i][j].len;
+      }
+      dest->t_arr[i][j].len = source->t_arr[i][j].len;
+      memcpy(dest->t_arr[i][j].p_arr, source->t_arr[i][j].p_arr, dest->t_arr[i][j].len * sizeof(vert_index));
+    }
+}
 size_t tri_list_memory(tri_list * list) {
   int dim_size = tri_list_dim_size(list, 0, -1,-1);
   size_t result = 0;
@@ -375,7 +393,7 @@ data_list data_list_init(int dim, int mode, int init_value) {
       result.mem_list = mem_list_tet_init(dim, init_value);
       break;
     case DATA_MEM_LIST_CUBE:
-      result.mem_list = mem_list_cube_init(dim, init_value, MEM_LIST_CUBE);
+      result.mem_list = mem_list_cube_init(dim, init_value, MEM_LIST_CUBE_SPARSE);
       break;
   }
   return result;
