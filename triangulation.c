@@ -411,11 +411,8 @@ void facets_tetra_list(tri_mem_list * mem_list, tri_list * list, tri_index base_
        * We avoid these by looking up the first vertex of this triangle, and aquiring this lock.
        */  
       omp_set_lock(&locks[idx[0]][idx[1]]);//Thread-safe now! As we edit the data check_list.p_arr[idx[0]][idx[1]]
-      if (!GMI(mem_list->t_arr,idx)) //Check if this index is still acute
-      {
-	printf("Niet in de lijst..");
-	print_triangle(&cur_facet);
-      } else if (tri_list_insert(list, &cur_facet, TRI_LIST_NO_RESIZE))
+      if (GMI(mem_list->t_arr,idx) && //Check if this index is still acute
+          tri_list_insert(list, &cur_facet, TRI_LIST_NO_RESIZE))
 	facets_add_cnt++;
       
       omp_unset_lock(&locks[idx[0]][idx[1]]);
