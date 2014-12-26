@@ -383,6 +383,8 @@ tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
   
   result.mem_fund.vert_fund_sym = vert_fund_sym;
   
+  free(cube.points);
+  free(fund.points);
   return result;  
 }
 
@@ -397,14 +399,19 @@ void mem_list_free(tri_mem_list * list) {
   free(list->t_arr);
   
   if (list->mode == MEM_LIST_FUND || list->mode == MEM_LIST_FUND_SPARSE) {
-    vert_index ** sym_index;
-    sym_index = list->mem_fund.sym_index;
-      
-    for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++)
-      free(sym_index[i]);
-    free(sym_index);
+    for (size_t i = 0; i < list->mem_fund.cube_len; i++)
+      free(list->mem_fund.sym_index[i]);
+    free(list->mem_fund.sym_index);
     
     free(list->mem_fund.vert_fund_sym);
+    free(list->mem_fund.vert_from_index);
+
+    for (int x = 0; x <=list->dim; x++) {
+      for (int y = 0; y <=list->dim; y++) 
+	free(list->mem_fund.vert_to_index[x][y]);
+      free(list->mem_fund.vert_to_index[x]);
+    }
+    free(list->mem_fund.vert_to_index);
   }
 }
 

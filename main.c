@@ -20,7 +20,7 @@
  */
  
 #define USE_FILE 1
-#define REDIRECT_OUTPUT 1
+#define REDIRECT_OUTPUT 0
 
 #define CUBE_LOG         "output_cube_%d.log"
 #define FUND_LOG         "output_fund_%d.log"
@@ -101,6 +101,12 @@ int main(int argc, char *argv[]) {
   
   for (int i = loop_start;i < loop_end + 1; i++) 
   {
+    if (LOOP_FUND_SPARSE == loop_type && (i % 2))
+    {
+      printf("Loop %d is an odd number, skipping this as it possibly gives a non symmetric grid\n",i);
+      continue;
+    }
+      
     switch (loop_type) {
       case LOOP_FUND: 
         sprintf(log_file,  FUND_LOG,i); 
@@ -153,7 +159,7 @@ int main(int argc, char *argv[]) {
     printf("Size of the memory list is %zu bytes.\n", data_list_memory(&face_list));
     printf("Amount of start facets is %zu.\n", data_list_count(&face_list));
     printf("Start filtering triangles not conform:\n\n");
-
+    printf("Cube_len %zu fund_len %zu", face_list.mem_list.mem_fund.cube_len, face_list.mem_list.mem_fund.fund_len);
 
     facets_conform(&face_list, tmp_file);
 

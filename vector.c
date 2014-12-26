@@ -390,6 +390,7 @@ cube_points gen_cube_sparse_points(int dim) {
 	  c++;
 	}
       }
+  free(axis);
   return result;
 }
 
@@ -415,6 +416,8 @@ cube_points gen_fund_sparse_points(int dim){
       result.points[result.len][2] = fund.points[i][2];
       result.len++;
     }
+  free(axis);
+  free(fund.points);
   return result;
 }
 void randomArr3(int dim, arr3 result) {

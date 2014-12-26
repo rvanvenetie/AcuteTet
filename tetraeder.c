@@ -344,6 +344,7 @@ void facets_conform_cube(data_list * data,int fund_domain, char * save_file){
     time_end   = omp_get_wtime();
     printf("Loop took %f seconds.\n\n", time_end-time_start);
   }
+  free(cube.points);
 }
 
 /*
@@ -454,7 +455,7 @@ void facets_conform_fund(data_list * data, char * save_file){
     time_start = omp_get_wtime();
     time_save = save_interval;
     
-    #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
+    //#pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
     for (i = 0; i < fund_len; i++) {
       for (j = i + 1; j < cube.len; j++) {
         for (k = j + 1; k < cube.len; k++) //All combinations of three vertices in the tet
@@ -494,6 +495,7 @@ void facets_conform_fund(data_list * data, char * save_file){
     time_end   = omp_get_wtime();
     printf("Conform loop took %f seconds.\n\n", time_end-time_start);
   }
+  free(cube.points);
 }
 
 void facets_conform_tri_list(data_list * data, char * save_file){
@@ -546,6 +548,7 @@ void facets_conform_tri_list(data_list * data, char * save_file){
     time_end   = omp_get_wtime();
     printf("Conform loop took %f seconds.\n\n", time_end-time_start);
   }
+  free(cube.points);
 }
 /*
  * Calls the correct conform function. Depens on the memory type
