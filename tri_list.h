@@ -69,6 +69,7 @@ tri_list mem_list_to_tri_list(tri_mem_list * list);
 #define DATA_MEM_LIST_TET  1
 #define DATA_MEM_LIST_CUBE 2
 #define DATA_TRI_LIST      3
+#define DATA_MEM_LIST_FUND_SPARSE 4
 
 typedef struct data_list{
   int mode;

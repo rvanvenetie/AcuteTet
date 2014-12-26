@@ -112,11 +112,8 @@ void gen_vertex_to_index_tet(int dim, vert_index **** vertex_index, int *tet_len
  * Generates a 3D array for converting a point to it's index. First stores all the points in the
  * fundamental domain (0..fund_len) then the rest of the points in the cube.
  */
-void gen_vertex_to_index_fund(int dim, vert_index_array * vertex_index, size_t * fund_len, size_t * cube_len) {
-  cube_points fund_pts = gen_fund_points(dim);
-  cube_points cube_pts = gen_cube_points(dim);
-  *fund_len = fund_pts.len;
-  *cube_len = cube_pts.len;
+void gen_vertex_to_index_fund(cube_points cube_pts, cube_points fund_pts, vert_index_array * vertex_index) {
+  int dim = cube_pts.dim;
   
   //Allocate the 3D array, initalize to USHRT_MAX
   *vertex_index = malloc((dim+1) * sizeof(unsigned short **));
@@ -131,35 +128,27 @@ void gen_vertex_to_index_fund(int dim, vert_index_array * vertex_index, size_t *
   int c = 0;
   //First do the fundamental domain
   for (size_t i = 0; i < fund_pts.len; i ++)
-  {
-    (*vertex_index)[fund_pts.points[i][0]][fund_pts.points[i][1]][fund_pts.points[i][2]] = c;
-    c++;
-  }
+    (*vertex_index)[fund_pts.points[i][0]][fund_pts.points[i][1]][fund_pts.points[i][2]] = c++;
+  
   //Now fill the entire cube - fundamental domain in the rest. 
   for (size_t i = 0; i < cube_pts.len; i++)
     if ((*vertex_index)[cube_pts.points[i][0]][cube_pts.points[i][1]][cube_pts.points[i][2]] == USHRT_MAX) //Point is not inside the fund domain
-    {
-      (*vertex_index)[cube_pts.points[i][0]][cube_pts.points[i][1]][cube_pts.points[i][2]] = c;
-      c++;
-    }
-  free(cube_pts.points);
-  free(fund_pts.points);
+      (*vertex_index)[cube_pts.points[i][0]][cube_pts.points[i][1]][cube_pts.points[i][2]] = c++;
+   
 }
 
 /*
  * Generates an array that does the revers from above, ie index to point.
  */
-void gen_vertex_from_index_fund(int dim, arr3 ** index_vertex, vert_index_array vertex_index) {
-  size_t len = (dim+1) * (dim + 1) * (dim + 1); //Amount of points
-  (*index_vertex) = malloc(len * sizeof(arr3));
-  for (int x = 0; x <= dim; x++)
-    for (int y = 0; y <= dim; y++)
-      for (int z = 0; z <= dim; z++) {
-        vert_index index = vertex_index[x][y][z];
-        (*index_vertex)[index][0] = x;
-        (*index_vertex)[index][1] = y;
-        (*index_vertex)[index][2] = z;
-     }
+void gen_vertex_from_index_fund(arr3 ** index_vertex, vert_index_array vertex_index, cube_points cube) {
+  *index_vertex = malloc(cube.len * sizeof(arr3));
+  for (size_t i = 0; i < cube.len; i++)
+  {
+    vert_index index = vertex_index[cube.points[i][0]][cube.points[i][1]][cube.points[i][2]];
+    (*index_vertex)[index][0] = cube.points[i][0];
+    (*index_vertex)[index][1] = cube.points[i][1];
+    (*index_vertex)[index][2] = cube.points[i][2];
+  }
 }
 
 /*
@@ -211,6 +200,7 @@ int mem_list_dim_size(tri_mem_list * list, int axis, int idx1, int idx2) {
       else if (axis == 2) //If we have a sparse matrix, thirds axis might be empty.
         return list->mem_cube.dim_size - idx1 - idx2 ;
     case MEM_LIST_FUND:
+    case MEM_LIST_FUND_SPARSE:
       if (axis == 0)
         return list->mem_fund.fund_len;
       else if (axis == 1)
@@ -243,7 +233,8 @@ tri_mem_list mem_list_init(int dim, int mode, int init_value) {
     case MEM_LIST_CUBE:
       return mem_list_cube_init(dim,init_value, MEM_LIST_CUBE);
     case MEM_LIST_FUND:
-      return mem_list_fund_init(dim, init_value);
+    case MEM_LIST_FUND_SPARSE:
+      return mem_list_fund_init(dim, init_value, mode);
     case MEM_LIST_TET:
       return mem_list_tet_init(dim, init_value);
     case MEM_LIST_CUBE_SPARSE:
@@ -317,44 +308,55 @@ tri_mem_list mem_list_tet_init(int dim, int init_value) {
   return result;
 }
 
-
-tri_mem_list mem_list_fund_init(int dim, int init_value) {
+tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
   tri_mem_list result;
   memset(&result,0,sizeof(tri_mem_list));
-  result.mode = MEM_LIST_FUND;
+  result.mode = mode;
   result.dim = dim; 
     
-  //Generate vertex to index array  
-  gen_vertex_to_index_fund(dim, 
-                        &result.mem_fund.vert_to_index,
-                        &result.mem_fund.fund_len,
-                        &result.mem_fund.cube_len);
-  gen_vertex_from_index_fund(dim, &result.mem_fund.vert_from_index, result.mem_fund.vert_to_index);
+  cube_points cube, fund;
+  if (mode == MEM_LIST_FUND)
+  {
+    cube = gen_cube_points(dim);
+    fund = gen_fund_points(dim);
+  } else {
+  //} else if (mode == MEM_LIST_FUND_SPARSE)
+    cube = gen_cube_sparse_points(dim);
+    fund = gen_fund_sparse_points(dim); 
+  }
 
-  //Cache values, easier to read..
-  size_t fund_len = result.mem_fund.fund_len;
-  size_t cube_len = result.mem_fund.cube_len;
-  unsigned char *** t_arr = calloc(fund_len, sizeof(unsigned char **));
-  result.t_arr = t_arr;
+  result.mem_fund.cube_len = cube.len;
+  result.mem_fund.fund_len = fund.len;
+  //Generate vertex to index array
+  gen_vertex_to_index_fund(cube, fund, &result.mem_fund.vert_to_index);
+  //Generate index array to vertex
+  gen_vertex_from_index_fund(&result.mem_fund.vert_from_index, result.mem_fund.vert_to_index, cube);
+
   
   /* Initalize the 3D bit array.
-   * First dimension only holds points in fundamental domain (the first fund_len points)
+   * First dimension only holds points in fundamental domain (the first fund.len points)
    * Second dimension then holds all the points bigger than first dimension (also outside fund domain)
    * Third dimension holds all points bigger than the third dimension
    */
-  for (size_t i = 0; i < fund_len; i++) {
-    t_arr[i] = calloc(cube_len - i - 1, sizeof(unsigned char *));
-    for (size_t j = i + 1; j < cube_len; j++) {
-      t_arr[i][j - i -1] = calloc((cube_len - j-  1) / 8 + 1, sizeof(unsigned char));
+  unsigned char *** t_arr = calloc(fund.len, sizeof(unsigned char **));
+  result.t_arr = t_arr;
+  for (size_t i = 0; i < fund.len; i++) {
+    t_arr[i] = calloc(cube.len - i - 1, sizeof(unsigned char *));
+    for (size_t j = i + 1; j < cube.len; j++) {
+      t_arr[i][j - i -1] = calloc((cube.len - j-  1) / 8 + 1, sizeof(unsigned char));
       if (init_value == MEM_LIST_TRUE) 
-        for (size_t k = j+1; k < cube_len; k++) {
+        for (size_t k = j+1; k < cube.len; k++) {
           tri_index indices = {i,j - i - 1,k - j - 1}; //Correct order as i < j < k
           SMI(t_arr,indices);
         }
     }
   }
-  vert_index ** sym_vertex_index = malloc(cube_len * sizeof(vert_index *));
-  for (unsigned short i = 0; i < cube_len; i++)
+  /*
+   * Generate the sym_vertex_index. With this array we can convert
+   * vertices to each of its 48 symmetries
+   */
+  vert_index ** sym_vertex_index = malloc(cube.len * sizeof(vert_index *));
+  for (unsigned short i = 0; i < cube.len; i++)
   {
     arr3 cur_pt;
     copyArr3(cur_pt, result.mem_fund.vert_from_index[i]);
@@ -367,10 +369,14 @@ tri_mem_list mem_list_fund_init(int dim, int init_value) {
   }
   result.mem_fund.sym_index = sym_vertex_index;
   
-  int * vert_fund_sym = malloc(cube_len * sizeof(int));
-  for (unsigned short i = 0; i < cube_len; i++) 
+  /*
+   * For each vertex we give the symmetry number needed to transform this
+   * point into the fundamental domain
+   */
+  int * vert_fund_sym = malloc(cube.len * sizeof(int));
+  for (unsigned short i = 0; i < cube.len; i++) 
     for (int s = 0; s < 48; s++) 
-      if (sym_vertex_index[i][s] < fund_len){ //This symmetry translates point i to the fund domain
+      if (sym_vertex_index[i][s] < fund.len){ //This symmetry translates point i to the fund domain
         vert_fund_sym[i] = s;
         break;
       }
@@ -390,7 +396,7 @@ void mem_list_free(tri_mem_list * list) {
   }
   free(list->t_arr);
   
-  if (list->mode == MEM_LIST_FUND) {
+  if (list->mode == MEM_LIST_FUND || list->mode == MEM_LIST_FUND_SPARSE) {
     vert_index ** sym_index;
     sym_index = list->mem_fund.sym_index;
       
@@ -453,7 +459,7 @@ triangle_list mem_list_to_triangle_list(tri_mem_list * list) {
   triangle_list result= {NULL, count, list->dim}; 
   ptriangle t_arr = malloc(count * sizeof(triangle));
   
-  if (list->mode == MEM_LIST_FUND) {
+  if (list->mode == MEM_LIST_FUND || list->mode == MEM_LIST_FUND_SPARSE) {
     for (size_t i = 0; i < count; i ++) {
       printf("%d,%d,%d\n", index_list.index_list[i][0],index_list.index_list[i][1],index_list.index_list[i][2]);
       t_arr[i] = triangle_from_index_fund(index_list.index_list[i], list->mem_fund.vert_from_index); 

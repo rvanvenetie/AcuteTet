@@ -434,7 +434,12 @@ void facets_conform_fund(data_list * data, char * save_file){
   size_t i,j,k;
   triangle cur_tri;
   facet_acute_data parameters;
-  cube_points cube = gen_cube_points(conf_mem_list->dim);
+  cube_points cube;
+  if (conf_mem_list->mode == MEM_LIST_FUND)
+    cube = gen_cube_points(conf_mem_list->dim);
+  else if (conf_mem_list->mode == MEM_LIST_FUND_SPARSE)
+    cube = gen_cube_sparse_points(conf_mem_list->dim);
+
   size_t fund_len = conf_mem_list->mem_fund.fund_len; //Cache
   parameters.cube = &cube;
   parameters.boundary_func = &triangle_boundary_cube;
@@ -452,7 +457,7 @@ void facets_conform_fund(data_list * data, char * save_file){
     #pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
     for (i = 0; i < fund_len; i++) {
       for (j = i + 1; j < cube.len; j++) {
-        for (k = j + 1;k < cube.len; k++) //All combinations of three vertices in the tet
+        for (k = j + 1; k < cube.len; k++) //All combinations of three vertices in the tet
         {
           //Below is the same as indices_unique(i,j,k,indices) because i < j < k, already sorted
           
@@ -490,6 +495,7 @@ void facets_conform_fund(data_list * data, char * save_file){
     printf("Conform loop took %f seconds.\n\n", time_end-time_start);
   }
 }
+
 void facets_conform_tri_list(data_list * data, char * save_file){
   int changed = 1;
   char tmp_file[100];

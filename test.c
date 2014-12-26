@@ -125,7 +125,7 @@ void randomize_triangle(ptriangle triang) {
 }
 void test_mem_list_fund(void){
   int dim = 15;
-  tri_mem_list mem_list = mem_list_fund_init(dim,MEM_LIST_FALSE);
+  tri_mem_list mem_list = mem_list_fund_init(dim,MEM_LIST_FALSE, MEM_LIST_FUND);
   triangle * triang_list = malloc(sizeof(triangle)  * 750);
   for (int i = 0; i < 750; i++) {
     triang_list[i] = rand_triangle(dim);
@@ -244,14 +244,14 @@ void test_tri_list(void) {
   free(triang_list);
 
   dim = 5;
-  tri_mem_list mem_list = mem_list_fund_init(dim, MEM_LIST_TRUE);
+  tri_mem_list mem_list = mem_list_fund_init(dim, MEM_LIST_TRUE, MEM_LIST_FUND);
   list = mem_list_to_tri_list(&mem_list);
   if (C((dim + 1) * (dim + 1)  * (dim + 1), 3) != tri_list_count(&list))
     printf("ERROR 4 IN TRI_LIST\n");
   mem_list_free(&mem_list);
   tri_list_free(&list);
 
-  mem_list = mem_list_fund_init(dim, MEM_LIST_FALSE);
+  mem_list = mem_list_fund_init(dim, MEM_LIST_FALSE, MEM_LIST_FUND);
   triangle start_triangle = rand_triangle_tet(dim);
   mem_list_fund_set(&mem_list, &start_triangle);
   printf("Mem_list_count: %zu\n", mem_list_count(&mem_list));
@@ -488,7 +488,15 @@ void test_tetra_disjoint(void) {
 }
 
 int main(void){
-  test_tetra_disjoint();
+  cube_points cube =  gen_cube_sparse_points(30);
+  
+  cube_points fund =  gen_fund_sparse_points(30);
+  for (int i = 0; i <= 30; i++)
+    printArr3(cube.points[i]);
+  printf("\n");
+  for (int i = 0; i < fund.len; i++)
+    printArr3(fund.points[i]);
+  //test_tetra_disjoint();
   /*
   tri_mem_list list;
 
@@ -516,5 +524,5 @@ int main(void){
   test_triangle_indices();
   test_tetra_disjunct();
   */
-  test_tri_list();
+  //test_tri_list();
 }

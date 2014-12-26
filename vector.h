@@ -131,6 +131,8 @@ void printArr3(arr3 u);
 cube_points gen_tet_points(int dim);
 cube_points gen_cube_points(int dim);
 cube_points gen_fund_points(int dim);
+cube_points gen_cube_sparse_points(int dim);
+cube_points gen_fund_sparse_points(int dim);
 
 void randomArr3(int dim, arr3 result);
 #endif

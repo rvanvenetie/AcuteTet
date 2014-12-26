@@ -22,38 +22,33 @@
 #define USE_FILE 1
 #define REDIRECT_OUTPUT 1
 
-#define CUBE_LOG "output_cube_%d.log"
-#define FUND_LOG "output_fund_%d.log"
-#define TET_LOG  "output_tet_%d.log"
-#define TRI_LOG  "output_tri_%d.log"
+#define CUBE_LOG         "output_cube_%d.log"
+#define FUND_LOG         "output_fund_%d.log"
+#define FUND_SPARSE_LOG  "output_fund_sparse_%d.log"
+#define TET_LOG          "output_tet_%d.log"
+#define TRI_LOG          "output_tri_%d.log"
 
-#define FUND_TMP "/local/rvveneti/fund_conf_%d.tet"
-#define TET_TMP  "/local/rvveneti/tet_conf_%d.tet"
-#define CUBE_TMP "/local/rvveneti/cube_verz_%d.tet"
-#define TRI_TMP   "/local/rvveneti/tri_conf_%d.tet"
-
-#define FUND_DATA "data/fund_conf_%d.tet"
-#define TET_DATA  "data/tet_conf_%d.tet"
-#define CUBE_DATA "data/cube_conf_%d.tet"
-#define TRI_DATA "data/tri_conf_%d.tet"
+#define FUND_SPARSE_TMP "/local/rvveneti/fund_sparse_conf_%d.tet"
+#define FUND_TMP	"/local/rvveneti/fund_conf_%d.tet"
+#define TET_TMP		"/local/rvveneti/tet_conf_%d.tet"
+#define CUBE_TMP	"/local/rvveneti/cube_verz_%d.tet"
+#define TRI_TMP		"/local/rvveneti/tri_conf_%d.tet"
 
 
-#define LOOP_FUND DATA_MEM_LIST_FUND
-#define LOOP_CUBE DATA_MEM_LIST_CUBE
-#define LOOP_TET  DATA_MEM_LIST_TET
-#define LOOP_TRI  DATA_TRI_LIST
+#define FUND_SPARSE_DATA "data/fund_sparse_conf_%d.tet"
+#define FUND_DATA	 "data/fund_conf_%d.tet"
+#define TET_DATA	 "data/tet_conf_%d.tet"
+#define CUBE_DATA	 "data/cube_conf_%d.tet"
+#define TRI_DATA	 "data/tri_conf_%d.tet"
+
+
+#define LOOP_FUND        DATA_MEM_LIST_FUND
+#define LOOP_FUND_SPARSE DATA_MEM_LIST_FUND_SPARSE
+#define LOOP_CUBE	 DATA_MEM_LIST_CUBE
+#define LOOP_TET         DATA_MEM_LIST_TET
+#define LOOP_TRI         DATA_TRI_LIST
 
 int main(int argc, char *argv[]) {
-  tri_mem_list mem_list;
-  mem_list_from_file(&mem_list, "/local/rvveneti/fund_conf_30.tet");
-  fprintf(stdout,"Memory %zu\n", mem_list_memory(&mem_list));
-//  fprintf(stdout,"Conform %zu\n", mem_list_count(&mem_list));
-  fprintf(stdout,"Starting the big list shit!");
-  tri_mem_list cube_list = mem_list_fund_to_cube(&mem_list);
-  fprintf(stdout,"Memory %zu\n", mem_list_memory(&cube_list));
-  fprintf(stdout,"Conform %zu\n", mem_list_count(&cube_list));
-  mem_list_to_file(&cube_list, "/local/rvveneti/cube_conf__30.tet",MEM_LIST_SAVE_CLEAN);
-  return 0;
   char tmp_file[70],log_file[70],data_file[70];
   data_list face_list;
   double time_start,time_end;
@@ -68,6 +63,8 @@ int main(int argc, char *argv[]) {
       loop_type = LOOP_CUBE;
     else if (argv[1][0] == 't')
       loop_type = LOOP_TET;
+    else if (argv[1][0] == 's')
+      loop_type = LOOP_FUND_SPARSE;
     else if (argv[1][0] == 'l')
       loop_type = LOOP_TRI;
     else if (!(argv[1][0] == 'f')) {
@@ -83,7 +80,7 @@ int main(int argc, char *argv[]) {
   if (help) {
       printf("Illegal parameters. \n");
       printf("Parameters are <type> <p> or <type> <start p> <end p>\n");
-      printf("  <type> can be cube/fund/tet/list.\n");
+      printf("  <type> can be cube/fund/sparse/tet/list.\n");
       printf("   - Cube: Stores all the facets in the cube. \n");
       printf("   - Fund: Only stores facets with a point in the fundamental domain. \n");
       printf("   - Tet:  Tries to find a Conforme Verzameling for the unit tetrahedron instead of the cube. \n");
@@ -110,6 +107,13 @@ int main(int argc, char *argv[]) {
         sprintf(tmp_file,  FUND_TMP,i);         
         sprintf(data_file, FUND_DATA,i);         
         break;
+
+      case LOOP_FUND_SPARSE:
+        sprintf(log_file,  FUND_SPARSE_LOG,i); 
+        sprintf(tmp_file,  FUND_SPARSE_TMP,i);         
+        sprintf(data_file, FUND_SPARSE_DATA,i);         
+        break;
+
       case LOOP_CUBE: 
         sprintf(log_file,  CUBE_LOG,i);
         sprintf(tmp_file,  CUBE_TMP,i);

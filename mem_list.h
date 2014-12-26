@@ -30,7 +30,7 @@ typedef struct tri_mem_list
     tri_mem_fund mem_fund;
   };
   int dim;      //Original dimension
-  int  mode;     //Stores the type of mem_list (store every triangle in the cube, only in fundamental domain, or triangles in the unit tetrahedron)
+  int mode;     //Stores the type of mem_list (store every triangle in the cube, only in fundamental domain, or triangles in the unit tetrahedron)
   
 } tri_mem_list;
 
@@ -38,6 +38,8 @@ typedef struct tri_mem_list
 #define MEM_LIST_FUND 2
 #define MEM_LIST_TET  3
 #define MEM_LIST_CUBE_SPARSE 4
+#define MEM_LIST_FUND_SPARSE 5
+
 typedef vert_index tri_index[3];
 typedef vert_index tet_index[4];
 
@@ -105,8 +107,8 @@ void indices_unique_tet(vert_index idx1, vert_index idx2, vert_index idx3, tri_i
 /*
  * Functions that generate vertex -> index arrays
  */
-void gen_vertex_to_index_fund(int dim, vert_index_array * vertex_index, size_t * fund_len, size_t * cube_len);
-void gen_vertex_from_index_fund(int dim, arr3 ** index_vertex, vert_index_array vertex_index);
+void gen_vertex_to_index_fund(cube_points cube_pts, cube_points fund_pts, vert_index_array * vertex_index);
+void gen_vertex_from_index_fund(arr3 ** index_vertex, vert_index_array vertex_index, cube_points cube);
 void gen_vertex_to_index_tet(int dim, vert_index_array * vertex_index, int *tet_len);
 
 
@@ -123,7 +125,7 @@ triangle triangle_from_index_fund(tri_index indices,arr3 * index_vertex);
 
 tri_mem_list mem_list_init(int dim, int mode, int init_value);
 tri_mem_list mem_list_cube_init(int dim, int init_value, int sparse);
-tri_mem_list mem_list_fund_init(int dim, int init_value);
+tri_mem_list mem_list_fund_init(int dim, int init_value, int mode);
 tri_mem_list mem_list_tet_init(int dim, int init_value);
 void mem_list_free(tri_mem_list * list);
 

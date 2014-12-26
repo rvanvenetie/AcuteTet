@@ -331,6 +331,92 @@ cube_points gen_fund_points(int dim){
   return result;
 }
 
+/*
+ * Generates a sparse axis.
+ */
+void gen_sparse_axis(int dim, int ** axis, size_t * len) {
+  (*axis) = calloc(dim + 1, sizeof(int));
+  /*
+   * We will first create an indicator array indicating what points are on the (*axis)
+   * We will add the middle of the subintervals to the (*axis) (rounded towards the middle).
+   * We only save the middle of the subinterval closest to the middle.
+   */
+  int left, right;
+  (*axis)[dim / 2] = 1;
+  //Start left of dim/2
+  left = 0; right = dim / 2;
+  while (left != right) {
+    (*axis)[left] = 1;
+    left = (left + right + 1) / 2; //Round up
+  }
+  //Start right of dim/2
+  left = dim / 2; right = dim;
+  while (left != right) {
+    (*axis)[right] = 1;
+    right = (left + right) / 2; //Round down
+  }
+
+  /*
+   * Len will hold the amount of points in total
+   */
+  *len = 0;
+  for (int i = 0; i <= dim; i++)
+    if ((*axis)[i])
+      (*len)++;
+}
+/*
+ * Generates the points inside the cube on a `sparse' grid. This grid
+ * is chosen in such a way that the amount of points in the centre is dense, compared to the
+ * outher points.
+ */
+cube_points gen_cube_sparse_points(int dim) {
+  int * axis;
+  size_t len_axis;
+
+  gen_sparse_axis(dim, &axis, &len_axis);
+  cube_points result = {NULL, 
+                        dim,
+			(len_axis) * (len_axis) * (len_axis)};
+  result.points = malloc(result.len *sizeof(arr3));
+  int c = 0;
+  for (int x = 0; x <= dim; x++)
+    for (int y = 0; y <= dim; y++)
+      for (int z = 0; z <= dim; z++) {
+	if (axis[x] && axis[y] && axis[z]) //We will add this point, as it is on all the three axis.
+	{
+	  result.points[c][0] = x;
+	  result.points[c][1] = y;
+	  result.points[c][2] = z;
+	  c++;
+	}
+      }
+  return result;
+}
+
+/*
+ * Generates the fundamental points inside the cube with a sparse grid, see 
+ * gen_fund_points
+ */
+cube_points gen_fund_sparse_points(int dim){
+  cube_points result = {NULL, 
+                        dim,
+                        0};
+  int * axis = NULL;
+  size_t len_axis;
+  gen_sparse_axis(dim, &axis, &len_axis);
+
+  cube_points fund = gen_fund_points(dim); //Check all the normal fundamental points
+
+  for (size_t i = 0; i < fund.len; i++) 
+    if(axis[fund.points[i][0]] && axis[fund.points[i][1]] && axis[fund.points[i][2]]) {
+      result.points = realloc(result.points, (result.len+1) * sizeof(arr3));
+      result.points[result.len][0] = fund.points[i][0];
+      result.points[result.len][1] = fund.points[i][1];
+      result.points[result.len][2] = fund.points[i][2];
+      result.len++;
+    }
+  return result;
+}
 void randomArr3(int dim, arr3 result) {
   result[0] = rand() % dim;
   result[1] = rand() % dim;
