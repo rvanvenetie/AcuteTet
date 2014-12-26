@@ -60,7 +60,7 @@ int tetra_volume(ptetra tet) {
   subArr3(tet->vertices[3], tet->vertices[0], P[2]); //d - a
 
   crossArr3(P[1],P[2], tmp);
-  return dotArr3(P[0], tmp);
+  return abs(dotArr3(P[0], tmp));
 }
 /*
  * Function tests if the tetrahedron in the parameter is acute. Does this by calculating the normal
