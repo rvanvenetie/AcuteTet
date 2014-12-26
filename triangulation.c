@@ -750,7 +750,7 @@ triangulation triangulate_cube_random(data_list * data) {
       }
       if (tmp_triang.tetra_len > max_amount_tet) {
         max_amount_tet = tmp_triang.tetra_len;
-        printf("New record for thread %d amount %zu\n", omp_get_thread_num(), max_amount_tet);
+        printf("Record for thread %d using method %d amount: %zu\n", omp_get_thread_num(), omp_get_thread_num() % 6, max_amount_tet);
         triangulation_print(&tmp_triang);
       }
       if (tmp_triang.bound_len == 0)
