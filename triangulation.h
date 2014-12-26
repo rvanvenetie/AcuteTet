@@ -27,4 +27,5 @@ int triangulation_to_file(ptriangulation triang, char * filename);
 #define TRIANGULATE_NO_CONFORM 0
 #define TRIANGULATE_CONFORM 1
 triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char * tmp_data_file);
+triangulation triangulate_cube_random(data_list * data);
 #endif

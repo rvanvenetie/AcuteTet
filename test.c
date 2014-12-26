@@ -396,7 +396,6 @@ void test_tetra_disjoint(void) {
   if (!tri_tet_disjoint(&tri, &tet))
     printf("ERROR1IN DISJOINT TEST");
 
-
   tri =(triangle) {{{0,0,0},{8,8,9},{12,9,0}}};
   //This triangle and tetrahedron share an edge and are disjoint
   if (!tri_tet_disjoint(&tri, &tet)) 
@@ -480,9 +479,16 @@ void test_tetra_disjoint(void) {
   //The same tetrahedrons.. Should intersect
   if (tet_tet_disjoint(&t1, &t2))
     printf("ERROR 11 IN DISJOINT TEST");
+
+  triangle sides[4];
+  tet_sides(&t1, sides);
+  for (int i = 0; i < 4; i++)
+    if (!tri_tet_disjoint(sides + i, &t1))
+      printf("ERROR 12 IN DISJOINT TEST");
 }
 
 int main(void){
+  test_tetra_disjoint();
   /*
   tri_mem_list list;
 
@@ -498,7 +504,6 @@ int main(void){
     mem_list_cube_set(&list, sides + i);
 
   triang = triangulate_cube(&list, NULL, NULL);
-  test_tetra_disjoint();
   */
   /*
   test_mem_list_fund();

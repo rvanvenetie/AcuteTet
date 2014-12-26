@@ -13,8 +13,8 @@
 #include "triangulation.h"
 #include "omp.h"
 
-#define REDIRECT_OUTPUT 0
-#define LOG "triang_%d.log"
+#define REDIRECT_OUTPUT 1
+#define LOG "triang_%d_2.log"
 #define TRIANG_FILE "/local/rvveneti/triangulation"
 #define TRIANG_TMP_FILE "/local/rvveneti/triang_tmp"
 #define TRIANG_TET_TMP_FILE "/local/rvveneti/triangulation_triangles_tmp.tet"
@@ -52,8 +52,8 @@ int main(int argc, char *argv[]) {
     printf("Memory of the triangle list = %zu\n", data_list_memory(&list));
 
     printf("Finding triangulation.\n");
-    //triang = triangulate_cube_random(&list);
-    triang = triangulate_cube(&list,  TRIANG_TMP_FILE, TRIANG_TET_TMP_FILE);
+    triang = triangulate_cube_random(&list);
+    //triang = triangulate_cube(&list,  TRIANG_TMP_FILE, TRIANG_TET_TMP_FILE);
     if (triang.bound_len == 0) //No boundary triangles!
     {
       printf("Triangulation found!");

@@ -329,8 +329,6 @@ int update_boundary_triangulation(arr3 v1, arr3 v2, arr3 v3, ptriangulation tria
   if (triangle_boundary_cube(&tri,triang->dim)) //Triangle on the boundary of the cube
     return -1;
 
-  printf("New boundary for triangulation:\n");
-  print_triangle(&tri);
   triang->bound_len++;
   triang->bound_tri = realloc(triang->bound_tri,triang->bound_len * sizeof(triangle));
   triang->bound_tri[triang->bound_len - 1] = tri;
@@ -623,9 +621,10 @@ triangulation triangulate_cube_random(data_list * data) {
   unsigned short tet_list_len; //Holds the length of this list
   int triangulation_found = 0; //Stop if one of the threads has found a triangulation!
   int rand_bound, i, rand_tet;
+  int max_amount_tet;
   //Start the parallel loop!
   #pragma omp parallel default(none) \
-     private(parameters, tmp_triang, tet_list, tet_list_len, rand_bound, i, rand_tet) \
+     private(parameters, tmp_triang, tet_list, tet_list_len, rand_bound, i, rand_tet, max_amount_tet) \
      shared(result, result_lock, cube,data,dim, triangulation_found)
   {
     //Initalization for each thread
@@ -636,6 +635,7 @@ triangulation triangulate_cube_random(data_list * data) {
     parameters.acute_ind  = malloc(sizeof(vert_index) * cube.len);
 
     tet_list = malloc(sizeof(tetra) * cube.len);
+    max_amount_tet;
 
     while (!triangulation_found) { //Not found a triangulation
       //Initalize the triangulation variables
@@ -644,8 +644,8 @@ triangulation triangulate_cube_random(data_list * data) {
       //Start triangle (0,0,0), (rand,0,0), (rand,rand,0)
       tmp_triang.bound_len = 1;
       tmp_triang.bound_tri = triangulation_start_facet(data);
-      printf("Thread %d starts with facet:\n", omp_get_thread_num());
-      print_triangle(tmp_triang.bound_tri);
+      //printf("Thread %d with iteration %zu starts with:\n", omp_get_thread_num(), ++iterations);
+      //print_triangle(tmp_triang.bound_tri);
 
       //While we have triangles on the boundary
       while (tmp_triang.bound_len > 0) {
@@ -657,19 +657,12 @@ triangulation triangulate_cube_random(data_list * data) {
 	 * Then we add a random tetrahedron to our triangulation and repeat.
 	 */
 	rand_bound = rand() % tmp_triang.bound_len;
-	printf("Expanding triangulation at bondary triangule: \n");
-	print_triangle(tmp_triang.bound_tri + rand_bound);
-
+        //
 	//Calculate the conform tetrahedrons above and below
-	if (!facet_conform(&tmp_triang.bound_tri[rand_bound], &parameters))
-	{
-	  printf("We have a triangle on the boundary that is not conform anymore.\n");
-	  printf("Whatthefuck? Breaking!\n");
-	  break;
-	}
+	if (!facet_conform(tmp_triang.bound_tri + rand_bound, &parameters))
+          break; //Triangle on the boundary that does not have a conform facet
 
 	tet_list_len = parameters.acute_ind_len;
-	printf("Total amount of conform tetrahedrons found for this boundary: %hu\n", tet_list_len);
 	//Form explicit list of the tetrahedrons
 	for (i = 0; i < tet_list_len; i++) 
 	{
@@ -682,28 +675,26 @@ triangulation triangulate_cube_random(data_list * data) {
 	//Remove all the tetrahedrons that intersect with current triangulation.
 	filter_tet_list_disjoint_triangulation(tet_list, &tet_list_len, &tmp_triang);
 
-	printf("Amount of tetrahedrons left after filtering: %hu\n\n",tet_list_len);
-	if (tet_list_len == 0) {
-	  printf("Waarom is deze lijst nu al fucking leeggefilterd?\n");
-	  printf("Dead end, helaas pindakaas. Got to %zu\n", tmp_triang.tetra_len);
-	  break;
-	}
+	if (tet_list_len == 0) 
+          break; //We can not find a conform tetrahedron for this boundary.. Restart
 
-	//Select random tetrahedron disjoint with the current triangulation
+	//Select random tetrahedron disjoint with the current triangulation (select the smallest one? Biggest?)
 	rand_tet = rand() % tet_list_len;
 	/*
 	 * Add the above tetra to the triangulation.
 	 * This removes all the boundary triangles that are covered by this tetrahedron
 	 */
-	printf("Adding the following tetra to the triangulation\n");
-	print_tetra(tet_list + rand_tet);
-	printf("\n\n");
 	add_tet_triangulation(tet_list + rand_tet,&tmp_triang);
-	triangulation_print(&tmp_triang);
       }
-
+      if (tmp_triang.tetra_len > max_amount_tet) {
+        max_amount_tet = tmp_triang.tetra_len;
+        printf("New record for thread %d amount %d\n", omp_get_thread_num(), max_amount_tet);
+        triangulation_print(&tmp_triang);
+      }
       if (tmp_triang.bound_len == 0)
       {
+        printf("FOUND A TRIANGULATION!!!\n");
+        triangulation_print(&tmp_triang);
 	omp_set_lock(&result_lock);
 	result = tmp_triang;
 	triangulation_found = 1;
