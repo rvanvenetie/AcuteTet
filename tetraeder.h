@@ -57,6 +57,7 @@ int tri_tet_share_facet(ptriangle tri, ptetra tet);
 
 void tet_sides(ptetra tet, ptriangle triang);
 void tetra_normals(ptetra tet, arr3 * normals);
+int tetra_volume(ptetra tet);
 int tetra_acute(ptetra tet);
 int tetra_acute_optimized(ptriangle tet, arr3 cube_pt);
 int tetrahedra_acute(int dim);

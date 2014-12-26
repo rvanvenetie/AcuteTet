@@ -507,6 +507,8 @@ size_t mem_list_memory(tri_mem_list * list) {
   return result;  
 }
 
+
+
 tri_mem_list mem_list_fund_to_cube(tri_mem_list * fund_list){
   tri_mem_list result;
   if (fund_list->mode != MEM_LIST_FUND)

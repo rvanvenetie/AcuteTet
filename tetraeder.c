@@ -49,7 +49,19 @@ void tetra_normals(ptetra tet, arr3 * normals) {
   crossArr3(P[2],P[0], normals[2]); //Normal on facet 0,1,3
   crossArr3(P[0],P[1], normals[3]); //Normal on facet 0,1,2
 }
+//The exact volume needs to be divided by six.
 
+int tetra_volume(ptetra tet) {
+  arr3 P[3]; //3 edge vectors from vertex a
+  arr3 tmp;
+
+  subArr3(tet->vertices[1], tet->vertices[0], P[0]); //b - a
+  subArr3(tet->vertices[2], tet->vertices[0], P[1]); //c - a
+  subArr3(tet->vertices[3], tet->vertices[0], P[2]); //d - a
+
+  crossArr3(P[1],P[2], tmp);
+  return dotArr3(P[0], tmp);
+}
 /*
  * Function tests if the tetrahedron in the parameter is acute. Does this by calculating the normal
  * vectors and checking the dot products.

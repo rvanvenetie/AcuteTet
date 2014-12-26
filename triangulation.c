@@ -364,22 +364,45 @@ void filter_tet_list_disjoint_triangulation(ptetra   list, unsigned short * list
   *list_len = c;
 }
 
-int consistent_triangulation(ptriangulation triang, facet_acute_data * data) {
-  int consistent = 1;
-  data->store_acute_ind = 0;
-  for (size_t i = 0; i < triang->bound_len; i++) {
-    if (!facet_conform(triang->bound_tri + i, data))  {
-      printf("Somehow we have a non conform facet on the boundary.. WTF?\n");
-      print_triangle(triang->bound_tri + i);
-      consistent = 0;
+void tet_list_min_max_volume(ptetra list, unsigned short list_len, unsigned short * max, unsigned short * min) {
+  *min = 0;
+  *max = 0;
+  int vol_max = INT_MIN;
+  int vol_min = INT_MAX;
+
+  for (unsigned short i = 0; i < list_len; i++) 
+  {
+    int vol_cur = tetra_volume(list + i);
+    if (vol_cur < vol_min) {
+      vol_min = vol_cur;
+      *min = i;
     }
-    if (!mem_list_cube_contains(&data->data->mem_list, triang->bound_tri + i)) {
-      printf("Somehow the bondary triangle is not in the list anymore.. WTF?\n");
-      print_triangle(triang->bound_tri + i);
-      consistent = 0;
+
+    if (vol_cur > vol_max) {
+      vol_max = vol_cur;
+      *max = i;
     }
   }
-  data->store_acute_ind = 1;
+}
+
+int triangulation_consistent(ptriangulation triang, facet_acute_data * data) {
+  int consistent = 1;
+  int store_acute_ind = data->store_acute_ind;
+  data->store_acute_ind = 0;
+  for (size_t i = 0; i < triang->bound_len; i++) {
+    if (!mem_list_cube_contains(&data->data->mem_list, triang->bound_tri + i)) // Boundary triangle removed from the data
+    {
+      printf("Triangle on the boundary got removed from the data.\n");
+      consistent = 0;
+      break;
+    }
+    if (!facet_conform(triang->bound_tri + i, data))  { //Triangle on the boundary not conform any longer
+      printf("Triangle on the boundary not a conform facet anymore\n");
+      consistent = 0;
+      break;
+    }
+  }
+  data->store_acute_ind = store_acute_ind;
   return consistent;
 }
 /*
@@ -491,7 +514,7 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
   return result;
 }
 
-void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri_list * check_list_new, omp_lock_t ** locks) {
+void facets_conform_dynamic_remove(data_list * data, ptriangulation triang,  tri_list * check_list, tri_list * check_list_new, omp_lock_t ** locks) {
   tri_mem_list * list = &data->mem_list;
 
   cube_points cube = gen_cube_points(list->dim);
@@ -511,36 +534,42 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
   int iter = 0;
   double time_start, time_check;
   size_t count = 0;
-  while (tri_list_count(check_list)) //While we have triangles to be removed)
+  int triang_consistent = 1;
+  while (tri_list_count(check_list) && triang_consistent) //While we have triangles to be removed)
   {
     time_start = omp_get_wtime();
     triangle cur_tri;
     tri_index cur_idx;
     int l,k;
     size_t i,j;
-    size_t new_count = data_list_count(data);
-    if (count)
-      printf("Removed %zu triangles\n", count - new_count);
-    printf("\n\nLoop %d of conform dynamic\n", iter++);
-    printf("Size of entire list    %zu\n", new_count);
-    printf("Size of check list     %zu\n", tri_list_count(check_list));
-    printf("Size of new check list %zu\n", tri_list_count(check_list_new));
-    tri_list_validate(check_list);
-    tri_list_validate(check_list_new);
-    count = new_count;
     size_t facets_add_total = 0;
+
+
     #pragma omp parallel shared(locks) private(cur_tri, cur_idx, i,j,k,l)
     {
       facets_add_cnt = 0;
       if (omp_get_thread_num() == 0) {
+	size_t new_count = data_list_count(data);
+	if (count)
+	  printf("Removed %zu triangles\n", count - new_count);
+	printf("\n\nLoop %d of conform dynamic\n", iter++);
+	printf("Size of entire list    %zu\n", new_count);
+	printf("Size of check list     %zu\n", tri_list_count(check_list));
+	tri_list_validate(check_list);
+	count = new_count;
       }
       /*
        * Loop over all the triangles in the check list. Check if they are not conform
        * if so, add all the possible new non-conform edges to the tmp_check_list.
        */
       #pragma omp for  schedule(dynamic,list->dim) 
-      for (i = 0; i < cube.len; i++) 
-	for (j = i; j < cube.len; j++)
+      for (i = 0; i < cube.len; i++) {
+	if (!triang_consistent) 
+	  continue; //We want break, but that is not possible with openMP
+
+	for (j = i; j < cube.len; j++) {
+	  if (!triang_consistent)
+	    break;
 	  for (l = check_list->t_arr[i][j- i].len - 1; l >= 0; l--) {  //Loop over all triangles (i,j,*)
 	    k = check_list->t_arr[i][j - i].p_arr[l] + j;
 	    cur_idx[0] = i;
@@ -561,17 +590,27 @@ void facets_conform_dynamic_remove(data_list * data,  tri_list * check_list, tri
 	      mem_list_cube_clear(list, &cur_tri);
 	    }
 	  }
+	}
+
+	if (omp_get_thread_num() == 0)
+	  triang_consistent = triangulation_consistent(triang, &parameters);
+      }
+
       #pragma omp atomic
       facets_add_total += facets_add_cnt;
     }
-    printf("Amount of triangles in new_check_list: +/-   %zu\n", facets_add_total);
-    printf("Amount of triangles in new_check_list: exact %zu\n", tri_list_count(check_list_new));
-    //Checked all the triangles from check_list. Empty it and swap the lists.
-    tri_list_empty(check_list);
 
-    tri_list tmp = *check_list;
-    *check_list = *check_list_new;
-    *check_list_new = tmp;
+    if (triang_consistent) {
+      printf("Amount of triangles in new_check_list: +/-   %zu\n", facets_add_total);
+      printf("Amount of triangles in new_check_list: exact %zu\n", tri_list_count(check_list_new));
+      //Checked all the triangles from check_list. Empty it and swap the lists.
+      tri_list_empty(check_list);
+
+      tri_list tmp = *check_list;
+      *check_list = *check_list_new;
+      *check_list_new = tmp;
+    } else
+      printf("Triangulation not consistent anymore\n");
 
     time_check = omp_get_wtime();
     printf("\nTook %f seconds to construct new check list\n",time_check - time_start);
@@ -620,11 +659,13 @@ triangulation triangulate_cube_random(data_list * data) {
   ptetra tet_list; //List of tetrahedrons, used in the parallel section
   unsigned short tet_list_len; //Holds the length of this list
   int triangulation_found = 0; //Stop if one of the threads has found a triangulation!
-  int rand_bound, i, rand_tet;
-  int max_amount_tet;
+  int rand_bound, i;
+  unsigned short tet_max, tet_min, tet_rand, tet_add;
+
+  size_t max_amount_tet;
   //Start the parallel loop!
   #pragma omp parallel default(none) \
-     private(parameters, tmp_triang, tet_list, tet_list_len, rand_bound, i, rand_tet, max_amount_tet) \
+     private(parameters, tmp_triang, tet_list, tet_list_len, rand_bound, i,max_amount_tet,tet_max, tet_min, tet_rand, tet_add) \
      shared(result, result_lock, cube,data,dim, triangulation_found)
   {
     //Initalization for each thread
@@ -635,7 +676,7 @@ triangulation triangulate_cube_random(data_list * data) {
     parameters.acute_ind  = malloc(sizeof(vert_index) * cube.len);
 
     tet_list = malloc(sizeof(tetra) * cube.len);
-    max_amount_tet;
+    max_amount_tet = 0;
 
     while (!triangulation_found) { //Not found a triangulation
       //Initalize the triangulation variables
@@ -678,17 +719,38 @@ triangulation triangulate_cube_random(data_list * data) {
 	if (tet_list_len == 0) 
           break; //We can not find a conform tetrahedron for this boundary.. Restart
 
-	//Select random tetrahedron disjoint with the current triangulation (select the smallest one? Biggest?)
-	rand_tet = rand() % tet_list_len;
+	//Select a ttetrahedron from the tet_list to add to the triangulation.. Different approaches.
+	//Combinations between: random tetra, smallest volume, maximum volume. Indices stored in tet_max, tet_min and tet_rand
+
+	tet_list_min_max_volume(tet_list, tet_list_len, &tet_max, &tet_min);
+	tet_rand = rand() % tet_list_len; 
+
+	switch (omp_get_thread_num() % 6) {
+	  case 0: //Choose tet with max volume
+	    tet_add = tet_max; break;
+	  case 1: //Choose tet with min volume
+	    tet_add = tet_min; break;
+	  case 2: //Choose random tet
+	    tet_add = tet_rand; break;
+	  case 3: //Choose either max or min (random)
+	    tet_add = (rand() % 2)? tet_min : tet_max; break;
+	  case 4: //Choose either max or rand
+	    tet_add = (rand() % 2)? tet_max : tet_rand; break;
+	  case 5: //Either min or rand
+	    tet_add = (rand() % 2)? tet_min : tet_rand; break;
+	  default:
+	    tet_add = 0;
+	}
+
 	/*
 	 * Add the above tetra to the triangulation.
 	 * This removes all the boundary triangles that are covered by this tetrahedron
 	 */
-	add_tet_triangulation(tet_list + rand_tet,&tmp_triang);
+	add_tet_triangulation(tet_list + tet_add,&tmp_triang);
       }
       if (tmp_triang.tetra_len > max_amount_tet) {
         max_amount_tet = tmp_triang.tetra_len;
-        printf("New record for thread %d amount %d\n", omp_get_thread_num(), max_amount_tet);
+        printf("New record for thread %d amount %zu\n", omp_get_thread_num(), max_amount_tet);
         triangulation_print(&tmp_triang);
       }
       if (tmp_triang.bound_len == 0)
@@ -810,7 +872,7 @@ triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char *
       break;
     }
     //Consistency check
-    if (!consistent_triangulation(&result, &parameters))
+    if (!triangulation_consistent(&result, &parameters))
     {
       printf("Triangulation not consistent after adding the tetrahedron. Breaking.\n");
       break;
@@ -822,14 +884,14 @@ triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char *
     printf("Removed %zu triangles that are not disjoint with the new tetrahedron\n", removed);
     printf("The check_list has size %zu\n", tri_list_count(&check_list));
 
-    if (!consistent_triangulation(&result, &parameters)) {
+    if (!triangulation_consistent(&result, &parameters)) {
       printf("After filtering the memory list we have a non consistent triangulation. Break\n");
       break;
     }
 
-    facets_conform_dynamic_remove(data, &check_list, &check_list_new, locks);
+    facets_conform_dynamic_remove(data, &result, &check_list, &check_list_new, locks);
 
-    if (!consistent_triangulation(&result, &parameters)) {
+    if (!triangulation_consistent(&result, &parameters)) {
       printf("Triangulation not consistent anymore after conforming the data set.. Breaking\n");
       break;
     }
