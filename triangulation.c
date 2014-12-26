@@ -735,9 +735,9 @@ triangulation triangulate_cube_random(data_list * data) {
 	  case 3: //Choose either max or min (random)
 	    tet_add = (rand() % 2)? tet_min : tet_max; break;
 	  case 4: //Choose either max or rand
-	    tet_add = (rand() % 2)? tet_max : tet_rand; break;
+	    tet_add = (rand() % 5)? tet_max : tet_rand; break;
 	  case 5: //Either min or rand
-	    tet_add = (rand() % 2)? tet_min : tet_rand; break;
+	    tet_add = (rand() % 5)? tet_min : tet_rand; break;
 	  default:
 	    tet_add = 0;
 	}
