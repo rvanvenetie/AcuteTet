@@ -1,17 +1,3 @@
-/* Computer Graphics, Assignment, Intersections
- * Filename ........ normals.c
- * Description ..... Calculates Plane/Vertex normals
- * Date ............ 19.08.2008
- *
- * Student name Ruben Brokkelkamp & Raymond van Venetië
- * Student email rubenbrokkelkamp@gmail.com & rayvanve@hotmail.com
- * Collegekaart 6282628 & 6303900
- * Date 15-09-2011
- * Comments ........
- *
- * (always fill in these fields before submitting!!)
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -378,18 +364,25 @@ cube_points gen_cube_sparse_points(int dim) {
                         dim,
 			(len_axis) * (len_axis) * (len_axis)};
   result.points = malloc(result.len *sizeof(arr3));
+
   int c = 0;
-  for (int x = 0; x <= dim; x++)
-    for (int y = 0; y <= dim; y++)
-      for (int z = 0; z <= dim; z++) {
-	if (axis[x] && axis[y] && axis[z]) //We will add this point, as it is on all the three axis.
-	{
-	  result.points[c][0] = x;
-	  result.points[c][1] = y;
-	  result.points[c][2] = z;
-	  c++;
-	}
+  for (int x = 0; x <= dim; x++) {
+    if (!axis[x])
+      continue;
+    for (int y = 0; y <= dim; y++) {
+      if (!axis[y])
+        continue;
+      for (int z = 0; z <= dim; z++)
+      {
+        if (!axis[z])
+          continue;
+        result.points[c][0] = axis[x];
+        result.points[c][1] = axis[y];
+        result.points[c][2] = axis[z];
+        c++;
       }
+    }
+  }
   free(axis);
   return result;
 }
@@ -406,18 +399,27 @@ cube_points gen_fund_sparse_points(int dim){
   size_t len_axis;
   gen_sparse_axis(dim, &axis, &len_axis);
 
-  cube_points fund = gen_fund_points(dim); //Check all the normal fundamental points
+  int M = dim / 2; //dim has points 0..dim, automatically floored. As point 3.5 is inside
+  for (int z = 0; z <= M; z++) {
+    if (!axis[z])
+      continue;
+    //We now have triangle (z,z,z) - (z,m,z) - (m,m,z)
+    for (int x = z; x <= M; x++){ //Loop over x-axis
+      if (!axis[x])
+        continue;
+      for (int y = z; y <= x; y++) {
+        if (!axis[y])
+          continue;
 
-  for (size_t i = 0; i < fund.len; i++) 
-    if(axis[fund.points[i][0]] && axis[fund.points[i][1]] && axis[fund.points[i][2]]) {
-      result.points = realloc(result.points, (result.len+1) * sizeof(arr3));
-      result.points[result.len][0] = fund.points[i][0];
-      result.points[result.len][1] = fund.points[i][1];
-      result.points[result.len][2] = fund.points[i][2];
-      result.len++;
+        result.points = realloc(result.points, (result.len+1) * sizeof(arr3));
+        result.points[result.len][0] = x;
+        result.points[result.len][1] = y;
+        result.points[result.len][2] = z;
+        result.len++;
+      }
     }
+  }
   free(axis);
-  free(fund.points);
   return result;
 }
 void randomArr3(int dim, arr3 result) {
