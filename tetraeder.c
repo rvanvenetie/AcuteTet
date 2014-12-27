@@ -261,7 +261,7 @@ int facet_conform(ptriangle triang, facet_acute_data * data) {
   return 0;  
 }
 //if save_file is set. The conf_mem_list is saved to this file every hour
-#define save_interval 15*60
+#define save_interval 60*60
 
 /*
  * Filters all non-conform facets in the conf_mem_list. Keeps looping
