@@ -27,8 +27,17 @@ void triangulation_free(ptriangulation triang) {
   free(triang->tetra);
 }
 
+float triangulation_volume(ptriangulation triang) {
+  int vol_tot = 0;
+  for (size_t i = 0; i < triang->tetra_len; i++)
+    vol_tot += tetra_volume(triang->tetra + i);
+
+  return ((float) vol_tot / 6.0);
+}
+
 void triangulation_print(ptriangulation triang) {
-  printf("Triangulation. Dimension = %d. Boundary triangles = %zu. Tetra = %zu\n", triang->dim,triang-> bound_len, triang->tetra_len);
+  printf("Triangulation. Dimension = %d. Boundary triangles = %zu. Tetra = %zu. Volume covered %f.\n",\
+      triang->dim,triang-> bound_len, triang->tetra_len, triangulation_volume(triang) / ((triang->dim+1)*(triang->dim+1)*(triang->dim+1)));
 }
 
 int triangulation_to_file(ptriangulation triang, char * filename) {
@@ -514,7 +523,7 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
   return result;
 }
 
-void facets_conform_dynamic_remove(data_list * data, ptriangulation triang,  tri_list * check_list, tri_list * check_list_new, omp_lock_t ** locks) {
+void facets_conform_dynamic_remove(data_list * data, ptriangulation triang, int iterations, tri_list * check_list, tri_list * check_list_new, omp_lock_t ** locks) {
   tri_mem_list * list = &data->mem_list;
 
   cube_points cube = gen_cube_points(list->dim);
@@ -535,7 +544,7 @@ void facets_conform_dynamic_remove(data_list * data, ptriangulation triang,  tri
   double time_start, time_check;
   size_t count = 0;
   int triang_consistent = 1;
-  while (tri_list_count(check_list) && triang_consistent) //While we have triangles to be removed)
+  while (tri_list_count(check_list) && triang_consistent && (iter != iterations)) //While we have triangles to be removed)
   {
     time_start = omp_get_wtime();
     triangle cur_tri;
@@ -888,8 +897,8 @@ triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char *
       printf("After filtering the memory list we have a non consistent triangulation. Break\n");
       break;
     }
-
-    facets_conform_dynamic_remove(data, &result, &check_list, &check_list_new, locks);
+    //Do two iterations
+    facets_conform_dynamic_remove(data, &result, 2, &check_list, &check_list_new, locks);
 
     if (!triangulation_consistent(&result, &parameters)) {
       printf("Triangulation not consistent anymore after conforming the data set.. Breaking\n");
