@@ -823,6 +823,8 @@ triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char *
   }
   //While we have triangles on the boundary..
   while (result.bound_len > 0) {
+    tri_list_empty(&check_list);
+    tri_list_empty(&check_list_new);
     /*
      * We are going to add a tetrahedron on the boundary triangle.
      * To do so, we select a random triangle on the boundary. Then we generate all the
