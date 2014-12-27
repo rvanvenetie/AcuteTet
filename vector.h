@@ -133,6 +133,7 @@ cube_points gen_cube_points(int dim);
 cube_points gen_fund_points(int dim);
 cube_points gen_cube_sparse_points(int dim);
 cube_points gen_fund_sparse_points(int dim);
+void gen_sparse_axis(int dim, int ** axis, size_t * len);
 
 void randomArr3(int dim, arr3 result);
 #endif

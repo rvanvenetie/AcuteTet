@@ -32,6 +32,15 @@
  * 
  */
 
+//REALLY HACKY SOLUTION, SHOULD BE IN TRI_MEM_FUND, BUT THEN FROM_FILE AND TO_FILE BREAK :(
+/*
+ * For the sparse mem_list we use different axis, 'sparse ones'.
+ * When we need to convert an vertex inside this sparse grid, we first convert it to a `normal'
+ * grid, and then we use vert_to_index to get the index of this vertex for this grid
+ */
+int * axis_sparse_to_normal =NULL;
+size_t axis_sparse_len = 0;
+
 /*
  * Vertex to index conversion functions are given as macros in mem_list.h. Each function
  * converts a vertex (x,y,z) to an index for the mem_list.
@@ -109,52 +118,56 @@ void gen_vertex_to_index_tet(int dim, vert_index **** vertex_index, int *tet_len
 }
 
 /*
- * Generates a 3D array for converting a point to it's index. First stores all the points in the
- * fundamental domain (0..fund_len) then the rest of the points in the cube.
+ * Note that we can easily calculate the index of a point in the cube_points array (vertex_to_index_cube).
+ * We now generate an array that translates this index to the index locally used (fundamental points first).
  */
-void gen_vertex_to_index_fund(cube_points cube_pts, cube_points fund_pts, vert_index_array * vertex_index) {
-  int dim = cube_pts.dim;
-  
-  //Allocate the 3D array, only allocate points that are actually used.
-  //initalize to USHRT_MAX
-  *vertex_index = calloc(dim+1 , sizeof(*vertex_index));
-  for (size_t i = 0; i < cube_pts.len; i++)
-  {
-    int x,y;
-    x = cube_pts.points[i][0];
-    y = cube_pts.points[i][1];
-    if (!(*vertex_index)[x]) //Not initalized
-      (*vertex_index)[x] = calloc( (dim + 1) , sizeof( (*vertex_index)[x]));
-    if (!(*vertex_index)[x][y]){ //Not initalized
-      (*vertex_index)[x][y] = malloc((dim + 1) * sizeof((*vertex_index)[x][y]));
-      memset((*vertex_index)[x][y], USHRT_MAX, (dim + 1) * sizeof((*vertex_index)[x][y]));
-    }
-  }
+void gen_vertex_to_index_fund(int * axis, int axis_len, cube_points cube_pts, cube_points fund_pts, vert_index ** vertex_index) {
+  *vertex_index = malloc(cube_pts.len * sizeof (vert_index));
+  memset(*vertex_index, USHRT_MAX, cube_pts.len * sizeof(vert_index));
   //Fill every entry with the number of this vertex
   int c = 0;
   //First do the fundamental domain
-  for (size_t i = 0; i < fund_pts.len; i ++)
-    (*vertex_index)[fund_pts.points[i][0]][fund_pts.points[i][1]][fund_pts.points[i][2]] = c++;
+  for (size_t i = 0; i < fund_pts.len; i ++) 
+    (*vertex_index)[vertex_to_index_cube_axis(fund_pts.points[i], axis, axis_len)] = c++;
   
   //Now fill the entire cube - fundamental domain in the rest. 
-  for (size_t i = 0; i < cube_pts.len; i++)
-    if ((*vertex_index)[cube_pts.points[i][0]][cube_pts.points[i][1]][cube_pts.points[i][2]] == USHRT_MAX) //Point is not inside the fund domain
-      (*vertex_index)[cube_pts.points[i][0]][cube_pts.points[i][1]][cube_pts.points[i][2]] = c++;
-   
+  for (size_t i = 0; i < cube_pts.len; i++) {
+    vert_index cube_idx = vertex_to_index_cube_axis(cube_pts.points[i], axis, axis_len);
+    if ((*vertex_index)[cube_idx] == USHRT_MAX) //Point is not inside the fund domain
+      (*vertex_index)[cube_idx] = c++;
+  }
 }
 
 /*
  * Generates an array that does the revers from above, ie index to point.
  */
-void gen_vertex_from_index_fund(arr3 ** index_vertex, vert_index_array vertex_index, cube_points cube) {
+void gen_vertex_from_index_fund(arr3 ** index_vertex, vert_index * vertex_index, cube_points cube) {
   *index_vertex = malloc(cube.len * sizeof(arr3));
   for (size_t i = 0; i < cube.len; i++)
   {
-    vert_index index = vertex_index[cube.points[i][0]][cube.points[i][1]][cube.points[i][2]];
+    vert_index index = vertex_to_index_fund(cube.points[i], vertex_index);
     (*index_vertex)[index][0] = cube.points[i][0];
     (*index_vertex)[index][1] = cube.points[i][1];
     (*index_vertex)[index][2] = cube.points[i][2];
   }
+}
+
+void gen_axis(int dim, int sparse) {
+  if (sparse) {
+    gen_sparse_axis(dim, &axis_sparse_to_normal, &axis_sparse_len);
+    int c= 0;
+    for (int i = 0; i <= dim; i++)
+      if (axis_sparse_to_normal[i]) 
+	axis_sparse_to_normal[i] = c++;
+      else
+	axis_sparse_to_normal[i] = -1;
+  } else {
+    axis_sparse_len = dim + 1;
+    axis_sparse_to_normal = malloc(axis_sparse_len * sizeof(axis_sparse_to_normal[0]));
+    for (int i = 0; i <= dim; i++)
+      axis_sparse_to_normal[i] = i;
+  }
+    
 }
 
 /*
@@ -323,18 +336,18 @@ tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
   cube_points cube, fund;
   if (mode == MEM_LIST_FUND)
   {
+    gen_axis(dim, 0);
     cube = gen_cube_points(dim);
     fund = gen_fund_points(dim);
   } else {
-  //} else if (mode == MEM_LIST_FUND_SPARSE)
+    gen_axis(dim, 1); //HACKY
     cube = gen_cube_sparse_points(dim);
     fund = gen_fund_sparse_points(dim); 
   }
-
   result.mem_fund.cube_len = cube.len;
   result.mem_fund.fund_len = fund.len;
   //Generate vertex to index array
-  gen_vertex_to_index_fund(cube, fund, &result.mem_fund.vert_to_index);
+  gen_vertex_to_index_fund(axis_sparse_to_normal, axis_sparse_len, cube, fund, &result.mem_fund.vert_to_index);
   //Generate index array to vertex
   gen_vertex_from_index_fund(&result.mem_fund.vert_from_index, result.mem_fund.vert_to_index, cube);
 
@@ -412,15 +425,13 @@ void mem_list_free(tri_mem_list * list) {
     free(list->mem_fund.vert_fund_sym);
     free(list->mem_fund.vert_from_index);
 
-    for (int x = 0; x <=list->dim; x++) {
-      if (!list->mem_fund.vert_to_index[x])
-	continue;
-
-      for (int y = 0; y <=list->dim; y++) 
-	free(list->mem_fund.vert_to_index[x][y]);
-      free(list->mem_fund.vert_to_index[x]);
-    }
     free(list->mem_fund.vert_to_index);
+  }
+
+  if(axis_sparse_to_normal)
+  {
+    free(axis_sparse_to_normal);
+    axis_sparse_to_normal = NULL;
   }
 }
 

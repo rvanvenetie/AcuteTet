@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
     printf("Size of the memory list is %zu bytes.\n", data_list_memory(&face_list));
     printf("Amount of start facets is %zu.\n", data_list_count(&face_list));
     printf("Start filtering triangles not conform:\n\n");
-    printf("Cube_len %zu fund_len %zu", face_list.mem_list.mem_fund.cube_len, face_list.mem_list.mem_fund.fund_len);
+    printf("Cube_len %zu fund_len %zu\n", face_list.mem_list.mem_fund.cube_len, face_list.mem_list.mem_fund.fund_len);
 
     facets_conform(&face_list, tmp_file);
 

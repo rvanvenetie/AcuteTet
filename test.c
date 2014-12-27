@@ -487,15 +487,36 @@ void test_tetra_disjoint(void) {
       printf("ERROR 12 IN DISJOINT TEST");
 }
 
-int main(void){
-  cube_points cube =  gen_cube_sparse_points(30);
-  
-  cube_points fund =  gen_fund_sparse_points(30);
-  for (int i = 0; i <= 30; i++)
-    printArr3(cube.points[i]);
-  printf("\n");
+void test_sparse_list(void) {
+  int dim= 16;
+  cube_points cube =  gen_cube_points(dim);
+  cube_points fund =  gen_fund_points(dim);
+  gen_axis(dim, 1);
+  tri_mem_list list = mem_list_init(dim, MEM_LIST_FUND, MEM_LIST_FALSE);
+  int j;
+  for (int i = 0; i < cube.len; i++) {
+    if ((j = vertex_to_index_cube_axis(cube.points[i], axis_sparse_to_normal, axis_sparse_len)) != i)
+      printf("ERROR IN VERTEX_TO_INDEX_CUBE");
+
+  }
   for (int i = 0; i < fund.len; i++)
-    printArr3(fund.points[i]);
+  {
+    int vert_idx = vertex_to_index_fund(fund.points[i], list.mem_fund.vert_to_index);
+    if (vert_idx != i) {
+      printf("%d %d\n", vert_idx, i);
+      printf("ERROR IN SPARSE LIST!!\n");
+    }
+  }
+
+  for (int i = 0; i < cube.len; i++)
+  {
+    int vert_idx = vertex_to_index_fund(cube.points[i], list.mem_fund.vert_to_index);
+    if (!equalArr3(cube.points[i], list.mem_fund.vert_from_index[vert_idx]))
+      printf("ERROR IN LIST!! \n");
+  }
+}
+int main(void){
+  test_sparse_list();
   //test_tetra_disjoint();
   /*
   tri_mem_list list;

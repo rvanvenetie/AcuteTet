@@ -12,8 +12,14 @@ typedef struct tri_mem_cube {
   int dim_size; //Size of the data 
 } tri_mem_cube;
 
+
+//REALLY HACKY SOLUTION, SHOULD BE IN TRI_MEM_FUND, BUT THEN FROM_FILE AND TO_FILE BREAK :(
+extern int * axis_sparse_to_normal;
+extern size_t axis_sparse_len;
+
+
 typedef struct tri_mem_fund {
-  vert_index_array vert_to_index; //Convert point to it's index
+  vert_index *    vert_to_index; //Array converts cube.points index to the index in our list
   arr3 *           vert_from_index; //Convert index to it's vertex
   vert_index **    sym_index;     //Cached symmetries
   int *            vert_fund_sym;  //Array that holds the symmetry number needed to convert this to fund domain
@@ -66,8 +72,12 @@ typedef struct tri_index_list
  */
 #define vertex_to_index_tet(vertex, vertex_index_array) (vertex_index_array[vertex[0]][vertex[1]][vertex[2]])
 #define vertex_to_index_cube(vertex,dim) (vertex[0] * (dim+1)*(dim+1) + vertex[1] * (dim+1) + vertex[2])
-#define vertex_to_index_fund(vertex, vertex_index_array) (vertex_index_array[vertex[0]][vertex[1]][vertex[2]])
+#define vertex_to_index_cube_axis(vertex, axis, axis_len) (axis[vertex[0]] * axis_len * axis_len + axis[vertex[1]] * axis_len + axis[vertex[2]])
+//Might want to make a seperate one for NON-sparse fund mem_list?
+#define vertex_to_index_fund(vertex, vertex_index_array) (vertex_index_array[\
+    vertex_to_index_cube_axis(vertex, axis_sparse_to_normal, axis_sparse_len)])
 
+                                     
 /* 
  * See indices_unique_*. This is a wrapper to convert vertices to a unique index directly
  */
@@ -107,8 +117,7 @@ void indices_unique_tet(vert_index idx1, vert_index idx2, vert_index idx3, tri_i
 /*
  * Functions that generate vertex -> index arrays
  */
-void gen_vertex_to_index_fund(cube_points cube_pts, cube_points fund_pts, vert_index_array * vertex_index);
-void gen_vertex_from_index_fund(arr3 ** index_vertex, vert_index_array vertex_index, cube_points cube);
+void gen_axis(int dim, int sparse);
 void gen_vertex_to_index_tet(int dim, vert_index_array * vertex_index, int *tet_len);
 
 
