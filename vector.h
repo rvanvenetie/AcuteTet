@@ -19,7 +19,7 @@ typedef struct cube_points
 
 
 typedef unsigned short vert_index;
-typedef vert_index ***vert_index_array;
+typedef unsigned short  ***vert_index_array;
 
 #ifdef INLINE_MACROS
   #define subArr3(u,v, result) {\

@@ -115,13 +115,19 @@ void gen_vertex_to_index_tet(int dim, vert_index **** vertex_index, int *tet_len
 void gen_vertex_to_index_fund(cube_points cube_pts, cube_points fund_pts, vert_index_array * vertex_index) {
   int dim = cube_pts.dim;
   
-  //Allocate the 3D array, initalize to USHRT_MAX
-  *vertex_index = malloc((dim+1) * sizeof(unsigned short **));
-  for (int x = 0; x <= dim; x++) {
-    (*vertex_index)[x] = malloc((dim + 1) * sizeof(unsigned short *));
-    for (int y = 0; y <= dim; y++) {
-      (*vertex_index)[x][y] = malloc((dim + 1) * sizeof(unsigned short));
-      memset((*vertex_index)[x][y], USHRT_MAX, (dim + 1) * sizeof(unsigned short));
+  //Allocate the 3D array, only allocate points that are actually used.
+  //initalize to USHRT_MAX
+  *vertex_index = calloc(dim+1 , sizeof(*vertex_index));
+  for (size_t i = 0; i < cube_pts.len; i++)
+  {
+    int x,y;
+    x = cube_pts.points[i][0];
+    y = cube_pts.points[i][1];
+    if (!(*vertex_index)[x]) //Not initalized
+      (*vertex_index)[x] = calloc( (dim + 1) , sizeof( (*vertex_index)[x]));
+    if (!(*vertex_index)[x][y]){ //Not initalized
+      (*vertex_index)[x][y] = malloc((dim + 1) * sizeof((*vertex_index)[x][y]));
+      memset((*vertex_index)[x][y], USHRT_MAX, (dim + 1) * sizeof((*vertex_index)[x][y]));
     }
   }
   //Fill every entry with the number of this vertex
@@ -407,6 +413,9 @@ void mem_list_free(tri_mem_list * list) {
     free(list->mem_fund.vert_from_index);
 
     for (int x = 0; x <=list->dim; x++) {
+      if (!list->mem_fund.vert_to_index[x])
+	continue;
+
       for (int y = 0; y <=list->dim; y++) 
 	free(list->mem_fund.vert_to_index[x][y]);
       free(list->mem_fund.vert_to_index[x]);
