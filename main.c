@@ -98,15 +98,15 @@ int main(int argc, char *argv[]) {
   printf("\n");
    
   
-  
-  for (int i = loop_start;i < loop_end + 1; i++) 
+  for (int dim = loop_start;dim < loop_end + 1; dim++) 
   {
-    if (LOOP_FUND_SPARSE == loop_type && (i % 2))
-    {
-      printf("Loop %d is an odd number, skipping this as it possibly gives a non symmetric grid\n",i);
-      continue;
-    }
       
+    int i;
+    if (loop_type == LOOP_FUND_SPARSE)
+      i = 1 << dim;
+    else
+      i = dim;
+
     switch (loop_type) {
       case LOOP_FUND: 
         sprintf(log_file,  FUND_LOG,i); 
