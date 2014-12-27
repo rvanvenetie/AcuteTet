@@ -671,10 +671,10 @@ triangulation triangulate_cube_random(data_list * data) {
   int rand_bound, i;
   unsigned short tet_max, tet_min, tet_rand, tet_add;
 
-  size_t max_amount_tet;
+  size_t max_volume;
   //Start the parallel loop!
   #pragma omp parallel default(none) \
-     private(parameters, tmp_triang, tet_list, tet_list_len, rand_bound, i,max_amount_tet,tet_max, tet_min, tet_rand, tet_add) \
+     private(parameters, tmp_triang, tet_list, tet_list_len, rand_bound, i,max_volume,tet_max, tet_min, tet_rand, tet_add) \
      shared(result, result_lock, cube,data,dim, triangulation_found)
   {
     //Initalization for each thread
@@ -685,7 +685,7 @@ triangulation triangulate_cube_random(data_list * data) {
     parameters.acute_ind  = malloc(sizeof(vert_index) * cube.len);
 
     tet_list = malloc(sizeof(tetra) * cube.len);
-    max_amount_tet = 0;
+    max_volume = 0;
 
     while (!triangulation_found) { //Not found a triangulation
       //Initalize the triangulation variables
@@ -757,9 +757,9 @@ triangulation triangulate_cube_random(data_list * data) {
 	 */
 	add_tet_triangulation(tet_list + tet_add,&tmp_triang);
       }
-      if (tmp_triang.tetra_len > max_amount_tet) {
-        max_amount_tet = tmp_triang.tetra_len;
-        printf("Record for thread %d using method %d amount: %zu\n", omp_get_thread_num(), omp_get_thread_num() % 6, max_amount_tet);
+      if (triangulation_volume(&tmp_triang) > max_volume) {
+        max_volume = triangulation_volume(&tmp_triang);
+        printf("Record for thread %d using method %d amount: %zu\n", omp_get_thread_num(), omp_get_thread_num() % 6, max_volume);
         triangulation_print(&tmp_triang);
       }
       if (tmp_triang.bound_len == 0)
@@ -905,12 +905,14 @@ triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char *
       break;
     }
 
-    mem_list_cube_compress(&data->mem_list);
+    /*mem_list_cube_compress(&data->mem_list);
+
 
     if (tmp_triang_file && tmp_data_file) {
       triangulation_to_file(&result, tmp_triang_file);
       data_list_to_file(data, tmp_data_file, MEM_LIST_SAVE_CLEAN);
     }
+    */
   }
   for (size_t i = 0; i < cube.len; i++){
     for (size_t j = 0; j < cube.len - i; j++)
