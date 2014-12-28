@@ -127,6 +127,7 @@ void gen_vertex_to_index_fund(int * axis, int axis_len, cube_points cube_pts, cu
   //Fill every entry with the number of this vertex
   int c = 0;
   //First do the fundamental domain
+ 
   for (size_t i = 0; i < fund_pts.len; i ++) 
     (*vertex_index)[vertex_to_index_cube_axis(fund_pts.points[i], axis, axis_len)] = c++;
   

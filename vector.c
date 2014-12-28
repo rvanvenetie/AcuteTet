@@ -376,9 +376,9 @@ cube_points gen_cube_sparse_points(int dim) {
       {
         if (!axis[z])
           continue;
-        result.points[c][0] = axis[x];
-        result.points[c][1] = axis[y];
-        result.points[c][2] = axis[z];
+        result.points[c][0] = x;
+        result.points[c][1] = y;
+        result.points[c][2] = z;
         c++;
       }
     }

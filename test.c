@@ -489,10 +489,10 @@ void test_tetra_disjoint(void) {
 
 void test_sparse_list(void) {
   int dim= 16;
-  cube_points cube =  gen_cube_points(dim);
-  cube_points fund =  gen_fund_points(dim);
+  cube_points cube =  gen_cube_sparse_points(dim);
+  cube_points fund =  gen_fund_sparse_points(dim);
   gen_axis(dim, 1);
-  tri_mem_list list = mem_list_init(dim, MEM_LIST_FUND, MEM_LIST_FALSE);
+  tri_mem_list list = mem_list_init(dim, MEM_LIST_FUND_SPARSE, MEM_LIST_FALSE);
   int j;
   for (int i = 0; i < cube.len; i++) {
     if ((j = vertex_to_index_cube_axis(cube.points[i], axis_sparse_to_normal, axis_sparse_len)) != i)
