@@ -390,7 +390,6 @@ data_list data_list_init(int dim, int mode, int init_value) {
       result.mem_list = mem_list_fund_init(dim, init_value, MEM_LIST_FUND);
       break;
     case DATA_MEM_LIST_FUND_SPARSE:
-      result.mode = DATA_MEM_LIST_FUND;
       result.mem_list = mem_list_fund_init(dim, init_value, MEM_LIST_FUND_SPARSE);
       break;
     case DATA_MEM_LIST_TET:

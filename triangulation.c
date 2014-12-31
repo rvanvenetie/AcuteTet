@@ -900,7 +900,7 @@ triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char *
       break;
     }
     //Do two iterations
-    facets_conform_dynamic_remove(data, &result, 2, &check_list, &check_list_new, locks);
+    facets_conform_dynamic_remove(data, &result, 1, &check_list, &check_list_new, locks);
 
     if (!triangulation_consistent(&result, &parameters)) {
       printf("Triangulation not consistent anymore after conforming the data set.. Breaking\n");

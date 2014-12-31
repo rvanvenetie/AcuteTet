@@ -20,6 +20,7 @@
 #define TRIANG_TET_TMP_FILE "/local/rvveneti/triangulation_triangles_tmp.tet"
 #define TRIANG_TET_FILE "/local/rvveneti/triangulation_triangles.tet"
 int main(int argc, char *argv[]) {
+  srand(1234);
   char log_file[100];
   int dim = 10;
   data_list list;

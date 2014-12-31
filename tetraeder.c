@@ -555,6 +555,8 @@ void facets_conform_tri_list(data_list * data, char * save_file){
  */
 void facets_conform(data_list * data, char * save_file){
   switch (data->mode) {
+    case DATA_MEM_LIST_FUND_SPARSE:
+      data->mode = DATA_MEM_LIST_FUND; //Hack..
     case DATA_MEM_LIST_FUND:
       facets_conform_fund(data, save_file);
       break;
