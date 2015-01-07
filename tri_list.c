@@ -199,7 +199,6 @@ void tri_list_copy(tri_list * dest, tri_list * source) {
 }
 size_t tri_list_memory(tri_list * list) {
   int dim_size = tri_list_dim_size(list, 0, -1,-1);
-  fprintf(stderr,"Dimsize: %zu\n", dim_size);
   size_t result = 0;
 
   result += sizeof(int_arr *) * dim_size;
@@ -324,21 +323,15 @@ int tri_list_old_from_file_to_new(tri_list * list, char * filename) {
 tri_list mem_list_to_tri_list(tri_mem_list * list) {
   if (list->mode != MEM_LIST_FUND) 
     return *(tri_list * )NULL;
-  fprintf(stderr,"breakpoint 1\n");
-  size_t dim_size = list->mem_fund.cube_len;
-  fprintf(stderr,"breakpoint 2\n");
+  int dim_size = list->mem_fund.cube_len;
   tri_list result = tri_list_init(list->dim, MEM_LIST_FALSE);
   fprintf(stderr,"Size of tri_mem_list: %zu\n", mem_list_memory(list));
   fprintf(stderr,"Size of tri_list:     %zu\n", tri_list_memory(&result));
-  size_t i,j, cntr;
+  int i,j;
   int s;
   unsigned short k;
-  int sym_num; 
-  tri_index cur_index, sym_index;
   tri_index cur_idx, sym_idx;
   triangle cur_tri, sym_triang;
-  unsigned short * tmp_array;
-  arr3 v1,v2,v3;
   arr3 * vert_from_index = list->mem_fund.vert_from_index;         
   omp_lock_t ** locks = malloc(sizeof(omp_lock_t *) * list->mem_fund.cube_len);
   //Initalize the locks
@@ -383,6 +376,11 @@ tri_list mem_list_to_tri_list(tri_mem_list * list) {
   }
   return result;
   /*
+  arr3 v1,v2,v3;
+	size_t cnt;
+  tri_index cur_index, sym_index;
+  unsigned short * tmp_array;
+  int sym_num; 
 #pragma omp parallel private(j,k,i,v1,v2,v3, cntr, tmp_array, cur_index, sym_num, sym_index)
 {
 tmp_array = malloc(dim_size * sizeof(unsigned short));
