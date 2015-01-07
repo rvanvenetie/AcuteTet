@@ -20,6 +20,31 @@
 #define TRIANG_TET_TMP_FILE "/local/rvveneti/triangulation_triangles_tmp.tet"
 #define TRIANG_TET_FILE "/local/rvveneti/triangulation_triangles.tet"
 int main(int argc, char *argv[]) {
+  tri_mem_list fund_list;
+  tri_list     t_list;
+  fprintf(stderr,"Start loading\n");
+  if (mem_list_from_file(&fund_list, "/var/scratch/rvveneti/fund_conf_31.tet"))
+    fprintf(stderr,"Loaded succesfuly\n");
+  else
+  {
+    fprintf(stderr,"Failed loading..\n");
+    return 0;
+  }
+  tri_mem_list cube_list;
+  cube_list = mem_list_fund_to_cube(&fund_list);
+  if (mem_list_to_file(&cube_list, "/local/rvveneti/cube_conf_31.tet", MEM_LIST_SAVE_CLEAN))
+    fprintf(stderr,"Stored succesfully\n");
+  else
+    fprintf(stderr, "Failed storing\n");
+  return 0;
+  t_list = mem_list_to_tri_list(&fund_list);
+  fprintf(stderr,"Not failed in mem_list_to_tri_list!\n");
+  if (tri_list_to_file(&t_list, "/local/rvveneti/tri_list_31.tet"))
+      fprintf(stderr,"Stored succesfully\n");
+  else
+    fprintf(stderr,"Failed storing..  tri list\n");
+  return 0;
+
   srand(1234);
   char log_file[100];
   int dim = 10;

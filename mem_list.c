@@ -48,7 +48,7 @@ size_t axis_sparse_len = 0;
  * Below are then given the unique representation functions. They represent the three indices in a unique way. 
  * This property is important as then we can represent each triangle in a unique way (vertices may have 6 different orders)
  */
- 
+
 #define swap(x,y) {t=x;x=y;y=t;}
 /*
  * Turns 3 indices into the unique number used in mem_list.
@@ -127,10 +127,10 @@ void gen_vertex_to_index_fund(int * axis, int axis_len, cube_points cube_pts, cu
   //Fill every entry with the number of this vertex
   int c = 0;
   //First do the fundamental domain
- 
+
   for (size_t i = 0; i < fund_pts.len; i ++) 
     (*vertex_index)[vertex_to_index_cube_axis(fund_pts.points[i], axis, axis_len)] = c++;
-  
+
   //Now fill the entire cube - fundamental domain in the rest. 
   for (size_t i = 0; i < cube_pts.len; i++) {
     vert_index cube_idx = vertex_to_index_cube_axis(cube_pts.points[i], axis, axis_len);
@@ -159,22 +159,22 @@ void gen_axis(int dim, int sparse) {
     int c= 0;
     for (int i = 0; i <= dim; i++)
       if (axis_sparse_to_normal[i]) 
-	axis_sparse_to_normal[i] = c++;
+        axis_sparse_to_normal[i] = c++;
       else
-	axis_sparse_to_normal[i] = -1;
+        axis_sparse_to_normal[i] = -1;
   } else {
     axis_sparse_len = dim + 1;
     axis_sparse_to_normal = malloc(axis_sparse_len * sizeof(axis_sparse_to_normal[0]));
     for (int i = 0; i <= dim; i++)
       axis_sparse_to_normal[i] = i;
   }
-    
+
 }
 
 /*
  * vertex_from_index_*: Functions convert an index back to a vertex (x,y,z).
  */
- 
+
 //Conversion for points in cube
 void vertex_from_index_cube(vert_index index, int dim ,arr3 vertex) {
   int t;
@@ -227,7 +227,7 @@ int mem_list_dim_size(tri_mem_list * list, int axis, int idx1, int idx2) {
         return list->mem_fund.cube_len - idx1 - 1;
       else if (axis == 2)
         return list->mem_fund.cube_len - idx1 - idx2 - 2;
-            
+
     case MEM_LIST_TET:
       if (axis == 0)
         return list->mem_tet.tet_len; 
@@ -271,11 +271,11 @@ tri_mem_list mem_list_init(int dim, int mode, int init_value) {
 tri_mem_list mem_list_cube_init(int dim,int init_value, int sparse) { 
   int dim_size = (dim + 1) * (dim + 1) * (dim + 1);
   tri_mem_cube mem_cube = {dim_size};
-                           
+
   tri_mem_list result = {NULL,
-                         {mem_cube},
-                        dim,
-                        MEM_LIST_CUBE};
+    {mem_cube},
+    dim,
+    MEM_LIST_CUBE};
   if (sparse)
     result.mode = MEM_LIST_CUBE_SPARSE;
   unsigned char *** t_arr = calloc(dim_size, sizeof(unsigned char **));
@@ -293,7 +293,7 @@ tri_mem_list mem_list_cube_init(int dim,int init_value, int sparse) {
     }
   }
 
-  
+
   result.t_arr = t_arr;
   return result;
 }
@@ -304,14 +304,14 @@ tri_mem_list mem_list_tet_init(int dim, int init_value) {
   memset(&result,0, sizeof(tri_mem_list));
   result.dim = dim;
   result.mode = MEM_LIST_TET;
-  
+
   cube_points tet = gen_tet_points(dim);
   //Generate vertex to index array
   gen_vertex_to_index_tet(dim, &result.mem_tet.vert_to_index, &result.mem_tet.tet_len);
-  
+
   unsigned char *** t_arr = calloc(tet.len, sizeof(unsigned char **));
   result.t_arr = t_arr;
-  
+
 
   for (size_t i = 0; i < tet.len; i++) {
     t_arr[i] = calloc(tet.len - i - 1, sizeof(unsigned char *));
@@ -333,7 +333,7 @@ tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
   memset(&result,0,sizeof(tri_mem_list));
   result.mode = mode;
   result.dim = dim; 
-    
+
   cube_points cube, fund;
   if (mode == MEM_LIST_FUND)
   {
@@ -352,7 +352,7 @@ tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
   //Generate index array to vertex
   gen_vertex_from_index_fund(&result.mem_fund.vert_from_index, result.mem_fund.vert_to_index, cube);
 
-  
+
   /* Initalize the 3D bit array.
    * First dimension only holds points in fundamental domain (the first fund.len points)
    * Second dimension then holds all the points bigger than first dimension (also outside fund domain)
@@ -388,7 +388,7 @@ tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
     }
   }
   result.mem_fund.sym_index = sym_vertex_index;
-  
+
   /*
    * For each vertex we give the symmetry number needed to transform this
    * point into the fundamental domain
@@ -400,9 +400,9 @@ tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
         vert_fund_sym[i] = s;
         break;
       }
-  
+
   result.mem_fund.vert_fund_sym = vert_fund_sym;
-  
+
   free(cube.points);
   free(fund.points);
   return result;  
@@ -417,12 +417,12 @@ void mem_list_free(tri_mem_list * list) {
     free(list->t_arr[i]);
   }
   free(list->t_arr);
-  
+
   if (list->mode == MEM_LIST_FUND || list->mode == MEM_LIST_FUND_SPARSE) {
     for (size_t i = 0; i < list->mem_fund.cube_len; i++)
       free(list->mem_fund.sym_index[i]);
     free(list->mem_fund.sym_index);
-    
+
     free(list->mem_fund.vert_fund_sym);
     free(list->mem_fund.vert_from_index);
 
@@ -456,10 +456,10 @@ int mem_list_row_empty(tri_mem_list * list,int i, int j) {
 size_t mem_list_indices(tri_mem_list * list, tri_index_list * index_list) {
   size_t count = mem_list_count(list);
   index_list->dim = list->dim;
-  
+
   int c = 0;
   index_list->index_list = malloc(sizeof(tri_index) * count);
-  
+
   for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++) {
     if (!list->t_arr[i])
       continue;
@@ -480,13 +480,13 @@ size_t mem_list_indices(tri_mem_list * list, tri_index_list * index_list) {
 /*
  * Returns a list of triangles set in the memory_list
  */
- 
+
 triangle_list mem_list_to_triangle_list(tri_mem_list * list) {
   tri_index_list index_list;
   size_t count = mem_list_indices(list,&index_list);
   triangle_list result= {NULL, count, list->dim}; 
   ptriangle t_arr = malloc(count * sizeof(triangle));
-  
+
   if (list->mode == MEM_LIST_FUND || list->mode == MEM_LIST_FUND_SPARSE) {
     for (size_t i = 0; i < count; i ++) {
       printf("%d,%d,%d\n", index_list.index_list[i][0],index_list.index_list[i][1],index_list.index_list[i][2]);
@@ -505,7 +505,7 @@ static const unsigned char BitsSetTable256[256] =
 #   define B2(n) n,     n+1,     n+1,     n+2
 #   define B4(n) B2(n), B2(n+1), B2(n+1), B2(n+2)
 #   define B6(n) B4(n), B4(n+1), B4(n+1), B4(n+2)
-    B6(0), B6(1), B6(1), B6(2)
+  B6(0), B6(1), B6(1), B6(2)
 };
 
 /*
@@ -513,13 +513,13 @@ static const unsigned char BitsSetTable256[256] =
  */
 size_t mem_list_count(tri_mem_list * list) {
   size_t result = 0;
-  
-    for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++)
-     if (list->t_arr[i])
-        for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++)
-          if (list->t_arr[i][j])
-            for (int k = 0; k < mem_list_dim_size(list,2,i,j) / 8 + 1; k++)
-              result += BitsSetTable256[list->t_arr[i][j][k]];    
+
+  for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++)
+    if (list->t_arr[i])
+      for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++)
+        if (list->t_arr[i][j])
+          for (int k = 0; k < mem_list_dim_size(list,2,i,j) / 8 + 1; k++)
+            result += BitsSetTable256[list->t_arr[i][j][k]];    
   return result;
 }
 
@@ -528,7 +528,7 @@ size_t mem_list_count(tri_mem_list * list) {
  */
 size_t mem_list_memory(tri_mem_list * list) {
   size_t result = 0;
-  
+
   result += mem_list_dim_size(list,0,-1,-1) * sizeof(unsigned char **); //First dimension
   for (int i = 0; i < mem_list_dim_size(list,0,-1,-1); i++) 
     if (list->t_arr[i]) {
@@ -561,10 +561,9 @@ tri_mem_list mem_list_fund_to_cube(tri_mem_list * fund_list){
       omp_init_lock(&locks[i][j]);
   }
 
-  #pragma omp parallel for schedule(dynamic) shared(locks)\
-    private(cur_idx, sym_idx, cur_tri, sym_triang,i,j,k,s)
+#pragma omp parallel for schedule(dynamic) shared(locks)  private(cur_idx, sym_idx, cur_tri, sym_triang,i,j,k,s)
   for (i = 0; i < mem_list_dim_size(fund_list,0,-1,-1); i++)  {
-    for (j = 0; j < mem_list_dim_size(fund_list,1,i,-1); j++) 
+    for (j = 0; j < mem_list_dim_size(fund_list,1,i,-1); j++) { 
       for (k = 0; k < mem_list_dim_size(fund_list,2,i,j); k++) {
         cur_idx[0] = i;
         cur_idx[1] = j;
@@ -578,17 +577,20 @@ tri_mem_list mem_list_fund_to_cube(tri_mem_list * fund_list){
           triangle_to_index_cube((sym_triang), fund_list->dim, sym_idx);
 
           omp_set_lock(&locks[sym_idx[0]][sym_idx[1]]);
-          if (!EMI(result.t_arr, sym_idx)) //This row does not exist.. Calloc it! {
-              result.t_arr[sym_idx[0]][sym_idx[1]]=calloc(mem_list_dim_size(&result,2,sym_idx[0],sym_idx[1])/8+1,sizeof(unsigned char));
+          if (!EMI(result.t_arr, sym_idx)) //This row does not exist.. Calloc it! 
+            result.t_arr[sym_idx[0]][sym_idx[1]]=calloc(mem_list_dim_size(&result,2,sym_idx[0],sym_idx[1])/8+1,sizeof(unsigned char));
           //Set this triangle in the cube list!
           SMI(result.t_arr,sym_idx);
           omp_unset_lock(&locks[sym_idx[0]][sym_idx[1]]);
         }
       }
-    printf("Thread %d is finnished with %d/%zu\n", omp_get_thread_num(), i, fund_list->mem_fund.fund_len);
+      free(fund_list->t_arr[i][j]);
+    }
+    free(fund_list->t_arr[i]);
+    fprintf(stderr,"Thread %d is finnished with %d/%zu\n", omp_get_thread_num(), i, fund_list->mem_fund.fund_len);
   }
 
-  
+
   for (i = 0; i < mem_list_dim_size(&result,0,-1,-1); i++){
     for (j = 0; j < mem_list_dim_size(&result,1,i,-1); j++)
       omp_destroy_lock(&locks[i][j]);
@@ -619,8 +621,8 @@ int mem_list_to_file(tri_mem_list * list, char * filename, int mode) {
       continue;
     for (int j = 0; j < mem_list_dim_size(list,1,i,-1); j++) {
       if (list->t_arr[i][j] &&  //Initalized
-         ((mode == MEM_LIST_SAVE_FULL) || //Save any way
-         ((mode == MEM_LIST_SAVE_CLEAN) && !mem_list_row_empty(list,i,j)))) {
+          ((mode == MEM_LIST_SAVE_FULL) || //Save any way
+           ((mode == MEM_LIST_SAVE_CLEAN) && !mem_list_row_empty(list,i,j)))) {
         fputc(1, stream); //Write 1 to indicate content is comming
         size_t write_count = mem_list_dim_size(list,2,i,j)/8 + 1;
         if (fwrite(list->t_arr[i][j],sizeof(unsigned char), write_count, stream) < write_count) //Write the contents
@@ -640,14 +642,14 @@ int mem_list_from_file(tri_mem_list * result, char * filename) {
   stream = fopen(filename, "rb");
   if (stream == NULL)
     return 0;
-    
+
   //Reads the entire struct from file
   if (fread(result, sizeof(tri_mem_list), 1, stream) < 1)
     return 0;
-  
+
   //Initalize to FALSE, as we are only going to set the triangles from the file
   *result = mem_list_init(result->dim, result->mode, MEM_LIST_FALSE);
- 
+
   for (int i = 0; i < mem_list_dim_size(result,0,-1,-1); i++) {
     if (!result->t_arr[i])
       continue;
@@ -803,23 +805,23 @@ void mem_list_fund_set(tri_mem_list * list, ptriangle triang) {
  */
 int mem_list_fund_get(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3){
   tri_index cur_index;
-  
+
   //Indices of the vertices stored in cur_index
   cur_index[0] = vertex_to_index_fund(v1,list->mem_fund.vert_to_index);
   cur_index[1] = vertex_to_index_fund(v2,list->mem_fund.vert_to_index);
   cur_index[2] = vertex_to_index_fund(v3,list->mem_fund.vert_to_index);
-  
+
   //Symmetry number needed to transform first vertex into fund domain
   int sym_num = list->mem_fund.vert_fund_sym[cur_index[0]]; 
 
   tri_index sym_index;
-  
+
   //Apply symmetry_number and return the unique_index of this transformed triangle.
   indices_unique_fund(list->mem_fund.sym_index[cur_index[0]][sym_num], 
-                      list->mem_fund.sym_index[cur_index[1]][sym_num],
-                      list->mem_fund.sym_index[cur_index[2]][sym_num],
-                      sym_index);
-                        
+      list->mem_fund.sym_index[cur_index[1]][sym_num],
+      list->mem_fund.sym_index[cur_index[2]][sym_num],
+      sym_index);
+
   return GMI(list->t_arr,sym_index);
 }
 
@@ -865,7 +867,7 @@ int index_list_from_file(tri_index_list * result, char * filename){
   stream = fopen(filename, "rb");
   if (stream == NULL)
     return 0;
-  
+
   //Reads the entire struct from file
   if (fread(result, sizeof(tri_index_list), 1, stream) < 1)
     return 0;
@@ -884,7 +886,7 @@ int index_list_to_file(tri_index_list * list, char * filename) {
   stream = fopen(filename, "wb");
   if (stream == NULL)
     return 0;
-    
+
   //Write the struct to the file
   if (fwrite(list,sizeof(tri_index_list), 1,stream) < 1)
     return 0;

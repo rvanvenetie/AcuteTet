@@ -199,6 +199,7 @@ void tri_list_copy(tri_list * dest, tri_list * source) {
 }
 size_t tri_list_memory(tri_list * list) {
   int dim_size = tri_list_dim_size(list, 0, -1,-1);
+  fprintf(stderr,"Dimsize: %zu\n", dim_size);
   size_t result = 0;
 
   result += sizeof(int_arr *) * dim_size;
@@ -323,53 +324,106 @@ int tri_list_old_from_file_to_new(tri_list * list, char * filename) {
 tri_list mem_list_to_tri_list(tri_mem_list * list) {
   if (list->mode != MEM_LIST_FUND) 
     return *(tri_list * )NULL;
+  fprintf(stderr,"breakpoint 1\n");
   size_t dim_size = list->mem_fund.cube_len;
+  fprintf(stderr,"breakpoint 2\n");
   tri_list result = tri_list_init(list->dim, MEM_LIST_FALSE);
+  fprintf(stderr,"Size of tri_mem_list: %zu\n", mem_list_memory(list));
+  fprintf(stderr,"Size of tri_list:     %zu\n", tri_list_memory(&result));
   size_t i,j, cntr;
+  int s;
   unsigned short k;
   int sym_num; 
   tri_index cur_index, sym_index;
+  tri_index cur_idx, sym_idx;
+  triangle cur_tri, sym_triang;
   unsigned short * tmp_array;
   arr3 v1,v2,v3;
-  #pragma omp parallel private(j,k,i,v1,v2,v3, cntr, tmp_array, cur_index, sym_num, sym_index)
-  {
-    tmp_array = malloc(dim_size * sizeof(unsigned short));
-    #pragma omp for schedule(dynamic, 20)
-    for (i = 0; i < dim_size; i++) {
+  arr3 * vert_from_index = list->mem_fund.vert_from_index;         
+  omp_lock_t ** locks = malloc(sizeof(omp_lock_t *) * list->mem_fund.cube_len);
+  //Initalize the locks
+  for (i = 0; i < dim_size; i++){
+    locks[i] = malloc(sizeof(omp_lock_t) * (dim_size));
+    for (j = 0; j < dim_size - i; j++)
+      omp_init_lock(&locks[i][j]);
+  }
 
-      vertex_from_index_cube(i,list->dim, v1); //Get point in cube
-      cur_index[0] = vertex_to_index_fund(v1,list->mem_fund.vert_to_index); //Convert to index in mem_list
-      sym_num = list->mem_fund.vert_fund_sym[cur_index[0]]; //Calculate symmetry needed
-      cur_index[0] = list->mem_fund.sym_index[cur_index[0]][sym_num]; //Store symmetried point
+#pragma omp parallel for schedule(dynamic,5) shared(locks)\
+  private(cur_idx, sym_idx, cur_tri, sym_triang,i,j,k,s)
+  for (i = 0; i < mem_list_dim_size(list,0,-1,-1); i++)  {
+    for (j = 0; j < mem_list_dim_size(list,1,i,-1); j++) {
+      for (k = 0; k < mem_list_dim_size(list,2,i,j); k++) {
+        cur_idx[0] = i;
+        cur_idx[1] = j;
+        cur_idx[2] = k;
+        if (!GMI(list->t_arr, cur_idx))
+          continue;
+        cur_tri = triangle_from_index_fund(cur_idx, vert_from_index);
 
-      for ( j = 1; j < dim_size - i; j++) {
-        cntr = 0;
+        for (s = 0; s < 48; s++) {
+          triangle_symmetry(&cur_tri,s,list->dim,&sym_triang);
+          triangle_to_index_cube((sym_triang), list->dim, sym_idx);
 
-        vertex_from_index_cube(i + j,list->dim, v2);
-        cur_index[1] = vertex_to_index_fund(v2,list->mem_fund.vert_to_index);
-        cur_index[1] = list->mem_fund.sym_index[cur_index[1]][sym_num];
-
-        for (k = 1; k < dim_size - j - i; k++)
-        {
-          vertex_from_index_cube(i + j + k,list->dim, v3);
-          cur_index[2] = vertex_to_index_fund(v3,list->mem_fund.vert_to_index);
-          cur_index[2] = list->mem_fund.sym_index[cur_index[2]][sym_num];
-
-          //Apply symmetry_number and return the unique_index of this transformed triangle.
-          indices_unique_fund(cur_index[0],cur_index[1],cur_index[2],sym_index);
-
-          //Sym_index now holds the index of the triangle given by v1,v2,v3 in FUND_MEM_LIST
-          if (GMI(list->t_arr,sym_index))
-            tmp_array[cntr++] = k;
+          omp_set_lock(&locks[sym_idx[0]][sym_idx[1]]);
+          tri_list_insert(&result, &sym_triang, TRI_LIST_NO_RESIZE);
+          omp_unset_lock(&locks[sym_idx[0]][sym_idx[1]]);
         }
-        result.t_arr[i][j].len = cntr;
-        result.t_arr[i][j].data_len = cntr;
-        result.t_arr[i][j].p_arr = malloc(cntr * sizeof(unsigned short));
-        memcpy(result.t_arr[i][j].p_arr, tmp_array, cntr * sizeof(unsigned short));
       }
+      free(list->t_arr[i][j]);
     }
+    free(list->t_arr[i]);
+    fprintf(stderr,"Thread %d is finnished with %d/%zu\n", omp_get_thread_num(), i, list->mem_fund.fund_len);
+    if (i % 20 == 0)
+      fprintf(stderr,"Amount of memory: %zu\n", tri_list_memory(&result)); 
+  }
+  for (i = 0; i < dim_size; i++){
+    for (j = 0; j < dim_size -i ; j++)
+      omp_destroy_lock(&locks[i][j]);
+    free(locks[i]);
   }
   return result;
+  /*
+#pragma omp parallel private(j,k,i,v1,v2,v3, cntr, tmp_array, cur_index, sym_num, sym_index)
+{
+tmp_array = malloc(dim_size * sizeof(unsigned short));
+#pragma omp for schedule(dynamic, 20)
+for (i = 0; i < dim_size; i++) {
+
+vertex_from_index_cube(i,list->dim, v1); //Get point in cube
+cur_index[0] = vertex_to_index_fund(v1,list->mem_fund.vert_to_index); //Convert to index in mem_list
+sym_num = list->mem_fund.vert_fund_sym[cur_index[0]]; //Calculate symmetry needed
+cur_index[0] = list->mem_fund.sym_index[cur_index[0]][sym_num]; //Store symmetried point
+
+for ( j = 1; j < dim_size - i; j++) {
+cntr = 0;
+
+vertex_from_index_cube(i + j,list->dim, v2);
+cur_index[1] = vertex_to_index_fund(v2,list->mem_fund.vert_to_index);
+cur_index[1] = list->mem_fund.sym_index[cur_index[1]][sym_num];
+
+for (k = 1; k < dim_size - j - i; k++)
+{
+vertex_from_index_cube(i + j + k,list->dim, v3);
+cur_index[2] = vertex_to_index_fund(v3,list->mem_fund.vert_to_index);
+cur_index[2] = list->mem_fund.sym_index[cur_index[2]][sym_num];
+
+  //Apply symmetry_number and return the unique_index of this transformed triangle.
+  indices_unique_fund(cur_index[0],cur_index[1],cur_index[2],sym_index);
+
+  //Sym_index now holds the index of the triangle given by v1,v2,v3 in FUND_MEM_LIST
+  if (GMI(list->t_arr,sym_index))
+  tmp_array[cntr++] = k;
+  }
+  result.t_arr[i][j].len = cntr;
+  result.t_arr[i][j].data_len = cntr;
+  result.t_arr[i][j].p_arr = malloc(cntr * sizeof(unsigned short));
+  memcpy(result.t_arr[i][j].p_arr, tmp_array, cntr * sizeof(unsigned short));
+  }
+
+  fprintf(stderr,"Thread %d finished doing %d\n",omp_get_thread_num(),i);
+  }
+  }
+  */
 }
 
 
