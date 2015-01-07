@@ -54,19 +54,22 @@ int main(int argc, char *argv[]) {
 	while (1) {
 		if (argc == 2 && isdigit(argv[1][0]))
 			dim = atoi(argv[1]);
+    int mode = DATA_TRI_LIST;
 		if (argc == 2 && !isdigit(argv[1][0]))
 		{
-			printf("Loading from: %s\n", argv[1]);
-			if (data_list_from_file(&list, DATA_MEM_LIST_CUBE, argv[1]))
-				printf("Loaded succesfully from file\n");
+      if (strstr(argv[1], "cube")) //Cube in the name, must be cube
+        mode = DATA_MEM_LIST_CUBE;
+			fprintf(stderr,"Loading from: %s\n", argv[1]);
+			if (data_list_from_file(&list, mode, argv[1]))
+				fprintf(stderr,"Loaded succesfully from file\n");
 			else {
-				printf("Failed loading from file\n");
+				fprintf(stderr,"Failed loading from file\n");
 				return -1;
 			}
 			dim = data_list_dim(&list);
 		} else {
-			printf("Creating new tri_list\n");
-			list = data_list_init(dim, DATA_MEM_LIST_CUBE, MEM_LIST_TRUE);
+			fprintf(stderr,"Creating new tri_list\n");
+			list = data_list_init(dim, mode, MEM_LIST_TRUE);
 		}
 		sprintf(log_file, LOG, dim);
 		if (REDIRECT_OUTPUT) {
@@ -79,8 +82,8 @@ int main(int argc, char *argv[]) {
 		printf("Memory of the triangle list = %zu\n",     data_list_memory(&list));
 
 		printf("Finding triangulation.\n");
-		triang = triangulate_cube_random(&list);
-		//triang = triangulate_cube(&list,  TRIANG_TMP_FILE, TRIANG_TET_TMP_FILE);
+		//triang = triangulate_cube_random(&list);
+		triang = triangulate_cube(&list,  TRIANG_TMP_FILE, TRIANG_TET_TMP_FILE);
 		if (triang.bound_len == 0) //No boundary triangles!
 		{
 			printf("Triangulation found!");
