@@ -14,7 +14,7 @@
 #include "omp.h"
 
 #define REDIRECT_OUTPUT 1
-#define LOG "triang_%d_3.log"
+#define LOG "triang_%d_%s.log"
 #define TRIANG_FILE "/local/rvveneti/triangulation"
 #define TRIANG_TMP_FILE "/local/rvveneti/triang_tmp"
 #define TRIANG_TET_TMP_FILE "/local/rvveneti/triangulation_triangles_tmp.tet"
@@ -47,6 +47,7 @@ int main(int argc, char *argv[]) {
 		 return 0;
 	 */
 	srand(1234);
+  srand(time(NULL));
 	char log_file[100];
 	int dim = 10;
 	data_list list;
@@ -71,7 +72,10 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr,"Creating new tri_list\n");
 			list = data_list_init(dim, mode, MEM_LIST_TRUE);
 		}
-		sprintf(log_file, LOG, dim);
+    if (mode == DATA_TRI_LIST)
+      sprintf(log_file, LOG, dim, "tri_list");
+    else 
+      sprintf(log_file, LOG, dim, "cube");
 		if (REDIRECT_OUTPUT) {
 			if (freopen(log_file,"a",stdout) == NULL)
 				printf("Redirecting output failed\n");
@@ -83,17 +87,20 @@ int main(int argc, char *argv[]) {
 
 		printf("Finding triangulation.\n");
 		//triang = triangulate_cube_random(&list);
-		triang = triangulate_cube(&list,  TRIANG_TMP_FILE, TRIANG_TET_TMP_FILE);
-		if (triang.bound_len == 0) //No boundary triangles!
-		{
-			printf("Triangulation found!");
-			triangulation_to_file(&triang, TRIANG_FILE);
-			data_list_to_file(&list, TRIANG_TET_FILE, MEM_LIST_SAVE_CLEAN);
-			break;
-		} 
+    do {
+      triang = triangulate_cube(&list,  TRIANG_TMP_FILE, TRIANG_TET_TMP_FILE);
+      if (triang.bound_len == 0) //No boundary triangles!
+      {
+        printf("Triangulation found!");
+        triangulation_to_file(&triang, TRIANG_FILE);
+        data_list_to_file(&list, TRIANG_TET_FILE, MEM_LIST_SAVE_CLEAN);
+        break;
+      } 
 
-		triangulation_free(&triang);
+      triangulation_free(&triang);
+    } while (mode == DATA_TRI_LIST && tri_list_update_from_file(&list.list, argv[1]));
 		data_list_free(&list);
+    fprintf(stderr, "Restarting loop\n\n");
 	}
 	triangulation_free(&triang);
 	data_list_free(&list);

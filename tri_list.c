@@ -270,56 +270,38 @@ int tri_list_from_file(tri_list * list, char * filename) {
   fclose(stream);
   return 1;
 }
-tri_list_old tri_list_init_old(int dim, int init_value) {
-  tri_list_old result;
-  int dim_size = (dim +  1) * (dim + 1) * (dim + 1);
-  result.dim = dim;
+int tri_list_update_from_file(tri_list * list, char * filename) {
 
-  int_arr_old ** t_arr = malloc(sizeof(int_arr *) * dim_size);
-
-  for (int i = 0; i < dim_size; i++)  {
-    t_arr[i] = calloc((dim_size - i ) , sizeof(int_arr));
-    if (init_value == MEM_LIST_TRUE) {
-      for (int j = 1; j < dim_size - i; j++){
-        t_arr[i][j].len      = (dim_size - j - i - 1);
-        t_arr[i][j].p_arr = malloc(t_arr[i][j].len * sizeof(vert_index));
-        for (int k = 1; k < dim_size - j - i; k++)
-          t_arr[i][j].p_arr[k-1] = k;
-      }
-    }
-  }
-  result.t_arr = t_arr;
-  return result;
-}
-int tri_list_old_from_file_to_new(tri_list * list, char * filename) {
   FILE * stream;
   stream = fopen(filename, "rb");
   if (stream == NULL)
     return 0;
 
   //Reads the entire struct from file
-  if (fread(list, sizeof(tri_list), 1, stream) < 1)
+  if (fseek(stream, sizeof(tri_list), SEEK_CUR))
     return 0;
 
-  size_t dim_size = (list->dim +  1) * (list->dim + 1) * (list->dim + 1);
-  *list = tri_list_init(list->dim,MEM_LIST_FALSE);
+  int dim_size = tri_list_dim_size(list,0,-1,-1);
 
-  for (size_t i = 0; i < dim_size; i++) {
-    for (size_t j = 0; j < dim_size - i; j++) {
-      size_t old_size;
-      if (fread(&old_size, sizeof(old_size), 1, stream) < 1)
+  for (int i = 0; i < dim_size; i++) {
+    for (int j = 0; j < dim_size - i; j++) {
+      //Read len parameter
+      if (fseek(stream, sizeof(list->t_arr[i][j].len), SEEK_CUR))
         return 0;
-      list->t_arr[i][j].data_len = (unsigned short) old_size;
-      list->t_arr[i][j].len      = (unsigned short) old_size;
-      list->t_arr[i][j].p_arr = malloc(list->t_arr[i][j].len  * sizeof(unsigned short));
-      if (fread(list->t_arr[i][j].p_arr, sizeof(unsigned short), list->t_arr[i][j].len, stream) < (size_t) list->t_arr[i][j].len)
-        return 0;
+      if (list->t_arr[i][j].data_len != list->t_arr[i][j].len) //We must read from file!
+      {
+        if (fread(list->t_arr[i][j].p_arr, sizeof(unsigned short), list->t_arr[i][j].len, stream) < (size_t) list->t_arr[i][j].len)
+          return 0;
+        list->t_arr[i][j].len = list->t_arr[i][j].data_len;
+      } else
+        if (fseek(stream, sizeof(unsigned short) * list->t_arr[i][j].len, SEEK_CUR))
+          return 0;
     }
   }
   fclose(stream);
   return 1;
-}
 
+}
 tri_list mem_list_to_tri_list(tri_mem_list * list) {
   if (list->mode != MEM_LIST_FUND) 
     return *(tri_list * )NULL;
@@ -478,6 +460,13 @@ int data_list_dim_size(data_list * list, int dim, int idx1, int idx2) {
     return mem_list_dim_size(&list->mem_list, dim, idx1,idx2);
 }
 
+int data_list_contains(data_list * list, ptriangle  triang) {
+  if (list->mode == DATA_TRI_LIST)
+    return tri_list_contains(&list->list, triang);
+  else
+    return mem_list_cube_contains(&list->mem_list, triang);
+
+}
 void data_list_free(data_list * list) {
   if (list->mode == DATA_TRI_LIST)
     tri_list_free(&list->list);
