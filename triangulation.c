@@ -399,7 +399,7 @@ int triangulation_consistent(ptriangulation triang, facet_acute_data * data) {
   int store_acute_ind = data->store_acute_ind;
   data->store_acute_ind = 0;
   for (size_t i = 0; i < triang->bound_len; i++) {
-    if (!mem_list_cube_contains(&data->data->mem_list, triang->bound_tri + i)) // Boundary triangle removed from the data
+    if (!data_list_contains(data->data, triang->bound_tri + i)) // Boundary triangle removed from the data
     {
       printf("Triangle on the boundary got removed from the data.\n");
       consistent = 0;
@@ -475,7 +475,7 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
   size_t i,j;
   int k;
   #pragma omp parallel for  schedule(dynamic,dim) shared(locks) private(cur_tri, cur_idx, i,j,k)
-  for (i = 0; i < cube.len; i++) 
+  for (i = 0; i < cube.len; i++)  {
     for (j = 0; j < cube.len - i; j++)
     {
       //if mem_list->t_arr[i][j] does not exist
@@ -513,6 +513,7 @@ size_t filter_intersection_data_list_tet(data_list * data, tri_list * check_list
         }
       }
     }
+  }
   #pragma omp parallel 
   {
     free(parameters.acute_ind);
@@ -553,7 +554,7 @@ void facets_conform_dynamic_remove(data_list * data, ptriangulation triang, int 
     size_t facets_add_total = 0;
 
 
-#pragma omp parallel shared(locks) private(cur_tri, cur_idx, i,j,k,l)
+    #pragma omp parallel shared(locks) private(cur_tri, cur_idx, i,j,k,l)
     {
       facets_add_cnt = 0;
       if (omp_get_thread_num() == 0) {
@@ -585,9 +586,8 @@ void facets_conform_dynamic_remove(data_list * data, ptriangulation triang, int 
             cur_idx[2] = k;
             cur_tri = triangle_from_index_cube(cur_idx, dim);
             //Cur_tri now holds the triangle we should check
-            if ((data->mode == DATA_TRI_LIST && !tri_list_contains(&data->list,&cur_tri)) ||
-                (data->mode == DATA_MEM_LIST_CUBE && !mem_list_cube_contains(&data->mem_list,&cur_tri)))
-              continue; //This triangle was already removed.. Skip :-)
+            if (!data_list_contains(data, &cur_tri))
+              continue;//This triangle was already removed.. Skip :-)
 
             if (!facet_conform(&cur_tri, &parameters)) { //This triangle is not conform, delete!
               parameters.store_acute_ind = 1;
@@ -618,9 +618,11 @@ void facets_conform_dynamic_remove(data_list * data, ptriangulation triang, int 
       //Checked all the triangles from check_list. Empty it and swap the lists.
       tri_list_empty(check_list);
 
-      tri_list tmp = *check_list;
-      *check_list = *check_list_new;
-      *check_list_new = tmp;
+      if (iter != iterations) {
+        tri_list tmp = *check_list;
+        *check_list = *check_list_new;
+        *check_list_new = tmp;
+      }
     } else
       printf("Triangulation not consistent anymore\n");
 
@@ -651,10 +653,7 @@ ptriangle triangulation_start_facet(data_list  * data) {
 
     if (!triangle_acute(start_facet))
       continue;
-    if (data->mode == DATA_MEM_LIST_CUBE)
-      found_start = mem_list_cube_contains(&data->mem_list,start_facet);
-    else
-      found_start = tri_list_contains(&data->list, start_facet);
+    found_start = data_list_contains(data, start_facet);
   }
   return start_facet;
 }
@@ -894,9 +893,12 @@ triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char *
     /*
      * Calculate a list of all the triangles we are going to remove
      */
+    double time_removed = omp_get_wtime();
+    printf("Removing triangles not disjoint with new tetrahedron\n");
     size_t removed = filter_intersection_data_list_tet(data,  &check_list, tet_list + rand_tet, locks);
     printf("Removed %zu triangles that are not disjoint with the new tetrahedron\n", removed);
     printf("The check_list has size %zu\n", tri_list_count(&check_list));
+    printf("Time took to removed triangles: %g seconds\n", omp_get_wtime()-time_removed);
 
     if (!triangulation_consistent(&result, &parameters)) {
       printf("After filtering the memory list we have a non consistent triangulation. Break\n");

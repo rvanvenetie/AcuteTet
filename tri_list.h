@@ -5,16 +5,6 @@
 #include "mem_list.h"
 
 
-typedef struct int_arr_old{
-  unsigned short * p_arr;
-  size_t len;
-} int_arr_old;
-
-typedef struct tri_list_old
-{
-  int_arr_old **  t_arr; //The actual data
-  int dim;      //Original dimension
-} tri_list_old;
 /*
  * This is a storage class for triangles. It does so by creating a 3D-array.
  * The first two axis indicate the first two point of the triangles. The last 
@@ -56,6 +46,7 @@ void tri_list_resize(tri_list * list);
 void tri_list_validate(tri_list * list);
 
 int tri_list_from_file(tri_list * result, char * filename);
+int tri_list_update_from_file(tri_list * result, char * filename);
 int tri_list_to_file(tri_list * list, char * filename);
 tri_list mem_list_to_tri_list(tri_mem_list * list);
 
@@ -86,7 +77,7 @@ size_t data_list_count(data_list * list);
 size_t data_list_memory(data_list * list);
 int data_list_dim(data_list * list);
 int data_list_dim_size(data_list * list, int dim, int idx1, int idx2);
-
+int data_list_contains(data_list * list, ptriangle  triang);
 void data_list_free(data_list * list);
 #endif
 
