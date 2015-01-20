@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "triangle.h"
@@ -156,4 +157,44 @@ void edge_matrix_cosy_count(edge_matrix * mat, size_t * tri_cnt, size_t * total_
 			}
 		}
 	}
+}
+
+int edge_matrix_to_file(edge_matrix * mat, char * filename) {
+  FILE * stream;
+  stream = fopen(filename, "wb");
+  if (stream == NULL)
+    return 0;
+  //Write p to the file
+  if (fwrite(&mat->p, sizeof(int), 1, stream) < 1)
+    return 0;
+  
+  //Save entire matrix to the file (possibly only upper triangular part?)
+  int row_size = edge_matrix_row_size(mat);
+	for (int i = 0; i < row_size; i++)  
+    if (fwrite(mat->val[i], sizeof(unsigned char), row_size , stream) < (row_size ))
+      return 0;
+
+  fclose(stream);
+  return 1;
+}
+
+int edge_matrix_from_file(edge_matrix * result, char  * filename) { 
+  FILE * stream;
+  stream = fopen(filename, "rb");
+  if (stream == NULL)
+    return 0;
+  
+
+  //Read p from the file
+  if (fread(&result->p, sizeof(int), 1, stream) < 1)
+    return 0;
+
+  *result = edge_matrix_init(result->p, 0);
+  //Read entire matrix from file
+  int row_size = edge_matrix_row_size(result);
+	for (int i = 0; i < row_size; i++)  
+    if (fread(result->val[i], sizeof(unsigned char), row_size , stream) < (row_size ))
+      return 0;
+  fclose(stream);
+  return 1;
 }

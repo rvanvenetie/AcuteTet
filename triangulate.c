@@ -8,6 +8,7 @@
 #include "vector.h"
 #include "triangle.h"
 #include "tetraeder.h"
+#include "edge_list.h"
 #include "mem_list.h"
 #include "tri_list.h"
 #include "triangulation.h"
@@ -20,6 +21,40 @@
 #define TRIANG_TET_TMP_FILE "/local/rvveneti/triangulation_triangles_tmp.tet"
 #define TRIANG_TET_FILE "/local/rvveneti/triangulation_triangles.tet"
 int main(int argc, char *argv[]) {
+  int p = 31;
+  tri_list t_list;
+
+  tri_list_from_file(&t_list,"/local/rvveneti/tri_list_31.tet");
+  edge_matrix mat = edge_matrix_init(p, 0);
+  int row_size = edge_matrix_row_size(&mat);
+  /*
+   * All triangles in x = 0 plane are given by the indices
+   * i < j < k < row_size. Note that an edge (i,j) exists if len > 0 for tri[i][j-i].len
+   */
+  //Loop over all edges in x = 0 plane
+	for (int i = 0; i < row_size; i++) 
+		for (int j = 0; j < row_size - i; j++) {
+      if (t_list.t_arr[i][j].len > 0) {
+        printf("(%d,%d)\n", i, j);
+        mat.val[i][i+j] = mat.val[i+j][i] = 1;
+        arr3 vertex3;
+        vertex_from_index_cube(i,p,vertex3);
+        printArr3(vertex3);
+        vertex_from_index_cube(i+j,p,vertex3);
+        printArr3(vertex3);
+
+        arr2 vertex2;
+
+        vertex_from_index_square(vertex2,i,p);
+        printArr2(vertex2);
+        vertex_from_index_square(vertex2,i+j,p);
+        printArr2(vertex2);
+
+      }
+
+    }
+  edge_matrix_to_file(&mat, "/var/scratch/rvveneti/plane.mat");
+  return 1;
 	/*
 		 tri_mem_list fund_list;
 		 tri_list     t_list;

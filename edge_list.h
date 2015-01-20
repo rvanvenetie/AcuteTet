@@ -21,8 +21,8 @@ typedef struct {
 	  result[1] = vertex_to_index_square(edge->vertices[1], p);\
 	}
   #define vertex_from_index_square(result, index, p) {\
-		result[0] = index / (p+1);\
-		result[1] = index % (p+1);\
+		result[0] = (index) / (p+1);\
+		result[1] = (index) % (p+1);\
 	}
 
 	#define edge_from_index_square(result, indices, p) {\
@@ -51,4 +51,7 @@ unsigned char edge_matrix_get(edge_matrix * mat, arr2 v1, arr2 v2);
 size_t edge_matrix_count(edge_matrix * mat );
 
 void edge_matrix_cosy_count(edge_matrix * mat, size_t * tri_cnt, size_t * total_area_x2);
+
+int edge_matrix_from_file(edge_matrix * result, char  * filename) ;
+int edge_matrix_to_file(edge_matrix * mat, char * filename) ;
 #endif

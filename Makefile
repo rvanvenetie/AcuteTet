@@ -6,7 +6,7 @@ OBJ= vector.o triangle.o tetraeder.o mem_list.o tri_list.o triangulation.o
 DEPS=$(OBJ:.o=.h)
 MAIN_OBJ= main.o $(OBJ)
 TEST_OBJ= test.o $(OBJ)
-TRIANG_OBJ= triangulate.o $(OBJ)
+TRIANG_OBJ= triangulate.o edge_list.o $(OBJ)
 
 EDGE_OBJ= vector.o triangle.o edge_list.o edge.o
 
