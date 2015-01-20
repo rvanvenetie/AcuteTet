@@ -8,9 +8,9 @@
 //Triangle with vertices (edge->vertices[0], edge->vertices[1], apex)
 int triangle_acute_2d(arr2 v1, arr2 v2, arr2 v3) {
 	arr2 P[3]; //Edges
-	subArr2(v2, v1, P[0]); //b - a
-	subArr2(v3, v1, P[1]); //c - a
-	subArr2(v3, v2, P[2]); //c  -b
+	subArr2(P[0], v2, v1); //b - a
+	subArr2(P[1], v3, v1); //c - a
+	subArr2(P[2], v3, v2); //c  -b
 
 	return ((dotArr2(P[0],P[1]) > 0) &&
 			    (dotArr2(P[1],P[2]) > 0) &&
