@@ -31,6 +31,16 @@ int edge_equal(pedge e1, pedge e2) {
 }
 
 
+int triangle_acute_inline(arr2 v1, arr2 v2, arr2 v3) {
+	arr2 P[3]; //Edges
+	subArr2(P[0], v2, v1); //b - a
+	subArr2(P[1], v3, v1); //c - a
+	subArr2(P[2], v3, v2); //c  -b
+
+	return ((dotArr2(P[0],P[1]) > 0) &&
+					(dotArr2(P[1],P[2]) > 0) &&
+					(dotArr2(P[0],P[2]) < 0));
+}
 
 
 int edge_conform(pedge edge, edge_conform_parameters * parameters) {
@@ -42,8 +52,17 @@ int edge_conform(pedge edge, edge_conform_parameters * parameters) {
 	if (!mat->val[v1][v2]) //This edge is not in the matrix
 		return 0; 
 	arr2 edge_normal; //Normal to this edge
+	arr2 edge_vec; //Vector from edge vertex[0] to vertex[1]
+
   normalEdge(edge_normal, edge->vertices[0], edge->vertices[1]);
-	int edge_d = dotArr2(edge_normal, edge->vertices[0]); //Find constant for this line
+	int edge_d = dotArr2(edge_normal, edge->vertices[0]); //Find constant for this edge
+
+	subArr2(edge_vec, edge->vertices[0], edge->vertices[1]);
+	int line_a = dotArr2(edge_vec, edge->vertices[0]); //Find the constant of the line perp to this edge going through A
+	int line_b = dotArr2(edge_vec, edge->vertices[1]); //Same, but through B
+	//Point must be between those lines
+	int line_min = (line_a < line_b) ? line_a : line_b;
+	int line_max = (line_a > line_b) ? line_a : line_b;
 	
 	int acute_above = 0, acute_below = 0;
 	parameters->boundary_edge = edge_boundary(edge, mat->p);
@@ -52,18 +71,21 @@ int edge_conform(pedge edge, edge_conform_parameters * parameters) {
 	parameters->acute_ind_len = 0;
 	
 	//Loop over all points in the square
-	for (vert_index i = 0; i < (mat->p + 1) * (mat->p + 1); i++) {
+	for (int i = 0; i < (mat->p + 1) * (mat->p + 1); i++) {
 		arr2 point;
+		int dotedge;
+		int dotnormal;
 		vertex_from_index_square(point, i, mat->p);
-
-		int dotprod = dotArr2(point, edge_normal); //Calculate <normal,point>, to find the side of this point
-		if (((dotprod > edge_d && !acute_above) || //Point above
-				(dotprod < edge_d && !acute_below))&&   //Point below
-				triangle_acute_2d(edge->vertices[0], edge->vertices[1], point)  && //Acute
+		dotnormal = dotArr2(point, edge_normal); //Calculate <normal,point>, to find the side of this point
+		if (((dotnormal > edge_d && !acute_above) || //Point above
+				(dotnormal < edge_d && !acute_below))&&   //Point below
+				(dotedge = dotArr2(edge_vec, point)) > line_min && 
+				dotedge < line_max &&
+				triangle_acute_inline(edge->vertices[0], edge->vertices[1], point)  && //Acute
 				mat->val[v1][i] && //Edge in mat
 				mat->val[v2][i]) //Edge in mat
 		{
-			if (dotprod > edge_d)
+			if (dotnormal > edge_d)
 				parameters->acute_above = 1;
 			else
 				parameters->acute_below = 1;
@@ -448,7 +470,7 @@ int main(int argc, char *argv[]) {
 	printf("%-5s" "%-15s"       "%-15s"					"%-15s"       "%-15s"        "%-15s"			"%-15s"			"%-15s"		"%-15s"    "%-15s" "\n",
 			   "p",   "edge_total","edge_conform","time_conf","time_conf_sym","cosy_tri","cosy_area_x2","time_cosy","suc_rate","time_triang");
 	//printf("p\tedge_total\tedge_con_cnt\tcosy_tri\tcosy_area\n");
-	for (int p = 1; p < 40; p++)
+	for (int p = 1; p < 31; p++)
 	{
 		start = clock();
 		mat = edge_matrix_init(p, 1);

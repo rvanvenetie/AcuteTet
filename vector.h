@@ -28,7 +28,7 @@ typedef unsigned short vert_index;
 typedef unsigned short  ***vert_index_array;
 
 #ifdef INLINE_MACROS
-  #define subArr2(u,v, result) {\
+  #define subArr2(result, u,v) {\
     result[0] = u[0] - v[0]; \
     result[1] = u[1] - v[1];}
   #define dotArr2(u,v) (u[0]*v[0] + u[1]*v[1])
