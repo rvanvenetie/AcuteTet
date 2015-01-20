@@ -5,6 +5,25 @@
 #include "vector.h"
 #include "triangle.h"
 
+//Triangle with vertices (edge->vertices[0], edge->vertices[1], apex)
+int triangle_acute_2d(arr2 v1, arr2 v2, arr2 v3) {
+	arr2 P[3]; //Edges
+	subArr2(v2, v1, P[0]); //b - a
+	subArr2(v3, v1, P[1]); //c - a
+	subArr2(v3, v2, P[2]); //c  -b
+
+	return ((dotArr2(P[0],P[1]) > 0) &&
+			    (dotArr2(P[1],P[2]) > 0) &&
+		      (dotArr2(P[0],P[2]) < 0));
+}
+int triangle_area_x2(arr2 vA, arr2 vB, arr2 vC) {
+	int //Easy of notation
+		XA = vA[0], XB = vB[0], XC = vC[0],
+		YA = vA[1], YB = vB[1], YC = vC[1];
+
+	return abs((XB - XA)*(YC - YA) - (XC-XA) * (YB - YA));
+}
+
 void arr3_to_triangle(arr3 v0, arr3 v1, arr3 v2, ptriangle triang) {
   copyArr3(triang->vertices[0], v0);
   copyArr3(triang->vertices[1], v1);
@@ -39,6 +58,11 @@ void print_triangle(ptriangle tet) {
   printf(" [%d,%d,%d]]\n",tet->vertices[2][0],tet->vertices[2][1],tet->vertices[2][2]);
 }
 
+void print_triangle_2d(ptriangle_2d tet) {
+  printf("[[%d,%d],\n",tet->vertices[0][0],tet->vertices[0][1]);
+  printf(" [%d,%d],\n",tet->vertices[1][0],tet->vertices[1][1]);
+  printf(" [%d,%d]]\n",tet->vertices[2][0],tet->vertices[2][1]);
+}
 /*
  * Returns whether the given triangle lies in a boundary plane of the cube
  * given by dimensions dim.

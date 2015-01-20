@@ -76,6 +76,9 @@ int maxArr3(arr3 u, int * axis) {
   }
 }
 
+void printArr2(arr2 u) {
+  printf("[%d,%d]\n",u[0],u[1]);
+}
 void printArr3(arr3 u) {
   printf("[%d,%d,%d]\n",u[0],u[1],u[2]);   
 }
@@ -422,6 +425,20 @@ cube_points gen_fund_sparse_points(int dim){
   free(axis);
   return result;
 }
+square_points gen_fund_square(int p) {
+  square_points result = {NULL, 
+                        p,
+                        0};
+	int m = p / 2;
+	for (int x = 0; x <= m; x++)
+		for (int y = 0; y <= x; y++)
+		{
+			result.points = realloc(result.points, (++result.len) * sizeof(arr2));
+			result.points[result.len - 1][0] = x;
+			result.points[result.len - 1][1] = y;
+		}
+	return result;
+}
 void randomArr3(int dim, arr3 result) {
   result[0] = rand() % dim;
   result[1] = rand() % dim;
@@ -432,4 +449,8 @@ void copyArr3(arr3 dest, arr3 source) {
   dest[0] = source[0];
   dest[1] = source[1];
   dest[2] = source[2];
+}
+void copyArr2(arr2 dest, arr2 source) {
+  dest[0] = source[0];
+  dest[1] = source[1];
 }

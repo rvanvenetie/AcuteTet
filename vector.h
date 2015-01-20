@@ -17,11 +17,29 @@ typedef struct cube_points
   size_t len;
 } cube_points;
 
+typedef struct square_points
+{
+	arr2 * points;
+	int p;
+	int len;
+} square_points;
 
 typedef unsigned short vert_index;
 typedef unsigned short  ***vert_index_array;
 
 #ifdef INLINE_MACROS
+  #define subArr2(u,v, result) {\
+    result[0] = u[0] - v[0]; \
+    result[1] = u[1] - v[1];}
+  #define dotArr2(u,v) (u[0]*v[0] + u[1]*v[1])
+  #define normalArr2(result, v) {\
+		result[0] = -v[1];\
+		result[1] =  v[0];\}
+	#define normalEdge(result, v1,v2) {\
+		result[0] = -(v2[1] - v1[1]);\
+		result[1] =  (v2[0] - v1[0]);}
+	#define equalArr2(u,v) (u[0] == v[0] && u[1] == v[1])
+
   #define subArr3(u,v, result) {\
     result[0] = u[0] - v[0]; \
     result[1] = u[1] - v[1]; \
@@ -127,12 +145,15 @@ vec3 subVectors(vec3 u, vec3 v);
 int maxArr3(arr3 u, int * axis);
 void copyArr3(arr3 dest, arr3 source);
 void printArr3(arr3 u);
+void copyArr2(arr2 dest, arr2 source);
+void printArr2(arr2 u);
 
 cube_points gen_tet_points(int dim);
 cube_points gen_cube_points(int dim);
 cube_points gen_fund_points(int dim);
 cube_points gen_cube_sparse_points(int dim);
 cube_points gen_fund_sparse_points(int dim);
+square_points gen_fund_square(int p);
 void gen_sparse_axis(int dim, int ** axis, size_t * len);
 
 void randomArr3(int dim, arr3 result);

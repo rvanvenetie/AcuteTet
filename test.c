@@ -515,6 +515,12 @@ void test_sparse_list(void) {
       printf("ERROR IN LIST!! \n");
   }
 }
+
+void test_triangle_2d() {
+
+
+
+}
 int main(void){
   test_sparse_list();
   //test_tetra_disjoint();

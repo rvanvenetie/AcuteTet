@@ -8,10 +8,14 @@ MAIN_OBJ= main.o $(OBJ)
 TEST_OBJ= test.o $(OBJ)
 TRIANG_OBJ= triangulate.o $(OBJ)
 
+EDGE_OBJ= vector.o triangle.o edge_list.o edge.o
+
 %.o : %.c
 	$(CC) -c $(CFLAGS) $<
 
-all: main triang test
+all: main triang test edge
+edge: $(EDGE_OBJ)
+	$(CC) -o edge $(EDGE_OBJ) $(LDFLAGS)
 main: $(MAIN_OBJ) 
 	$(CC) -o main $(MAIN_OBJ) $(LDFLAGS)
 
@@ -28,6 +32,8 @@ clean:
 	rm -f main
 
 vector.o     : vector.h 
+edge_list.o  : edge_list.h
+edge.o       : edge.h
 triangle.o   : vector.h triangle.h 
 mem_list.o   : vector.h triangle.h mem_list.h
 tri_list.o   : vector.h triangle.h mem_list.h tri_list.h 

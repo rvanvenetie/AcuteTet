@@ -9,6 +9,11 @@ typedef struct triangle
   arr3 vertices[3];
 } triangle, *ptriangle;
 
+typedef struct triangle_2d
+{
+  arr2 vertices[3];
+} triangle_2d, *ptriangle_2d;
+
 typedef struct triangle_list
 {
   ptriangle t_arr;
@@ -16,7 +21,9 @@ typedef struct triangle_list
   int dim;   
 } triangle_list;
 
-
+//Returns area times two
+int triangle_area_x2(arr2 v1, arr2 v2, arr2 v3);
+int triangle_acute_2d(arr2 v1, arr2 v2, arr2 v3);
 
 void arr3_to_triangle(arr3 v0, arr3 v1, arr3 v2, ptriangle triang);
 int tri_tri_equal(ptriangle t1, ptriangle t2);
@@ -27,6 +34,7 @@ int triangle_boundary_tet(ptriangle triang, int dim);
 
 void triangle_normal(ptriangle triang, arr3 normal);
 void print_triangle(ptriangle tet);
+void print_triangle_2d(ptriangle_2d tet);
 void triangle_symmetry(ptriangle triang, int sym,int dim, ptriangle result);
 
 /*
