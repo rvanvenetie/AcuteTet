@@ -146,7 +146,7 @@ void edge_matrix_cosy_count(edge_matrix * mat, size_t * tri_cnt, size_t * total_
 			for (int k = j; k < row_size; k++) {
 				vertex_from_index_square(v3, k, mat->p);
 				//If triangle is acute and the sides are contained in the matrix
-				if (triangle_acute_2d(v1,v2,v3) && 
+				if (arr2_triangle_acute(v1,v2,v3) && 
 						mat->val[i][j] &&
 						mat->val[i][k] &&
 						mat->val[j][k])

@@ -71,9 +71,15 @@ int main(int argc, char *argv[]) {
 						mat.val[i][k] &&
 						mat.val[j][k])
 				{
-          mem_list_square_set(&sq_list, &cur_tri);
-          if (tri_list_contains(&t_list, &cur_tri))
+          if (tri_list_contains(&t_list, &cur_tri)) {
             tri_cnt_bla++;
+
+            triangle_2d cur_tri_2d;
+            vertex_from_index_square(cur_tri_2d.vertices[0], i, mat.p);
+            vertex_from_index_square(cur_tri_2d.vertices[1], j, mat.p);
+            vertex_from_index_square(cur_tri_2d.vertices[2], k, mat.p);
+            mem_list_square_set(&sq_list, &cur_tri_2d);
+          }
           tri_cnt++;
 				}
 
@@ -89,7 +95,8 @@ int main(int argc, char *argv[]) {
   edge_matrix_cosy_count(&mat, &totalcnt, &edge_cnt);
   printf("Cosy tri =%zu\n", totalcnt);
   printf("Cosy ara =%zu\n", edge_cnt);
-  edge_matrix_to_file(&mat, "/var/scratch/rvveneti/plane.mat");
+  mem_list_to_file(&sq_list, "/var/scratch/rvveneti/tri_sq_31.tri", MEM_LIST_SAVE_CLEAN);
+  edge_matrix_to_file(&mat, "/var/scratch/rvveneti/edge_sq_31.edg");
   return 1;
 	/*
 		 tri_mem_list fund_list;

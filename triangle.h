@@ -23,7 +23,7 @@ typedef struct triangle_list
 
 //Returns area times two
 int triangle_area_x2(arr2 v1, arr2 v2, arr2 v3);
-int triangle_acute_2d(arr2 v1, arr2 v2, arr2 v3);
+int arr2_triangle_acute(arr2 v1, arr2 v2, arr2 v3);
 
 void arr3_to_triangle(arr3 v0, arr3 v1, arr3 v2, ptriangle triang);
 int tri_tri_equal(ptriangle t1, ptriangle t2);

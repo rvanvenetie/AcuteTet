@@ -6,7 +6,7 @@
 #include "triangle.h"
 
 //Triangle with vertices (edge->vertices[0], edge->vertices[1], apex)
-int triangle_acute_2d(arr2 v1, arr2 v2, arr2 v3) {
+int arr2_triangle_acute(arr2 v1, arr2 v2, arr2 v3) {
 	arr2 P[3]; //Edges
 	subArr2(P[0], v2, v1); //b - a
 	subArr2(P[1], v3, v1); //c - a

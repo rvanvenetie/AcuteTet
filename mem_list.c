@@ -247,6 +247,13 @@ int mem_list_dim_size(tri_mem_list * list, int axis, int idx1, int idx2) {
         return list->mem_tet.tet_len - idx1 - 1;
       else  
         return list->mem_tet.tet_len - idx1 - idx2 - 2;
+    case MEM_LIST_SQUARE:
+      if (axis == 0)
+        return list->mem_square.dim_size;
+      else if (axis == 1)
+        return list->mem_square.dim_size - idx1;
+      else if (axis == 2) //If we have a sparse matrix, thirds axis might be empty.
+        return list->mem_square.dim_size - idx1 - idx2 ;
   }
 
   printf("WAT! NOT POSSIBLE:%d, %d, %d, %d\n", list->mem_tet.tet_len, axis, idx1,idx2);
