@@ -54,6 +54,8 @@ int main(int argc, char *argv[]) {
       }
     }
   triangle cur_tri;
+  tri_mem_list sq_list = mem_list_square_init(p,0);
+
 	//Loop over all triangles in the square
   size_t tri_cnt = 0;
   size_t tri_cnt_bla = 0;
@@ -69,6 +71,7 @@ int main(int argc, char *argv[]) {
 						mat.val[i][k] &&
 						mat.val[j][k])
 				{
+          mem_list_square_set(&sq_list, &cur_tri);
           if (tri_list_contains(&t_list, &cur_tri))
             tri_cnt_bla++;
           tri_cnt++;
@@ -77,6 +80,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
+  printf("Sq_list   %zu\n", mem_list_count(&sq_list));
   printf("Tricnt    %zu\n", tri_cnt_bla);
   printf("Tri cnt   %zu\n", tri_cnt);
   printf("Totalcnt= %zu\n", totalcnt);
