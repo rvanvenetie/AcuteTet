@@ -32,27 +32,59 @@ int main(int argc, char *argv[]) {
    * i < j < k < row_size. Note that an edge (i,j) exists if len > 0 for tri[i][j-i].len
    */
   //Loop over all edges in x = 0 plane
+  size_t totalcnt = 0;
+  size_t edge_cnt = 0;
 	for (int i = 0; i < row_size; i++) 
 		for (int j = 0; j < row_size - i; j++) {
-      if (t_list.t_arr[i][j].len > 0) {
-        printf("(%d,%d)\n", i, j);
-        mat.val[i][i+j] = mat.val[i+j][i] = 1;
-        arr3 vertex3;
-        vertex_from_index_cube(i,p,vertex3);
-        printArr3(vertex3);
-        vertex_from_index_cube(i+j,p,vertex3);
-        printArr3(vertex3);
+      for (int k = 0; k < t_list.t_arr[i][j].len; k++) {
+        tri_index idx;
+        idx[0] = i;
+        idx[1] = i + j;
+        idx[2] = i + j + t_list.t_arr[i][j].p_arr[k];
+        if (idx[2] < row_size) { //Third point also in the x = 0 plane
+          totalcnt++;
+          //Edge_count, increase if mat.val = 0
+          edge_cnt += 1 - mat.val[idx[0]][idx[1]] + 1 - mat.val[idx[1]][idx[2]] + 1 - mat.val[idx[0]][idx[2]];
 
-        arr2 vertex2;
-
-        vertex_from_index_square(vertex2,i,p);
-        printArr2(vertex2);
-        vertex_from_index_square(vertex2,i+j,p);
-        printArr2(vertex2);
-
+          //Set all edges to one
+          mat.val[idx[0]][idx[1]] = mat.val[idx[1]][idx[0]] = 1;
+          mat.val[idx[1]][idx[2]] = mat.val[idx[2]][idx[1]] = 1;
+          mat.val[idx[0]][idx[2]] = mat.val[idx[2]][idx[0]] = 1;
+        }
       }
-
     }
+  triangle cur_tri;
+	//Loop over all triangles in the square
+  size_t tri_cnt = 0;
+  size_t tri_cnt_bla = 0;
+	for (int i = 0; i < row_size; i++) {
+    vertex_from_index_cube(i,mat.p, cur_tri.vertices[0]);
+		for (int j = i; j < row_size; j++) {
+      vertex_from_index_cube(j,mat.p, cur_tri.vertices[1]);
+			for (int k = j; k < row_size; k++) {
+        vertex_from_index_cube(k,mat.p, cur_tri.vertices[2]);
+				//If triangle is acute and the sides are contained in the matrix
+				if (arr3_triangle_acute(cur_tri.vertices[0],cur_tri.vertices[1],cur_tri.vertices[2]) && 
+						mat.val[i][j] &&
+						mat.val[i][k] &&
+						mat.val[j][k])
+				{
+          if (tri_list_contains(&t_list, &cur_tri))
+            tri_cnt_bla++;
+          tri_cnt++;
+				}
+
+			}
+		}
+	}
+  printf("Tricnt    %zu\n", tri_cnt_bla);
+  printf("Tri cnt   %zu\n", tri_cnt);
+  printf("Totalcnt= %zu\n", totalcnt);
+  printf("Edgecnt = %zu\n", edge_cnt);
+  printf("Edge_mat= %zu\n", edge_matrix_count(&mat));
+  edge_matrix_cosy_count(&mat, &totalcnt, &edge_cnt);
+  printf("Cosy tri =%zu\n", totalcnt);
+  printf("Cosy ara =%zu\n", edge_cnt);
   edge_matrix_to_file(&mat, "/var/scratch/rvveneti/plane.mat");
   return 1;
 	/*

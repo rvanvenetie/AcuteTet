@@ -27,13 +27,18 @@ typedef struct tri_mem_fund {
   size_t fund_len; //Amount of points inside the fundamental domain
 } tri_mem_fund;
 
+typedef struct tri_mem_square {
+  int dim_size; //Size of the data
+} tri_mem_square;
+
 typedef struct tri_mem_list
 {
   unsigned char  *** t_arr; //Actual data array
   union {
-    tri_mem_cube mem_cube;
-    tri_mem_tet mem_tet;
-    tri_mem_fund mem_fund;
+    tri_mem_cube   mem_cube;
+    tri_mem_tet    mem_tet;
+    tri_mem_fund   mem_fund;
+    tri_mem_square mem_square;
   };
   int dim;      //Original dimension
   int mode;     //Stores the type of mem_list (store every triangle in the cube, only in fundamental domain, or triangles in the unit tetrahedron)
@@ -45,6 +50,7 @@ typedef struct tri_mem_list
 #define MEM_LIST_TET  3
 #define MEM_LIST_CUBE_SPARSE 4
 #define MEM_LIST_FUND_SPARSE 5
+#define MEM_LIST_SQUARE 6
 
 typedef vert_index tri_index[3];
 typedef vert_index tet_index[4];
@@ -70,6 +76,7 @@ typedef struct tri_index_list
 /*
  * Macros to convert a vertex to it's index in the mem_list
  */
+
 #define vertex_to_index_tet(vertex, vertex_index_array) (vertex_index_array[vertex[0]][vertex[1]][vertex[2]])
 #define vertex_to_index_cube(vertex,dim) (vertex[0] * (dim+1)*(dim+1) + vertex[1] * (dim+1) + vertex[2])
 #define vertex_to_index_cube_axis(vertex, axis, axis_len) (axis[vertex[0]] * axis_len * axis_len + axis[vertex[1]] * axis_len + axis[vertex[2]])
@@ -77,6 +84,7 @@ typedef struct tri_index_list
 #define vertex_to_index_fund(vertex, vertex_index_array) (vertex_index_array[\
     vertex_to_index_cube_axis(vertex, axis_sparse_to_normal, axis_sparse_len)])
 
+#define vertex_to_index_square(vert,p) (vert[0] * (p+1) + vert[1])
                                      
 /* 
  * See indices_unique_*. This is a wrapper to convert vertices to a unique index directly
@@ -91,6 +99,11 @@ typedef struct tri_index_list
           indices_unique_tet(vertex_to_index_tet(v1, vert_to_index),\
                              vertex_to_index_tet(v2, vert_to_index),\
                              vertex_to_index_tet(v3, vert_to_index),indices))
+
+#define vertices_to_index_square(v1, v2, v3, p, indices) (\
+          indices_unique_square(vertex_to_index_square(v1, p),\
+                                vertex_to_index_square(v2, p),\
+                                vertex_to_index_square(v3, p),indices))
                              
 /*
  * These are wrappers to convert triangles (thus three vertices) to a unique index directly
@@ -102,6 +115,9 @@ typedef struct tri_index_list
 #define triangle_to_index_tet(triang, vert_to_index, indices) (\
           vertices_to_index_tet( triang.vertices[0],triang.vertices[1], triang.vertices[2], vert_to_index,indices))
 
+#define triangle_to_index_square(triang, p,indices) (\
+    vertices_to_index_square(triang.vertices[0], triang.vertices[1], triang.vertices[2], p, indices))
+
 /*
  * Returns whether this is a fundamental triangle (has point in fund domain, by using fund len)
  */
@@ -110,6 +126,7 @@ typedef struct tri_index_list
 /*
  * Index - Vertex functions
  */
+void indices_unique_square(vert_index idx1, vert_index idx2, vert_index idx3, tri_index indices);
 void indices_unique_cube(vert_index idx1, vert_index idx2, vert_index idx3, tri_index indices);
 void indices_unique_fund(vert_index idx1, vert_index idx2, vert_index idx3, tri_index indices);
 void indices_unique_tet(vert_index idx1, vert_index idx2, vert_index idx3, tri_index indices);
@@ -125,6 +142,12 @@ void vertex_from_index_cube(vert_index index, int dim,arr3 vertex) ;
 triangle triangle_from_index_cube(tri_index indices, int dim);
 triangle triangle_from_index_fund(tri_index indices,arr3 * index_vertex);
 
+#define vertex_from_index_square(result, index, p) {\
+  result[0] = (index) / (p+1);\
+  result[1] = (index) % (p+1);\
+	}
+triangle_2d triangle_from_index_square(tri_indices, int p);
+
 
 /*
  * mem_list init/free functions
@@ -136,6 +159,7 @@ tri_mem_list mem_list_init(int dim, int mode, int init_value);
 tri_mem_list mem_list_cube_init(int dim, int init_value, int sparse);
 tri_mem_list mem_list_fund_init(int dim, int init_value, int mode);
 tri_mem_list mem_list_tet_init(int dim, int init_value);
+tri_mem_list mem_list_square_init(int p, int init_value);
 void mem_list_free(tri_mem_list * list);
 
 
@@ -183,18 +207,23 @@ void mem_list_cube_clear_sym(tri_mem_list * list, ptriangle triang);
 void mem_list_cube_set_sym(tri_mem_list * list, ptriangle triang);
 
 /*
- * mem_list set/get/clear tet functions
+ * mem_list set/get/clear fund functions
  */
 void mem_list_fund_clear(tri_mem_list * list, ptriangle triang);
 void mem_list_fund_set(tri_mem_list * list, ptriangle triang);
 int mem_list_fund_get(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
-
 /*
  * mem_list set/get/clear tet functions
  */
 int mem_list_tet_get(tri_mem_list * list, arr3 v1, arr3 v2, arr3 v3);
 void mem_list_tet_set(tri_mem_list * list, ptriangle triang);
 void mem_list_tet_clear(tri_mem_list * list, ptriangle triang);
+/*
+ * mem_list set/get/clear square functions
+ */
+int mem_list_square_get(tri_mem_list * list, arr2 v1, arr2 v2, arr2 v3);
+void mem_list_square_set(tri_mem_list * list, ptriangle_2d triang);
+void mem_list_square_clear(tri_mem_list * list, ptriangle_2d triang);
 /*
  * old
  */

@@ -91,6 +91,9 @@ void indices_unique_fund(vert_index idx1, vert_index idx2, vert_index idx3, tri_
   indices[1] = indices[1] - indices[0] - 1;
 }
 
+void indices_unique_square(vert_index idx1, vert_index idx2, vert_index idx3, tri_index indices) {
+  indices_unique_cube(idx1,idx2,idx3,indices);
+}
 
 /*
  * Vertices_to_index_* are macros defined in mem_list.h. They convert
@@ -198,6 +201,15 @@ triangle triangle_from_index_fund(tri_index indices,arr3 * index_vertex) {
   copyArr3(res.vertices[2], index_vertex[indices[0] + indices[1] + indices[2] + 2]);
   return res;
 }
+
+
+triangle_2d triangle_from_index_square(tri_indices, int p) {
+  triangle_2d res;
+  vertex_from_index_square(res.vertices[0], indices[0], p);
+  vertex_from_index_square(res.vertices[1], indices[1], p);
+  vertex_from_index_square(res.vertices[2], indices[2], p);
+  return res;
+}
 /*
  * Remember that t_arr is a three dimensional array. Depening on the 
  * list type, the dimensions may not be fixed: the length of t_arr[0] may be
@@ -259,6 +271,8 @@ tri_mem_list mem_list_init(int dim, int mode, int init_value) {
       return mem_list_tet_init(dim, init_value);
     case MEM_LIST_CUBE_SPARSE:
       return mem_list_cube_init(dim, init_value, MEM_LIST_CUBE_SPARSE);
+     case MEM_LIST_SQUARE:
+      return mem_list_square_init(dim, init_value);
   }
   printf("Should not come here..!!\n");
   exit(0);
@@ -406,6 +420,33 @@ tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
   free(cube.points);
   free(fund.points);
   return result;  
+}
+
+tri_mem_list mem_list_square_init(int p, int init_value) {
+  int dim_size = (p + 1) * (p + 1);
+  tri_mem_square mem_square = {dim_size};
+
+  tri_mem_list result = {NULL,
+    {mem_square},
+    p,
+    MEM_LIST_SQUARE};
+
+  unsigned char *** t_arr = calloc(dim_size, sizeof(unsigned char **));
+  for (int i = 0; i < mem_list_dim_size(&result, 0, -1,-1); i++) {
+    t_arr[i] = calloc(dim_size - i , sizeof(unsigned char *));
+
+    for (int j = 0; j < mem_list_dim_size(&result,1,i,-1); j++) {
+
+      t_arr[i][j] = calloc(mem_list_dim_size(&result,2,i,j)/ 8 + 1, sizeof(unsigned char));
+      if (init_value == MEM_LIST_TRUE) 
+        for (int k = 1; k < mem_list_dim_size(&result,2,i,j); k++) {
+          tri_index tmp_index = {i,j,k};
+          SMI(t_arr,tmp_index);
+        }
+    }
+  }
+  result.t_arr = t_arr;
+  return result;
 }
 
 void mem_list_free(tri_mem_list * list) {
@@ -846,7 +887,24 @@ void mem_list_tet_clear(tri_mem_list * list, ptriangle triang){
   vertices_to_index_tet(triang->vertices[0],triang->vertices[1],triang->vertices[2], list->mem_tet.vert_to_index, index);
   CMI(list->t_arr, index);
 }
-
+/*
+ * Square functions
+ */
+int mem_list_square_get(tri_mem_list * list, arr2 v1, arr2 v2, arr2 v3) {
+  tri_index index;
+  vertices_to_index_square(v1,v2,v3, list->mem_square.p, index);
+  return GMI(list->t_arr, index);
+}
+void mem_list_square_set(tri_mem_list * list, ptriangle_2d triang) {
+  tri_index index;
+  triangle_to_index_square((*triang), list->mem_square.p, index);
+  SMI(list->t_arr, index);
+}
+void mem_list_square_clear(tri_mem_list * list, ptriangle_2d triang) {
+  tri_index index;
+  triangle_to_index_square((*triang), list->mem_square.p, index);
+  CMI(list->t_arr, index);
+}
 
 /*
  * Converts an list of indices to a mem_list of cube type.
