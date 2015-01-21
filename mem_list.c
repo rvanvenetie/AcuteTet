@@ -203,7 +203,7 @@ triangle triangle_from_index_fund(tri_index indices,arr3 * index_vertex) {
 }
 
 
-triangle_2d triangle_from_index_square(tri_indices, int p) {
+triangle_2d triangle_from_index_square(tri_index indices, int p) {
   triangle_2d res;
   vertex_from_index_square(res.vertices[0], indices[0], p);
   vertex_from_index_square(res.vertices[1], indices[1], p);
@@ -424,12 +424,11 @@ tri_mem_list mem_list_fund_init(int dim, int init_value, int mode) {
 
 tri_mem_list mem_list_square_init(int p, int init_value) {
   int dim_size = (p + 1) * (p + 1);
-  tri_mem_square mem_square = {dim_size};
 
-  tri_mem_list result = {NULL,
-    {mem_square},
-    p,
-    MEM_LIST_SQUARE};
+  tri_mem_list result;
+	result.dim = p;
+	result.mode = MEM_LIST_SQUARE;
+	result.mem_square.dim_size = dim_size;
 
   unsigned char *** t_arr = calloc(dim_size, sizeof(unsigned char **));
   for (int i = 0; i < mem_list_dim_size(&result, 0, -1,-1); i++) {
@@ -892,17 +891,17 @@ void mem_list_tet_clear(tri_mem_list * list, ptriangle triang){
  */
 int mem_list_square_get(tri_mem_list * list, arr2 v1, arr2 v2, arr2 v3) {
   tri_index index;
-  vertices_to_index_square(v1,v2,v3, list->mem_square.p, index);
+  vertices_to_index_square(v1,v2,v3, list->dim, index);
   return GMI(list->t_arr, index);
 }
 void mem_list_square_set(tri_mem_list * list, ptriangle_2d triang) {
   tri_index index;
-  triangle_to_index_square((*triang), list->mem_square.p, index);
+  triangle_to_index_square((*triang), list->dim, index);
   SMI(list->t_arr, index);
 }
 void mem_list_square_clear(tri_mem_list * list, ptriangle_2d triang) {
   tri_index index;
-  triangle_to_index_square((*triang), list->mem_square.p, index);
+  triangle_to_index_square((*triang), list->dim, index);
   CMI(list->t_arr, index);
 }
 

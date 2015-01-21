@@ -144,9 +144,8 @@ triangle triangle_from_index_fund(tri_index indices,arr3 * index_vertex);
 
 #define vertex_from_index_square(result, index, p) {\
   result[0] = (index) / (p+1);\
-  result[1] = (index) % (p+1);\
-	}
-triangle_2d triangle_from_index_square(tri_indices, int p);
+  result[1] = (index) % (p+1);}
+triangle_2d triangle_from_index_square(tri_index indices, int p);
 
 
 /*
