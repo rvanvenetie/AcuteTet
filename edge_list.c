@@ -47,6 +47,7 @@ edge_matrix edge_matrix_init(int p, unsigned char init_val) {
   for (int i = 0; i < row_size; i++) {
 		result.val[i] = malloc(sizeof(unsigned char) * row_size);
 		memset(result.val[i], init_val, row_size);
+		result.val[i][i] = 0;
 	}
 	return result;
 }

@@ -307,6 +307,22 @@ size_t filter_intersection_edge_matrix_tri(edge_matrix * mat, ptriangle_2d trian
 	return removed;
 }
 
+/*
+ * Fileformat:
+ * p
+ * tri_len
+ * For tri in tri:
+ *   x_a y_a x_b y_b x_c y_c
+ */
+#define BUFFER_LEN 4096
+void print_triangle_array(char * buffer, ptriangle_2d tri, int tri_len, int p) {
+	int wc;
+	wc = snprintf(buffer, BUFFER_LEN,  "%d\n%d", p, tri_len);
+	for (int i = 0; i < tri_len; i++)
+	  wc += snprintf(buffer + wc, BUFFER_LEN-wc,"\n%d %d %d %d %d %d", tri[i].vertices[0][0],tri[i].vertices[0][1],tri[i].vertices[1][0],tri[i].vertices[1][1],tri[i].vertices[2][0],tri[i].vertices[2][1]);
+
+
+}
 void print_triangulation(ptriangulation result) {
 	printf("Triangulation debug:\n"
 			   "\tp: %d\n"
@@ -320,6 +336,12 @@ void print_triangulation(ptriangulation result) {
 		print_triangle_2d(result->tri + i);
 }
 
+void plot_triangulation(ptriangulation triang) {
+	char buffer[BUFFER_LEN], sys_arg[BUFFER_LEN];
+	print_triangle_array(buffer, triang->tri, triang->tri_len, triang->p);
+	snprintf(sys_arg, BUFFER_LEN, "python plt_triangles.py \"%s\"", buffer);
+	system(sys_arg);
+}
 void free_triangulation(ptriangulation result) {
 	free(result->bound_edge);
 	free(result->tri);
@@ -462,15 +484,38 @@ triangulation triangulate_square(edge_matrix * mat) {
 
 #define get_cpu_time(start) (((double) (clock() - start)) / CLOCKS_PER_SEC)
 int main(int argc, char *argv[]) {
+	srand(1337);
 	edge_matrix mat, mat_copy;
 	clock_t start;
 	double time_init, time_conform, time_conform_sym, time_cosy, time_triang, suc_rate;
 	size_t edge_total, edge_con_cnt, cosy_tri, cosy_area;
-	int p = 16;
+
+
+	edge_matrix_from_file(&mat, "data/square.mat");
+
+	edge_con_cnt = edge_matrix_count(&mat);
+	edge_matrix_cosy_count(&mat, &cosy_tri, &cosy_area);
+
+	fprintf(stderr,"Edge count mat    = %zu\n", edge_con_cnt);
+	fprintf(stderr,"Total cosy tri    = %zu\n", cosy_tri);
+	fprintf(stderr,"Total cosy area   = %zu\n", cosy_area);
+	triangulation triang;
+	while (1) {
+		mat_copy = edge_matrix_copy(&mat);
+		triang = triangulate_square(&mat_copy);
+		edge_matrix_free(&mat_copy);
+		if (triang.bound_len == 0) { //Succesful triangulation
+
+			plot_triangulation(&triang);
+		}
+		free_triangulation(&triang);
+	}
+	return 1;
+	
 	printf("%-5s" "%-15s"       "%-15s"					"%-15s"       "%-15s"        "%-15s"			"%-15s"			"%-15s"		"%-15s"    "%-15s" "\n",
 			   "p",   "edge_total","edge_conform","time_conf","time_conf_sym","cosy_tri","cosy_area_x2","time_cosy","suc_rate","time_triang");
 	//printf("p\tedge_total\tedge_con_cnt\tcosy_tri\tcosy_area\n");
-	for (int p = 1; p < 31; p++)
+	for (int p = 1; p < 32; p++)
 	{
 		start = clock();
 		mat = edge_matrix_init(p, 1);
