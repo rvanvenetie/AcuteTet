@@ -1,6 +1,7 @@
 #ifndef EDGE_LIST_H
 #define EDGE_LIST_H
 #include "vector.h"
+#include "mem_list.h"
 
 typedef vert_index edge_index[2]; //[0] = x, [1] = y
 
@@ -15,16 +16,10 @@ typedef struct {
 
 #ifdef INLINE_MACROS
   #define xy_to_index_square(x,y,p) (x * (p+1) + y)
-  #define vertex_to_index_square(vert,p) (xy_to_index_square(vert[0], vert[1], p))
   #define edge_to_index_square(result, edge, p) {\
 	  result[0] = vertex_to_index_square(edge->vertices[0], p);\
 	  result[1] = vertex_to_index_square(edge->vertices[1], p);\
 	}
-  #define vertex_from_index_square(result, index, p) {\
-		result[0] = (index) / (p+1);\
-		result[1] = (index) % (p+1);\
-	}
-
 	#define edge_from_index_square(result, indices, p) {\
 		vertex_from_index_square(result->vertices[0], indices[0], p);\
 		vertex_from_index_square(result->vertices[1], indices[1], p);\

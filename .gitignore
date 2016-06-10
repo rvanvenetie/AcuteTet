@@ -4,6 +4,20 @@
 *.obj
 *.elf
 *.tet
+
+# Optimized output
+*.optimized
+*.s
+
+# Dependencies
+*.depends
+
+# Callgrind
+*callgrind*
+
+# YCM
+.*py*
+
 # Libraries
 *.lib
 *.a

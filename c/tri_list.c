@@ -467,6 +467,7 @@ int data_list_contains(data_list * list, ptriangle  triang) {
     return mem_list_cube_contains(&list->mem_list, triang);
 
 }
+
 void data_list_free(data_list * list) {
   if (list->mode == DATA_TRI_LIST)
     tri_list_free(&list->list);
@@ -481,6 +482,7 @@ int data_list_from_file(data_list * result, int mode, char * filename) {
     return mem_list_from_file(&result->mem_list, filename);
 
 }
+
 int data_list_to_file(data_list * list, char * filename, int mode) {
   if (mode == DATA_TRI_LIST)
     return tri_list_to_file(&list->list, filename);

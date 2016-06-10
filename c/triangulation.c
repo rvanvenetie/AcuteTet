@@ -786,6 +786,7 @@ triangulation triangulate_cube_random(data_list * data) {
 
 
 triangulation triangulate_cube(data_list * data,  char * tmp_triang_file, char * tmp_data_file) {
+	printf("%s %s\n", tmp_triang_file, tmp_data_file);
   triangulation result = triangulation_init(data_list_dim(data));
 
   cube_points cube = gen_cube_points(result.dim);

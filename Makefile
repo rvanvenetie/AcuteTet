@@ -1,43 +1,26 @@
-CC=gcc -fopenmp 
-WARNING_FLAGS=-Wall -Wextra -Werror-implicit-function-declaration -Wshadow -Wstrict-prototypes -pedantic
-CFLAGS=  -g -O3 -std=gnu99 $(WARNING_FLAGS) -DINLINE_MACROS
-LDFLAGS= -lm 
-OBJ= vector.o triangle.o tetraeder.o mem_list.o tri_list.o triangulation.o
-DEPS=$(OBJ:.o=.h)
-MAIN_OBJ= main.o $(OBJ)
-TEST_OBJ= test.o $(OBJ)
-TRIANG_OBJ= triangulate.o edge_list.o $(OBJ)
+CXX      = c++
+CXXFLAGS = -std=c++11 -Wall -O3
+LDFLAGS  =
 
-EDGE_OBJ= vector.o triangle.o edge_list.o edge.o
+TARGET = main
+SRCS   = $(wildcard *.cpp)
+OBJS   = $(SRCS:.cpp=.o)
+DEPS   = $(SRCS:.cpp=.depends)
 
-%.o : %.c
-	$(CC) -c $(CFLAGS) $<
+.PHONY: clean all
 
-all: main triang test edge
-edge: $(EDGE_OBJ)
-	$(CC) -o edge $(EDGE_OBJ) $(LDFLAGS)
-main: $(MAIN_OBJ) 
-	$(CC) -o main $(MAIN_OBJ) $(LDFLAGS)
+all: $(TARGET)
 
-test: $(TEST_OBJ) 
-	$(CC) -o test $(TEST_OBJ) $(LDFLAGS)
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJS) -o $(TARGET)
 
-triang: $(TRIANG_OBJ)
-	$(CC) -o triang $(TRIANG_OBJ) $(LDFLAGS)
-	
-run: main
-	main
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+%.depends: %.cpp
+	$(CXX) -M $(CXXFLAGS) $< > $@
+
 clean:
-	rm -f *.o
-	rm -f main
+	rm -f $(OBJS) $(DEPS) $(TARGET)
 
-vector.o     : vector.h 
-edge_list.o  : edge_list.h
-edge.o       : edge.h
-triangle.o   : vector.h triangle.h 
-mem_list.o   : vector.h triangle.h mem_list.h
-tri_list.o   : vector.h triangle.h mem_list.h tri_list.h 
-tetraeder.o  : vector.h triangle.h mem_list.h tri_list.h tetraeder.h
-triangulate.o: $(DEPS)
-main.o       : $(DEPS)
-test.o       : $(DEPS)
+-include $(DEPS)

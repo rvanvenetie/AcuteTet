@@ -8,6 +8,7 @@
 
 #include "omp.h"
 #include "triangle.h"
+#include "mem_list.h"
 #include "edge.h"
 #include "edge_list.h"
 
@@ -42,6 +43,13 @@ int triangle_acute_inline(arr2 v1, arr2 v2, arr2 v3) {
 					(dotArr2(P[0],P[2]) < 0));
 }
 
+int edge_cosy(pedge, tri_mem_list * list) {
+	//See edge_conform
+}
+int triangle_cosy(ptriangle tri, tri_mem_list * list) {
+
+
+}
 
 int edge_conform(pedge edge, edge_conform_parameters * parameters) {
 	edge_matrix * mat = parameters->mat; //For ease of notation
@@ -147,6 +155,7 @@ int edges_conform_sym_square(edge_matrix * mat) {
 		fprintf(stderr,"Loop took %f seconds.\n\n", time_end-time_start);
 	}
 	fprintf(stderr,"Conforming set took %f seconds.\n", omp_get_wtime() - time_entire);
+	return iterations;
 }
 
 int edges_conform_square(edge_matrix * mat) {
@@ -183,6 +192,54 @@ int edges_conform_square(edge_matrix * mat) {
 	return iterations;
 }
 
+int triangles_conform_square(tri_mem_list * list) {
+	int iterations = 0;
+	int changed = 1;
+	int row_size (list->p +1 ) * (list->p + 1);
+	double time_start =0 , time_end = 0;
+	double time_entire = omp_get_wtime();
+	tri_index indices;
+	triangle_2d cur_tri;
+	edge_conform_parameters parameters = {.mat = mat};
+	while (changed) {
+		iterations++;
+		changed = 0;
+		fprintf(stderr,"Starting conform loop with %zu edges.\n"
+				, edge_matrix_count(mat));   
+		time_start = omp_get_wtime();
+		//Loop over upper triangular part (all possible edges)
+		for (int i = 0; i < row_size; i++) 
+			for (int j = i; j < row_size; j++)
+				for (int k = j; k < row_size; k++) 
+				{
+					indices[0] = i;
+					indices[1] = j - i;
+					indices[2] = k - j;
+					if (!GMI(conf_mem_list->t_arr, indices))
+						continue; 
+
+					vertex_from_index_square(e.vertices[0], i, list->dim);
+					vertex_from_index_square(e.vertices[1], j, list->dim);
+					vertex_from_index_square(e.vertices[2], k, list->dim);
+					if GMI
+
+				if (mat->val[i][j])
+				{
+				  struct edge	e;
+					vertex_from_index_square(e.vertices[0], i, mat->p);
+					vertex_from_index_square(e.vertices[1], j, mat->p);
+					if (!edge_conform(&e, &parameters))
+					{
+						changed = 1;
+						edge_matrix_clear(mat, &e);
+					} 
+				}
+		time_end   = omp_get_wtime();
+		fprintf(stderr,"Loop took %f seconds.\n\n", time_end-time_start);
+	}
+	fprintf(stderr,"Conforming set took %f seconds.\n", omp_get_wtime() - time_entire);
+	return iterations;
+}
 #define TOUCH 2
 #define DISJOINT 1
 #define INTERSECT 0
@@ -478,7 +535,7 @@ triangulation triangulate_square(edge_matrix * mat) {
   }
 	//print_triangulation(&result);
   free(parameters.acute_ind);
-  fprintf(stderr,"Triangulation has length of %zu\n", result.tri_len);
+  fprintf(stderr,"Triangulation has length of %d\n", result.tri_len);
   return result;
 }
 
@@ -487,9 +544,9 @@ int main(int argc, char *argv[]) {
 	srand(1337);
 	edge_matrix mat, mat_copy;
 	clock_t start;
-	double time_init, time_conform, time_conform_sym, time_cosy, time_triang, suc_rate;
+	double  time_conform, time_conform_sym, time_cosy, time_triang, suc_rate;
 	size_t edge_total, edge_con_cnt, cosy_tri, cosy_area;
-
+	triangulation triang;
 
 	edge_matrix_from_file(&mat, "data/square.mat");
 
@@ -499,7 +556,6 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr,"Edge count mat    = %zu\n", edge_con_cnt);
 	fprintf(stderr,"Total cosy tri    = %zu\n", cosy_tri);
 	fprintf(stderr,"Total cosy area   = %zu\n", cosy_area);
-	triangulation triang;
 	while (1) {
 		mat_copy = edge_matrix_copy(&mat);
 		triang = triangulate_square(&mat_copy);
@@ -517,9 +573,7 @@ int main(int argc, char *argv[]) {
 	//printf("p\tedge_total\tedge_con_cnt\tcosy_tri\tcosy_area\n");
 	for (int p = 1; p < 32; p++)
 	{
-		start = clock();
 		mat = edge_matrix_init(p, 1);
-		time_init = get_cpu_time(start);
 
 		mat_copy = edge_matrix_copy(&mat);
 		edge_total = edge_matrix_count(&mat);
@@ -544,7 +598,6 @@ int main(int argc, char *argv[]) {
 		time_cosy = get_cpu_time(start);
 
 		edge_matrix_free(&mat_copy);
-		triangulation triang;
 		int suc_cntr = 0, total_cntr = 0;
 		start = clock();
     while (suc_cntr != 20 && edge_con_cnt > 0) {
@@ -565,7 +618,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr,"Edge count total  = %zu\n", edge_total);
 		fprintf(stderr,"Edge count mat    = %zu\n", edge_con_cnt);
 		fprintf(stderr,"Total cosy tri    = %zu\n", cosy_tri);
-		fprintf(stderr,"Total cosy area   = %zu.%d\n", cosy_area/2,5 * (cosy_area % 2));
+		fprintf(stderr,"Total cosy area   = %zu.%zu\n", cosy_area/2,5 * (cosy_area % 2));
 		fprintf(stderr,"Succes rate triang= %f\n", suc_rate);
 	   printf("%-5d" "%-15zu" "%-15zu"      "%-15f"      "%-15f"          "%-15zu"  "%-15zu"   "%-15f"   "%-15f"   "%-15f" "\n",
 				    p,   edge_total, edge_con_cnt,time_conform,time_conform_sym,cosy_tri, cosy_area, time_cosy,suc_rate, time_triang);

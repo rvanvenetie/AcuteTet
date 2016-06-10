@@ -170,8 +170,8 @@ int edge_matrix_to_file(edge_matrix * mat, char * filename) {
     return 0;
   
   //Save entire matrix to the file (possibly only upper triangular part?)
-  int row_size = edge_matrix_row_size(mat);
-	for (int i = 0; i < row_size; i++)  
+  size_t row_size = edge_matrix_row_size(mat);
+	for (size_t i = 0; i < row_size; i++)  
     if (fwrite(mat->val[i], sizeof(unsigned char), row_size , stream) < (row_size ))
       return 0;
 
@@ -192,8 +192,8 @@ int edge_matrix_from_file(edge_matrix * result, char  * filename) {
 
   *result = edge_matrix_init(result->p, 0);
   //Read entire matrix from file
-  int row_size = edge_matrix_row_size(result);
-	for (int i = 0; i < row_size; i++)  
+  size_t row_size = edge_matrix_row_size(result);
+	for (size_t i = 0; i < row_size; i++)  
     if (fread(result->val[i], sizeof(unsigned char), row_size , stream) < (row_size ))
       return 0;
   fclose(stream);

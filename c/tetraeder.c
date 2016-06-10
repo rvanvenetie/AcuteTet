@@ -164,6 +164,7 @@ int facet_tetra_list(ptriangle triang, arr3 apex, data_list * data) {
 		return (tri_list_get(&data->list, triang->vertices[0], triang->vertices[1],apex) &&
 				tri_list_get(&data->list, triang->vertices[0], triang->vertices[2],apex) &&
 				tri_list_get(&data->list, triang->vertices[1], triang->vertices[2],apex)); 
+	else return -1;
 }
 
 /*
