@@ -20,7 +20,7 @@
  */
  
 #define USE_FILE 1
-#define REDIRECT_OUTPUT 1
+#define REDIRECT_OUTPUT 0
 
 #define CUBE_LOG         "output_cube_%d.log"
 #define FUND_LOG         "output_fund_%d.log"

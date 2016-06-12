@@ -299,7 +299,7 @@ void facets_conform_cube(data_list * data,int fund_domain, char * save_file){
 		time_start = omp_get_wtime();
 
 		if (!fund_domain) {
-#pragma omp parallel for  schedule(dynamic,conf_mem_list->dim) private(cur_tri, indices, i,j,k) firstprivate(parameters)
+//#pragma omp parallel for  schedule(dynamic,conf_mem_list->dim) private(cur_tri, indices, i,j,k) firstprivate(parameters)
 			for (i = 0; i < cube.len; i++) 
 				for (j = 0; j < cube.len - i; j++)
 					if (conf_mem_list->t_arr[i][j])
@@ -317,7 +317,7 @@ void facets_conform_cube(data_list * data,int fund_domain, char * save_file){
 
 							if (!facet_conform(&cur_tri,&parameters)) { //remove from conf_mem_list
 								changed = 1;
-								printf("What! Found a non-conform triangle :-(\n");
+								//printf("What! Found a non-conform triangle :-(\n");
 								mem_list_cube_clear(conf_mem_list, &cur_tri);
 							}
 						}
@@ -456,7 +456,7 @@ void facets_conform_fund(data_list * data, char * save_file){
 		time_start = omp_get_wtime();
 		time_save = save_interval;
 
-#pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
+//#pragma omp parallel for schedule(dynamic) private(j,k,i,cur_tri,indices)  firstprivate(parameters)
 		for (i = 0; i < fund_len; i++) {
 			for (j = i + 1; j < cube.len; j++) {
 				for (k = j + 1; k < cube.len; k++) //All combinations of three vertices in the tet
@@ -562,7 +562,7 @@ void facets_conform(data_list * data, char * save_file){
 			facets_conform_fund(data, save_file);
 			break;
 		case DATA_MEM_LIST_CUBE:
-			facets_conform_cube(data,1, save_file);
+			facets_conform_cube(data,0, save_file);
 			break;
 		case DATA_MEM_LIST_TET:
 			facets_conform_tet(data,save_file);

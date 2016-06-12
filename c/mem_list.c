@@ -307,7 +307,7 @@ tri_mem_list mem_list_cube_init(int dim,int init_value, int sparse) {
         t_arr[i][j] = calloc(mem_list_dim_size(&result,2,i,j)/ 8 + 1, sizeof(unsigned char));
 
       if (init_value == MEM_LIST_TRUE) 
-        for (int k = 1; k < mem_list_dim_size(&result,2,i,j); k++) {
+        for (int k = 0; k < mem_list_dim_size(&result,2,i,j); k++) {
           tri_index tmp_index = {i,j,k};
           SMI(t_arr,tmp_index);
         }
