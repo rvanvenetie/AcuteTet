@@ -34,7 +34,8 @@ int main(int argc, char *argv[]) {
   #pragma omp parallel for schedule(static,1)
   for (int i = 0; i < 70; i++)
     printf("(%d,%d)", omp_get_thread_num(),omp_get_num_threads());
-  printf("\n");
+  cout << endl;
+
   mkdir(logdir.c_str(), 0777);
   mkdir(tmpdir.c_str(), 0777 );
   mkdir(findir.c_str() , 0777);
