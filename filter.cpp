@@ -112,7 +112,7 @@ bool TriangleFilter<FundcubeTriangleSet>::sweep()
             omp_get_thread_num() == 0 && //Only let master save to the file
           ((omp_get_wtime() - time_start) > time_save))  //Time to save current progress
       {  
-        cout << "Saving tmp file. ";
+        cout << "Saving: ";
         _set.print();
         if(!_set.toFile(_tmpfile, TriangleSet<FundcubeTriangleSet, Cube>::SPARSE)) {
           cout << "Failed to save, try again at half the interval" << endl;
@@ -128,21 +128,22 @@ bool TriangleFilter<FundcubeTriangleSet>::sweep()
 template<typename T>
 inline bool TriangleFilter<T>::filter()
 {
-  cout << "Filtering a triangle set of scale " << (int) _domain._scale << endl;
+  cout << "Filtering a triangle set of scale " << (int) _domain._scale << endl << endl;
   double ftimer = omp_get_wtime();
   size_t number = 0;
   bool changed = true;
   while (changed) 
   {
     number = _set.print();
+    if (number == 0) break;
     cout << endl;
     double timer = omp_get_wtime();
     changed = sweep();
-    cout << endl << "Sweep took " << omp_get_wtime() - timer << " seconds." <<  endl;
+    cout << "Sweep took " << omp_get_wtime() - timer << " seconds." <<  endl;
   }
+  cout << endl << endl <<  "Done filtering. Took " << omp_get_wtime() - ftimer << " seconds." << endl;
   _set.print();
-  cout << endl <<  "Done filtering. Took " << omp_get_wtime() - ftimer << " seconds." << endl << endl;
-  _set.toFile(_filename);
+  if (!_filename.empty()) _set.toFile(_filename);
   return (number > 0);
 }
 

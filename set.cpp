@@ -9,15 +9,15 @@ tempTD void TriangleSet<T,D>::init(bool set)
 {
   _data = (byte ***) calloc(size(), sizeof(byte **));
   //_data2 = (boost::dynamic_bitset<> **) calloc(size(), sizeof(boost::dynamic_bitset<> *));
-  for (vindex i = 0; i < size(); i++) {
+  for (size_t i = 0; i < size(); i++) {
     _data[i] = (byte **) calloc( size(i), sizeof (byte *));
     //_data2[i] = (boost::dynamic_bitset<> *) calloc( size(i), sizeof (boost::dynamic_bitset<>));
-    for (vindex j =0; j < size(i); j++) {
+    for (size_t j =0; j < size(i); j++) {
       // calloc, bits
       _data[i][j] = (byte *) calloc( size(i,j)/8 + 1, sizeof(byte));
       //new(&_data2[i][j]) boost::dynamic_bitset<>(size(i,j));
       if (set)
-        for (vindex k =0; k < size(i,j); k++) 
+        for (size_t k =0; k < size(i,j); k++) 
           this->set(i,j,k);
     }
   }
@@ -25,8 +25,8 @@ tempTD void TriangleSet<T,D>::init(bool set)
 // destructor
 tempTD TriangleSet<T,D>::~TriangleSet()
 {
-  for (vindex i = 0;i < size(); i++) {
-    for (vindex j =0; j < size(i); j++)  {
+  for (size_t i = 0;i < size(); i++) {
+    for (size_t j =0; j < size(i); j++)  {
       //_data2[i][j].~dynamic_bitset<>();
       free(_data[i][j]);
     }
@@ -49,8 +49,8 @@ tempTD size_t TriangleSet<T,D>::count(vindex i, vindex j) const
 tempTD size_t TriangleSet<T,D>::count() const
 {
   size_t result = 0;
-  for (vindex i = 0; i < size(); i++) 
-    for (vindex j =0; j < size(i); j++) 
+  for (size_t i = 0; i < size(); i++) 
+    for (size_t j =0; j < size(i); j++) 
       result += count(i,j);
   return result;
 }
@@ -60,10 +60,10 @@ tempTD size_t TriangleSet<T,D>::memory() const
 {
   size_t result = 0;
   result += size() * sizeof(byte **); // first dimension
-  for (vindex i = 0; i <size(); i++) 
+  for (size_t i = 0; i <size(); i++) 
   {
     result += size(i) * sizeof(byte *);
-    for (vindex j =0 ; j < size(i); j++)
+    for (size_t j =0 ; j < size(i); j++)
       result += (size(i,j)/ 8 + 1) * sizeof(byte);
   }
   return result;  
@@ -74,8 +74,8 @@ tempTD size_t TriangleSet<T,D>::print() const
 { 
   std::string units[] = {"B", "kB", "MB", "GB"};
   size_t count = 0;
-  vindex size = memory();
-  vindex i = 0;
+  size_t size = memory();
+  size_t i = 0;
   while (size > 1024) {
     size /= 1024;
     i++;
@@ -97,8 +97,8 @@ tempTD bool TriangleSet<T,D>::toFile(const std::string &filename, TriangleSet<T,
   //Saves to file by looping over first two axis.
   //Then it saves <c><last_dimension>
   //Here c indicates whether the row is saved (0 can occur if MEM_LIST_SAVE_CLEAN and row is empty)
-  for (vindex i = 0;i < size(); i++) {
-    for (vindex j =0; j < size(i); j++)  {
+  for (size_t i = 0;i < size(); i++) {
+    for (size_t j =0; j < size(i); j++)  {
       if (options == FULL || (options == SPARSE && count(i,j))) 
       {
         file << (byte) 1;
@@ -116,8 +116,8 @@ tempTD bool TriangleSet<T,D>::toFile(const std::string &filename, TriangleSet<T,
 tempTD bool TriangleSet<T,D>::fromFile(ifstream &file)
 {
   if (!file.good()) return false;
-  for (vindex i = 0; i < size(); i++) {
-    for (vindex j =0; j < size(i); j++) {
+  for (size_t i = 0; i < size(); i++) {
+    for (size_t j =0; j < size(i); j++) {
       byte last;
       file >> last;
       if (last == 1)
@@ -171,9 +171,9 @@ FundcubeTriangleSet::FundcubeTriangleSet(byte scale, bool set) :
       _index[_domain.index(vtx)] = cnt++;
   
   // do the reverse, translate fund idx -> cube points
-  for (vindex cidx =0 ; cidx < _domain.size(); cidx++) {
+  for (size_t cidx =0 ; cidx < _domain.size(); cidx++) {
     // so cidx maps to fidx
-    vindex fidx = _index[cidx];
+    size_t fidx = _index[cidx];
 
     _vertices[fidx] = _domain[cidx];
   }
@@ -187,7 +187,7 @@ FundcubeTriangleSet::FundcubeTriangleSet(byte scale, bool set) :
 
   // for each symmetry and each point we generate the symmetry index
   for (size_t sym = 0; sym < 48; sym++)
-    for (vindex idx =0; idx < _domain.size(); idx++) {
+    for (size_t idx =0; idx < _domain.size(); idx++) {
       _sympt[idx +sym*_domain.size()] = _index[_domain.index(_fund.symmetry(_domain[idx], sym))];
     }
 }

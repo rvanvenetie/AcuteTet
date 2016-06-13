@@ -18,6 +18,9 @@
 # YCM
 .*py*
 
+# Data
+*.fund
+
 # Libraries
 *.lib
 *.a

@@ -4,7 +4,7 @@
 using namespace std;
 
 typedef unsigned char byte;
-typedef size_t vindex;
+typedef unsigned short vindex;
 
 template <byte _dim>
 struct Vector{

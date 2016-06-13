@@ -202,7 +202,7 @@ class FundcubeTriangleSet : public TriangleSet<FundcubeTriangleSet, Cube> {
     // delete all of its symmetries as well
     inline void reset(const Triangle<3> &triangle) 
     {
-      for (byte sym = 0; sym < 48; sym ++) 
+      for (size_t sym = 0; sym < 48; sym ++) 
         if (_sympt[_domain.index(triangle[0]) + _cubesize*sym] < _fundsize ||
             _sympt[_domain.index(triangle[1]) + _cubesize*sym] < _fundsize ||
             _sympt[_domain.index(triangle[2]) + _cubesize*sym] < _fundsize) 
