@@ -13,7 +13,7 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
   std::string tmpdir = "/local/rvveneti/";
-  std::string findir = "data/";
+  std::string findir = "/var/scratch/rvveneti/";
   std::string logdir = "log/";
   cout << argc << endl;
   if (!(argc == 4 || argc == 2))
