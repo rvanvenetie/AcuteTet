@@ -1,4 +1,5 @@
 #include <omp.h>
+#include <cstdio>
 #include "vector.h"
 #include "filter.h"
 #include "domain.h"
@@ -114,11 +115,13 @@ bool TriangleFilter<FundcubeTriangleSet>::sweep()
       {  
         cout << "Saving: ";
         _set.print();
-        if(!_set.toFile(_tmpfile, TriangleSet<FundcubeTriangleSet, Cube>::SPARSE)) {
+        if(!_set.toFile(_tmpfile + ".partial", TriangleSet<FundcubeTriangleSet, Cube>::SPARSE)) {
           cout << "Failed to save, try again at half the interval" << endl;
           time_save += _interval / 2;
-        } else 
+        } else {
+          rename( (_tmpfile + ".partial").c_str(), _tmpfile.c_str());
           time_save += _interval;
+        }
       }
     }
   }

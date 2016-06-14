@@ -1,5 +1,5 @@
 CXX      = g++
-CXXFLAGS = -g -fopenmp -std=c++14 -Wall -Ofast -Winline
+CXXFLAGS = -g  -march=haswell -fopenmp -std=c++14 -Wall -Ofast -Winline
 LDFLAGS  =
 
 TARGET = main
