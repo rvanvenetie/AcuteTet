@@ -4,15 +4,17 @@
 #include "filter.h"
 #include "domain.h"
 #include "tetrahedron.h"
+#include "cubeset.h"
+#include "squareset.h"
 
 
 // define conformity checker for triangle given by vertices (a,b,c)
 template<typename T>
-inline bool TriangleFilter<T>::conform(const Triangle<3> &triangle) const
+inline bool TriangleFilter<T>::valid(const Triangle<T::dim> &triangle) const
 {
   // calculate edges of this triangle
-  Polygon<3,3> edges = triangle.edges();
-  if (!triangle.acute(edges)) return false;
+  Simplex<3,3> edges = triangle.edges();
+  if (!Triangle<3>::acute(edges)) return false;
 
   // calculate the normal
   Vector<3> normal = cross(edges[1],edges[0]);
@@ -21,7 +23,7 @@ inline bool TriangleFilter<T>::conform(const Triangle<3> &triangle) const
   int d = dot(normal, triangle[0]);
 
   //Calculate the vector perpendicular to each side and the normal. Normals on each side of the prism
-  Polygon<3,3> edge_normals;
+  Simplex<3,3> edge_normals;
   Vector<3> side_d;  //The constant expression for the plane equations of the sides
   //Convention, need to explain why it works?? Third point must be on the other side!!
 
@@ -66,6 +68,52 @@ inline bool TriangleFilter<T>::conform(const Triangle<3> &triangle) const
   }
   return false;
 }
+template<>
+inline bool TriangleFilter<SquareTriangleSet>::valid(const Triangle<2> &triangle) const
+{
+  Simplex<2,3> edges = triangle.edges();
+  if (!Triangle<2>::acute(edges)) return false;
+
+   //Normals on the edges
+  Vector<2> edge_normals[3]= {normal(edges[0]), normal(edges[1]), normal(edges[2])};
+
+  // Line plane
+  Vector<3> side_d ={{dot(edge_normals[0], triangle[0]),
+                      dot(edge_normals[1], triangle[0]),
+                      dot(edge_normals[2], triangle[2])}};
+  
+  Vector<3> orientation = {{dot(edge_normals[0], triangle[2] - triangle[0]),
+                            dot(edge_normals[1], triangle[1] - triangle[0]),
+                            dot(edge_normals[2], triangle[0] - triangle[2])}};
+
+  // fix outgoing orientation
+  for (size_t e = 0; e < 3; e++)
+    if (orientation[e] > 0) {
+      side_d[e] = -side_d[e];
+      edge_normals[e] = Vector<2> {0,0} -edge_normals[e];
+    }
+
+  for (size_t e = 0; e < 3; e++) { // for each edge
+    bool acute = false;
+    Simplex<2,2> edge;
+    if      (e == 0) edge = {triangle[0], triangle[1]};
+    else if (e == 1) edge = {triangle[0], triangle[2]};
+    else if (e == 2) edge = {triangle[1], triangle[2]};
+    if  (_domain.boundary(edge)) continue;
+
+    for (size_t i = 0; i < _domain.size(); i++) // for each point 
+      if (dot(_domain[i], edge_normals[e]) > side_d[e] && // correct side 
+          Triangle<2> {{edge[0], edge[1], _domain[i]}}.acute() && // acute
+          _set.contains(edge[0], edge[1], _domain[i]))
+      {
+        acute = true;
+        break;
+      }
+    if (!acute) return false;
+  }
+  return true;
+}
+
 
 // do one iteration of conform checking
 template<>
@@ -78,7 +126,7 @@ bool TriangleFilter<CubeTriangleSet>::sweep()
       for (size_t k = 0; k < cube.size() - j - i; k++)
       {
         if (!_set(i,j,k)) continue;
-        if (!conform(Triangle<3>{cube[i], cube[i+j],  cube[i+j+k]})) { //remove from conf_mem_list
+        if (!valid({{cube[i], cube[i+j],  cube[i+j+k]}})) { //remove from conf_mem_list
           changed = true;
           _set.reset(i,j,k);
         }
@@ -103,8 +151,8 @@ bool TriangleFilter<FundcubeTriangleSet>::sweep()
       for (vindex k = 0; k < cube.size() - j - i; k++)
       {
         if (!_set(i,j,k)) continue;
-        Triangle<3> triangle{_set.vertex(i), _set.vertex(i+j),  _set.vertex(i+j+k)};
-        if (!conform(triangle)) { //remove from conf_mem_list
+        Triangle<3> triangle{{_set.vertex(i), _set.vertex(i+j),  _set.vertex(i+j+k)}};
+        if (!valid(triangle)) { //remove from conf_mem_list
           changed = true;
           _set.reset(triangle);
         }
@@ -121,6 +169,30 @@ bool TriangleFilter<FundcubeTriangleSet>::sweep()
         } else {
           rename( (_tmpfile + ".partial").c_str(), _tmpfile.c_str());
           time_save += _interval;
+        }
+      }
+    }
+  }
+  return changed;
+}
+
+// do one iteration of cosy checking
+template<>
+bool TriangleFilter<SquareTriangleSet>::sweep()
+{
+  bool changed = 0;
+  const Square &square = _domain;
+  const SquareTriangleSet &set = _set;
+  #pragma omp parallel for schedule(dynamic) 
+  for (vindex i = 0; i < set.size(); i++) {
+    for (vindex j = 0; j < set.size(i); j++) {
+      for (vindex k = 0; k < set.size(i,j); k++)
+      {
+        if (!_set(i,j,k)) continue;
+        Triangle<2> triangle{{square[i], square[i+j], square[i+j+k]}};
+        if (!valid(triangle)) { //remove from conf_mem_list
+          changed = true;
+          _set.reset(i,j,k);
         }
       }
     }
@@ -152,3 +224,4 @@ inline bool TriangleFilter<T>::filter()
 
 template class TriangleFilter<CubeTriangleSet>;
 template class TriangleFilter<FundcubeTriangleSet>;
+template class TriangleFilter<SquareTriangleSet>;

@@ -8,6 +8,8 @@
 #include "timer.h"
 #include "tetrahedron.h"
 #include "set.h"
+#include "cubeset.h"
+#include "squareset.h"
 #include "filter.h"
 using namespace std;
 
@@ -42,18 +44,17 @@ int main(int argc, char *argv[]) {
 
 
   // Redirect output
-  ofstream outfile(logdir + filename + ".log", ios::app);
-  auto coutbuf = cout.rdbuf(outfile.rdbuf());
-
+  //ofstream outfile(logdir + filename + ".log", ios::app);
+  //auto coutbuf = cout.rdbuf(outfile.rdbuf());
   cout << endl << endl << "Gathering results for scale = " << scale << endl<<endl << endl;
   double init_start = omp_get_wtime();
-  FundcubeTriangleSet set(scale,true);
+  SquareTriangleSet set(scale,true);
   cout << "Initalisation took " << omp_get_wtime() - init_start << " seconds" << endl << endl;
 
-  TriangleFilter<FundcubeTriangleSet> filter(set, findir + filename +".fund" , tmpdir + filename + ".tmp.fund", 60*60);
+  TriangleFilter<SquareTriangleSet> filter(set, findir + filename +".fund" , tmpdir + filename + ".tmp.fund", 60*60);
   filter.filter();
 
   // remove objects
-  cout.rdbuf(coutbuf);
+  //cout.rdbuf(coutbuf);
   return 0;
 }

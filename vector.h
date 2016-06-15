@@ -75,8 +75,19 @@ struct Vector{
 // add specific three dimensional operators; for speed.
 
 // subtract two vectors for three dimensional operators
-inline Vector<3> operator -(const Vector<3>& lhs, const Vector<3> &rhs){ 
+inline Vector<3> operator -(const Vector<3>& lhs, const Vector<3> &rhs)
+{ 
   return {{lhs.entries[0] -rhs.entries[0], lhs.entries[1] - rhs.entries[1], lhs.entries[2] - rhs.entries[2]}};
+}
+inline Vector<2> operator -(const Vector<2>& lhs, const Vector<2> &rhs)
+{ 
+  return {{lhs.entries[0] -rhs.entries[0], lhs.entries[1] - rhs.entries[1]}};
+}
+
+// normal vector for a vector in 2D
+inline Vector<2> normal(const Vector<2> &v)
+{
+  return {{-v[1], v[0]}};
 }
 
 // add cross product for three dimensional vectors
@@ -93,3 +104,5 @@ inline void cross(const Vector<3>& lhs, const Vector<3> &rhs, Vector<3> &result)
 
 // dot product for two dimensional vectors
 inline int dot(const Vector<3> &lhs, const Vector<3> &rhs) { return lhs.entries[0] * rhs.entries[0] + lhs.entries[1] * rhs.entries[1] + lhs.entries[2] * rhs.entries[2]; }
+
+inline int dot(const Vector<2> &lhs, const Vector<2> &rhs) { return lhs.entries[0] * rhs.entries[0] + lhs.entries[1] * rhs.entries[1]; }

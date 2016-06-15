@@ -2,7 +2,9 @@
 #include <string>
 #include "triangle.h"
 #include "domain.h"
+#include "cube.h"
 #include "set.h"
+#include "cubeset.h"
 
 /**
  *  Base class for filtering
@@ -32,7 +34,7 @@ class TriangleFilter {
       _interval(interval) {}
 
     // define conformity checker for triangle given by vertices (a,b,c)
-    inline bool conform(const Triangle<3> &triangle) const;
+    inline bool valid(const Triangle<T::dim> &triangle) const;
 
     // define sweep method
     bool sweep();

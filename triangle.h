@@ -1,7 +1,6 @@
 #pragma once
 #include "vector.h"
-#include "polygon.h"
-
+#include "simplex.h"
 
 struct tindex 
 {
@@ -12,30 +11,30 @@ struct tindex
 };
 
 template <byte _dim>
-struct Triangle : public Polygon<_dim,3> 
+struct Triangle : public Simplex<_dim,3> 
 {
   // move constructors
-  inline Triangle(Polygon<_dim,3> &&other)  : Polygon<_dim,3>(other) {}
-  inline Triangle(Vector<_dim> &&a, Vector<_dim> &&b, Vector<_dim> &&c) : Polygon<_dim,3>({{a,b,c}}) {}
-  // copy constructor
-  inline Triangle(Vector<_dim> const &a, Vector<_dim> const &b, Vector<_dim> const &c) : Polygon<_dim,3>({{a,b,c}}) {}
+  inline Triangle(Simplex<_dim,3> &&other)  : Simplex<_dim,3>(move(other)) {}
 
-  inline Polygon<_dim,3> edges() const;
-  inline bool acute(const Polygon<_dim,3> &edges) const;
-  inline bool acute() const 
-  {
-    return acute(edges());
-  }
+  inline Simplex<_dim,3> edges() const;
+  inline bool static acute(const Simplex<_dim,3> &edges);
+  inline bool acute() const { return acute(edges()); }
 };
 
 template<>
-inline Polygon<3,3> Triangle<3>::edges() const
+inline Simplex<3,3> Triangle<3>::edges() const
 {
   return {{_vertices[1] - _vertices[0], _vertices[2] - _vertices[0], _vertices[2] - _vertices[1]}};
 }
 
-template <>
-inline bool Triangle<3>::acute(const Polygon<3,3> &edges) const
+template<>
+inline Simplex<2,3> Triangle<2>::edges() const
+{
+  return {{_vertices[1] - _vertices[0], _vertices[2] - _vertices[0], _vertices[2] - _vertices[1]}};
+}
+
+template <byte _dim>
+inline bool Triangle<_dim>::acute(const Simplex<_dim,3> &edges)
 {
   return (dot(edges[0], edges[1]) > 0 && dot(edges[1], edges[2]) > 0 && dot(edges[0], edges[2]) < 0);
 }
