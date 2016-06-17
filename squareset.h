@@ -1,35 +1,49 @@
 #pragma once
-#include "set.h"
 #include "square.h"
+#include "set.h"
 
-class SquareTriangleSet : public TriangleSet<SquareTriangleSet, Square> {
+class SquareTSet : public TFullSet<2> 
+{
   private:
-    // hold the size of the first dimension
-    vindex _size = 0;
+    // alias
+    using S= TFullSet<2>;
+    // Domain
+    Square _domain;
 
   public:
     // initalize cube triangle set
-    SquareTriangleSet(byte scale, bool set=false) :
-      TriangleSet<SquareTriangleSet, Square>(scale),
-      _size(scale * scale)
+    SquareTSet(byte scale, bool set=false) : _domain(scale)
     { 
-      this->_name = "SquareTriangleSet";
-      this->init(set); 
+      // axis length
+      S::init({(vindex) _domain.size(),(vindex) _domain.size(),(vindex) _domain.size()}, scale, set);
+      S::_name = "SquareTSet";
     }
 
-    // define axis sizes for this data type
-    inline vindex size() const { return _size; }
-    inline vindex size(vindex a) const { return _size - a; }
-    inline vindex size(vindex a, vindex b) const  { return _size - a - b; } 
+    // Expose base  definitions, i.e. implementations using the index
+    using S::contains;
+    using S::reset;
+    using S::set;
 
     // define vertex to index
     inline vindex index(const Vector<2> &v) const { return _domain.index(v); }
     inline tindex index(const Vector<2> &a, const Vector<2> &b, const Vector<2> &c) const { return {{index(a), index(b), index(c)}}; }
 
     // reset triangle
-    using TriangleSet<SquareTriangleSet, Square>::reset;
     inline void reset(const Triangle<2> &triang) { reset(index(triang[0]), index(triang[1]), index(triang[2])); }
 
-    // from file
-    static SquareTriangleSet * fromFile(const std::string &filename);
+    //does the set contain the triangle?
+    inline bool contains(const Vector<2> &a, const Vector<2> &b, const Vector<2> &c) const
+    {
+      // determine indices
+      tindex indices(index(a,b,c));
+      
+      // sort indices
+      sortindices(indices);
+
+      // return whether we got the indices
+      return S::contains(indices);
+    }
+
+    // return domain
+    const Square &domain() const { return _domain; }
 };

@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
     printf("(%d,%d)", omp_get_thread_num(),omp_get_num_threads());
   printf("\n");
    
-  
+  printf("Header tri_mem_list:%lu\n", sizeof(tri_mem_list));
   for (int dim = loop_start;dim < loop_end + 1; dim++) 
   {
       
@@ -153,6 +153,7 @@ int main(int argc, char *argv[]) {
       printf("Initalizing new data-set.\n");
       face_list = data_list_init(i, loop_type, MEM_LIST_TRUE);
     }    
+    data_list_to_file(&face_list, "data/tst123", MEM_LIST_SAVE_CLEAN);
     time_end   = omp_get_wtime();
     printf("Took %f seconds to init the memory list.\n", time_end - time_start);
     time_start = omp_get_wtime();

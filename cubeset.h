@@ -1,50 +1,54 @@
 #pragma once
 #include "set.h"
-class CubeTriangleSet : public TriangleSet<CubeTriangleSet, Cube> {
+#include "cube.h"
+#include "squareset.h"
+// S is the implementor of the set
+template <typename S>
+class CubeTSet : public S
+{
   private:
-    // hold the size of the first dimension
-    vindex _size = 0;
+    // Cube domain
+    Cube _domain;
   public:
-    // initalize cube triangle set
-    CubeTriangleSet(byte scale, bool set=false) :
-      TriangleSet<CubeTriangleSet, Cube>(scale),
-      _size(scale * scale * scale)
-    { 
-      this->_name = "CubeTriangleSet";
-      this->init(set); 
-    }
 
-    // define axis sizes for this data type
-    inline vindex size() const { return _size; }
-    inline vindex size(vindex a) const { return _size - a; }
-    inline vindex size(vindex a, vindex b) const  { return _size - a - b; } 
+    // Constructor from file
+    CubeTSet(std::string filename);
+
+    // Initalize cube triangle set
+    CubeTSet(byte scale, bool set=false) : _domain(scale)
+    { 
+      // axis length
+      this->init({_domain.size(), _domain.size(), _domain.size()}, scale, set);
+      this->_name = "CubeTSet";
+    }
 
     // define vertex to index
     inline vindex index(const Vector<3> &v) const { return _domain.index(v); }
     inline tindex index(const Vector<3> &a, const Vector<3> &b, const Vector<3> &c) const { return {{index(a), index(b), index(c)}}; }
 
-    // reset triangle
-    using TriangleSet<CubeTriangleSet, Cube>::reset;
-    inline void reset(const Triangle<3> &triang) { reset(index(triang[0]), index(triang[1]), index(triang[2])); }
+    // turns index to a vertex
+    inline const Vector<3> &vertex(vindex a) const { return _domain[a]; }
 
-    // from file
-    static CubeTriangleSet * fromFile(const std::string &filename);
+    // reset triangle
+    inline void reset(const Triangle<3> &triang) { reset(index(triang[0]), index(triang[1]), index(triang[2])); }
 };
 
 // A memory set containing triangles for the cube, this filters
 // out symmetries. So for each triangle, only one of its symmetry class is stored
-class FundcubeTriangleSet : public TriangleSet<FundcubeTriangleSet, Cube> {
+template <typename S>
+class FCubeTSet : public S {
   private:
+    // Cube domain
+    Cube _domain;
+
     // fundamental domain
     Fundcube _fund;
 
-    // size cube
+    // sizes domains
     vindex _cubesize;
-
-    // size fund
     vindex _fundsize;
 
-    // Fundcube vertices: fund idx -> cube pt
+    // FCube vertices: fund idx -> cube pt
     vector<Vector<3>> _vertices;
 
     // index array: cube idx -> fund idx
@@ -55,18 +59,24 @@ class FundcubeTriangleSet : public TriangleSet<FundcubeTriangleSet, Cube> {
 
     // converts : cube idx + sym -> fund_idx
     vector<vindex> _sympt;
+
+    // inits all the above variables to the correct values
+    void init(byte scale);
+
+    // legacy load
+    void legacyload(const std::string &filename);
   public:
+    const static int dim = 3;
 
-    // initalize cube triangle set
-    FundcubeTriangleSet(byte scale, bool set=false);
+    // from file
+    FCubeTSet(const std::string &filename, bool legacy=false);
 
-    // define axis sizes for this data type
-    inline vindex size() const { return _fundsize; }
-    inline vindex size(vindex a) const { return _cubesize - a; }
-    inline vindex size(vindex a, vindex b) const  { return _cubesize - a - b; } 
+    // initalize fund cube triangle set
+    FCubeTSet(byte scale, bool set=false);
 
     // define vertex to (fund) index
     inline vindex index(const Vector<3> &v) const { return _index[_domain.index(v)]; }
+
     // define triangle to (fund) indices
     inline tindex index(const Vector<3> &a, const Vector<3> &b, const Vector<3> &c) const 
     {
@@ -76,7 +86,11 @@ class FundcubeTriangleSet : public TriangleSet<FundcubeTriangleSet, Cube> {
                _sympt[_domain.index(c) + _cubesize*sym]}};
     }
 
-    using TriangleSet<FundcubeTriangleSet, Cube>::reset;
+    using S::reset;
+    using S::sortindices;
+    using S::contains;
+    using S::set;
+
 
     // delete all of its symmetries as well
     inline void reset(const Triangle<3> &triangle) 
@@ -94,12 +108,36 @@ class FundcubeTriangleSet : public TriangleSet<FundcubeTriangleSet, Cube> {
         }
     }
 
+    // returns whether it contains all the facets of tetrahedrons given by triangle and apex. Does not check triangle itself
+    inline bool contains(const Triangle<3> &triang, const Vector<3> &apex) const
+    {
+      return (contains(triang[0], triang[1], apex) &&
+              contains(triang[0], triang[2], apex) &&
+              contains(triang[1], triang[2], apex));
+    }
+
+    // contains triangle determined by it's geometrical vertices
+    inline bool contains(const Vector<3> &a, const Vector<3> &b, const Vector<3> &c) const
+    {
+      // determine indices
+      tindex indices(index(a,b,c));
+      
+      // sort indices
+      sortindices(indices);
+
+      // return whether we got the indices
+      return contains(indices);
+    }
+
+    // contains triangl
+    inline bool contains(const Triangle<3> tri) const { return contains(tri[0], tri[1], tri[2]); }
+
     // turns (fund) index to a vertex
     inline const Vector<3> &vertex(vindex a) const { return _vertices[a]; }
 
     // define the fund
     inline const Fundcube &fund() const { return _fund; }
 
-    // from file
-    static FundcubeTriangleSet * fromFile(const std::string &filename);
+    // define the fund
+    inline const Cube &domain() const { return _domain; }
 };

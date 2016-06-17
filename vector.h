@@ -70,6 +70,16 @@ struct Vector{
       return result;
     }
 
+    // lift this vector, fill in axis with newval
+    Vector<_dim + 1> lift(byte axis, int newval) const {
+      Vector<_dim +1> result;
+      result[axis] = newval;
+      byte c = 0;
+      for (byte i = 0; i < _dim + 1; i++) 
+        if (i != axis)
+          result[i] = entries[c++];
+      return result;
+    }
 };
 
 // add specific three dimensional operators; for speed.

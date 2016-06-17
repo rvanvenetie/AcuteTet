@@ -45,18 +45,19 @@ inline bool TriangleFilter<T>::valid(const Triangle<T::dim> &triangle) const
    * In case we work store the acute indices, we need to locally store
    * if we found above and below. As we later put them into the data struct.
    */
-  for (size_t i = 0; i < _domain.size(); i++)
+  // count down, for higher performance
+  for (int i = _domain.size() - 1; i >= 0; i--)
   {
     int dotprod = dot(_domain[i], normal);  //Calculate angle between normal and vector from plane to cube_pt
     //Check if current point lies on side of the triangle which isn't sharp yet and check if point lies in the
     //prism of possible sharp tetrahedron
     if (((dotprod > d && !acute_above) ||  //Dotprod > tri_d implies that the point lies "above" the triangle (same side as normal) 
           (dotprod < d && !acute_below)) && //Check if point lies in the prism
-           dot(_domain[i], edge_normals[0]) < side_d[0] &&
-           dot(_domain[i], edge_normals[1]) < side_d[1] &&
-           dot(_domain[i], edge_normals[2]) < side_d[2] && //Dotprod < tri_d implies lies below
-           Tetrahedron::acute(triangle, _domain[i]) &&
-          _set.contains(triangle, _domain[i])) // all the facets are in the set
+           (dot(_domain[i], edge_normals[0]) < side_d[0]) &&
+           (dot(_domain[i], edge_normals[1]) < side_d[1]) &&
+           (dot(_domain[i], edge_normals[2]) < side_d[2]) && //Dotprod < tri_d implies lies below
+           (Tetrahedron::acute(triangle, _domain[i])) &&
+           (_set.contains(triangle, _domain[i]))) // all the facets are in the set
     { //Passed all tests, we have found a correct tetrahedron on this side.
       if (dotprod > d) 
         acute_above = true;
@@ -69,7 +70,7 @@ inline bool TriangleFilter<T>::valid(const Triangle<T::dim> &triangle) const
   return false;
 }
 template<>
-inline bool TriangleFilter<SquareTriangleSet>::valid(const Triangle<2> &triangle) const
+inline bool TriangleFilter<SquareTSet>::valid(const Triangle<2> &triangle) const
 {
   Simplex<2,3> edges = triangle.edges();
   if (!Triangle<2>::acute(edges)) return false;
@@ -116,39 +117,17 @@ inline bool TriangleFilter<SquareTriangleSet>::valid(const Triangle<2> &triangle
 
 
 // do one iteration of conform checking
-template<>
-bool TriangleFilter<CubeTriangleSet>::sweep() 
+template<typename T>
+bool TriangleFilter<T>::sweep()
 {
   bool changed = 0;
-  const Cube &cube = _domain;
-  for (size_t i = 0; i < cube.size(); i++) 
-    for (size_t j = 0; j < cube.size() - i; j++)
-      for (size_t k = 0; k < cube.size() - j - i; k++)
-      {
-        if (!_set(i,j,k)) continue;
-        if (!valid({{cube[i], cube[i+j],  cube[i+j+k]}})) { //remove from conf_mem_list
-          changed = true;
-          _set.reset(i,j,k);
-        }
-
-      }
-  return changed;
-}
-
-// do one iteration of conform checking
-template<>
-bool TriangleFilter<FundcubeTriangleSet>::sweep()
-{
-  bool changed = 0;
-  const Cube &cube = _domain;
-  const Fundcube &fund = _set.fund();
   double time_start = omp_get_wtime(), time_save = _interval;
   
 
-  #pragma omp parallel for schedule(dynamic) 
-  for (vindex i = 0; i < fund.size(); i++) {
-    for (vindex j = 0; j < cube.size() - i; j++) {
-      for (vindex k = 0; k < cube.size() - j - i; k++)
+  //#pragma omp parallel for schedule(dynamic) 
+  for (vindex i = 0; i < _set.size(); i++) {
+    for (vindex j = 0; j < _set.size(i); j++) {
+      for (vindex k = 0; k < _set.size(i,j); k++)
       {
         if (!_set(i,j,k)) continue;
         Triangle<3> triangle{{_set.vertex(i), _set.vertex(i+j),  _set.vertex(i+j+k)}};
@@ -163,7 +142,7 @@ bool TriangleFilter<FundcubeTriangleSet>::sweep()
       {  
         cout << "Saving: ";
         _set.print();
-        if(!_set.toFile(_tmpfile + ".partial", TriangleSet<FundcubeTriangleSet, Cube>::SPARSE)) {
+        if(!_set.toFile(_tmpfile + ".partial", true)) {
           cout << "Failed to save, try again at half the interval" << endl;
           time_save += _interval / 2;
         } else {
@@ -178,11 +157,11 @@ bool TriangleFilter<FundcubeTriangleSet>::sweep()
 
 // do one iteration of cosy checking
 template<>
-bool TriangleFilter<SquareTriangleSet>::sweep()
+bool TriangleFilter<SquareTSet>::sweep()
 {
   bool changed = 0;
   const Square &square = _domain;
-  const SquareTriangleSet &set = _set;
+  const auto &set = _set;
   #pragma omp parallel for schedule(dynamic) 
   for (vindex i = 0; i < set.size(); i++) {
     for (vindex j = 0; j < set.size(i); j++) {
@@ -203,7 +182,7 @@ bool TriangleFilter<SquareTriangleSet>::sweep()
 template<typename T>
 inline bool TriangleFilter<T>::filter()
 {
-  cout << "Filtering a triangle set of scale " << (int) _domain._scale << endl << endl;
+  cout << "Filtering a triangle set of scale " << (int) _domain._scale << " (p=" << _domain._scale - 1 << ")" << endl << endl;
   double ftimer = omp_get_wtime();
   size_t number = 0;
   bool changed = true;
@@ -211,6 +190,8 @@ inline bool TriangleFilter<T>::filter()
   {
     number = _set.print();
     if (number == 0) break;
+    auto bdrtriangles = boundaryfacets();
+    bdrtriangles.print();
     cout << endl;
     double timer = omp_get_wtime();
     changed = sweep();
@@ -222,6 +203,24 @@ inline bool TriangleFilter<T>::filter()
   return (number > 0);
 }
 
-template class TriangleFilter<CubeTriangleSet>;
-template class TriangleFilter<FundcubeTriangleSet>;
-template class TriangleFilter<SquareTriangleSet>;
+template<typename T>
+SquareTSet TriangleFilter<T>::boundaryfacets(byte axis, byte pt) const
+{
+  Square square(_set.scale());
+  SquareTSet result(_set.scale(), false);
+
+  // loop over every triangle in this square
+  for(vindex i = 0; i < square.size(); i++)
+    for (vindex j =i+1; j < square.size(); j++) 
+      for(vindex k = j+1; k < square.size(); k++)
+      {
+        // we must now lift every point of the 2D triangle to the 3D triangle
+        if (_set.contains(square[i].lift(axis, pt), square[j].lift(axis,pt), square[k].lift(axis,pt))) {
+          //Triangle<2> {square[i], square[j],square[k]}.print();
+          result.set(i, j-i, k-j);
+        }
+      }
+  return result;
+}
+
+template class TriangleFilter<FCubeTSet<TFullSet<3>>>;

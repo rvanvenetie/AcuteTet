@@ -2,36 +2,41 @@
 #include <limits>
 #include "cubeset.h"
 
-CubeTriangleSet * CubeTriangleSet::fromFile(const std::string &filename) 
+// S is the implementor of the set
+#define tempS template <typename S>
+/**
+ *  Definite CubeTSet
+ */
+// Constructor from file
+tempS CubeTSet<S>::CubeTSet(std::string filename) : _domain(0)
 {
   std::string classname;
   int scale;
 
   ifstream file(filename, ios::binary);
-  if (!file.good()) return nullptr;
+  if (!file.good()) throw std::runtime_error("Failed to load");
   file >> classname >>  scale;
   // read until end of line
   file.ignore(123456, '\n');
-  if (classname != "CubeTriangleSet") return nullptr;
-  CubeTriangleSet * result = new CubeTriangleSet(scale,false);
-  if (result->TriangleSet<CubeTriangleSet, Cube>::fromFile(file))
-    return result;
-  else
-    return nullptr;
+  if (classname != "CubeTSet") throw std::runtime_error("Failed to load");
+  _domain = Cube(scale);
+  this->init({_domain.size(), _domain.size(), _domain.size()});
+  this->_name = "CubeTSet";
 }
 
-FundcubeTriangleSet::FundcubeTriangleSet(byte scale, bool set) :
-      TriangleSet<FundcubeTriangleSet, Cube>(scale),
-      _fund(scale),
-      _vertices(_domain.size()),
-      _index(_domain.size(),numeric_limits<vindex>::max()),
-      _symindex(_domain.size()),
-      _sympt(_domain.size()*48)
-{ 
+/**
+ *  Define FCubeTSet
+ */
+// this initalizes all the variables
+tempS void FCubeTSet<S>::init(byte scale) 
+{
   _cubesize = _domain.size();
   _fundsize = _fund.size();
-  this->_name = "FundcubeTriangleSet";
-  this->init(set); 
+  _vertices.reserve(_cubesize);
+  _index.assign(_cubesize, numeric_limits<vindex>::max());
+  _symindex.reserve(_cubesize);
+  _sympt.reserve(_cubesize * 48);
+  this->_name = "FCubeTSet";
 
   int cnt = 0;
   // create index array, first the fundamental domain
@@ -64,20 +69,74 @@ FundcubeTriangleSet::FundcubeTriangleSet(byte scale, bool set) :
     }
 }
 
-FundcubeTriangleSet * FundcubeTriangleSet::fromFile(const std::string &filename) 
+tempS FCubeTSet<S>::FCubeTSet(byte scale, bool set) : _domain(scale), _fund(scale)
+{ 
+  init(scale);
+  S::init({{(vindex)_fundsize, (vindex) _cubesize, _cubesize}}, scale, set);
+}
+
+tempS FCubeTSet<S>::FCubeTSet(const std::string &filename, bool legacy) :
+  _domain(0), _fund(0)
 {
+  if (legacy) { legacyload(filename); return; }
+
   std::string classname;
   int scale;
 
   ifstream file(filename, ios::binary);
-  if (!file.good()) return nullptr;
+  if (!file.good()) throw std::runtime_error("Failed loading");
   file >> classname >> scale;
   // read until end of line
   file.ignore(123456, '\n');
-  if (classname != "FundcubeTriangleSet") return nullptr;
-  FundcubeTriangleSet * result = new FundcubeTriangleSet(scale,false);
-  if (result->TriangleSet<FundcubeTriangleSet, Cube>::fromFile(file))
-    return result;
-  else
-    return nullptr;
+  if (classname != "FCubeTSet") throw std::runtime_error("Failed loading");
+  _domain = Cube(scale);
+  _fund   = Fundcube(scale);
+  // init the values
+  init(scale); 
+  // load from file
+  S::init(file, {_fundsize, _cubesize, _cubesize}, scale); 
+  S::_name = "FCubeTSet";
 }
+
+
+tempS void FCubeTSet<S>::legacyload(const std::string &filename)
+{
+  ifstream file(filename, ios::binary);
+  int scale;
+  if (!file.good()) throw std::runtime_error("Failed to load");
+  char buffer[64];
+  file.read (buffer,64);
+  scale = buffer[56]+1;
+
+  _domain = Cube(scale);
+  _fund   = Fundcube(scale);
+  // init the values
+  init(scale); 
+  // create the axis
+  S::init( {_fundsize, _cubesize, _cubesize},scale, false); 
+
+  byte * tmp = (byte *) calloc(S::size(0), sizeof(byte));
+  size_t cnt = 0;
+  for (size_t i = 0; i < S::size(); i++) {
+    for (int j = 0; j < S::size(i)-1; j++) {
+      byte last;
+      file >> last;
+      if (last == 1)
+      {
+        file.read((char *) tmp, (S::size(i,j)-2)/8 + 1);
+        if (!file.good()) throw std::runtime_error("Failed to load legacy");
+        for (int k=0; k < S::size(i,j)-2; k++) {
+          if (tmp[k/8] & (1 << (k % 8))) {
+            cnt++;
+            S::set(i,j+1,k+1);
+          }
+        }
+      }
+    }
+  }
+  cout << "Loaded legacy for scale " << scale << " (p= " << scale - 1 << "). Amount of tri: " << cnt << endl << endl;
+  free(tmp);
+  S::_name = "FCubeTSet";
+}
+
+template class FCubeTSet<TFullSet<3>>;
