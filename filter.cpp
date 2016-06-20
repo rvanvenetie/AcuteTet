@@ -201,7 +201,7 @@ inline bool TriangleFilter<T>::filter()
   }
   cout << endl << endl <<  "Done filtering. Took " << omp_get_wtime() - ftimer << " seconds." << endl;
   _set.print();
-  if (!_filename.empty()) _set.toFile(_filename);
+  if (!_filename.empty()) _set.toFile(_filename, true);
   return (number > 0);
 }
 
