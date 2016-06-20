@@ -112,7 +112,7 @@ tempD size_t TFullSet<D>::count(vindex i, vindex j) const
 tempD bool TFullSet<D>::empty(vindex i, vindex j) const
 {
   for (vindex k =0; k < (_size[2]-i-j) / 8 + 1; k++)
-    if(std::bitset<8>(_data[i][j][k]).count()) return false;
+    if(_data[i][j][k]) return false;
   return true;
 }
 
@@ -131,7 +131,7 @@ tempD bool TFullSet<D>::toFile(const std::string &filename, bool sparse) const
   //Here c indicates whether the row is saved (0 can occur if MEM_LIST_SAVE_CLEAN and row is empty)
   for (size_t i = 0;i < size(); i++) {
     for (size_t j =0; j < size(i); j++)  {
-      if (!sparse || (sparse && empty(i,j))) 
+      if (!sparse || (sparse && !empty(i,j))) 
       {
         file << (byte) 1;
         file.write((const char *) _data[i][j],size(i,j)/8 + 1);

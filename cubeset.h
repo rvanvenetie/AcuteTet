@@ -18,8 +18,8 @@ class CubeTSet : public S
     CubeTSet(byte scale, bool set=false) : _domain(scale)
     { 
       // axis length
-      this->init({_domain.size(), _domain.size(), _domain.size()}, scale, set);
-      this->_name = "CubeTSet";
+      S::init({_domain.size(), _domain.size(), _domain.size()}, scale, set);
+      S::_name = "CubeTSet";
     }
 
     // define vertex to index

@@ -190,9 +190,11 @@ inline bool TriangleFilter<T>::filter()
   {
     number = _set.print();
     if (number == 0) break;
+    /*
     auto bdrtriangles = boundaryfacets();
     bdrtriangles.print();
     cout << endl;
+    */
     double timer = omp_get_wtime();
     changed = sweep();
     cout << "Sweep took " << omp_get_wtime() - timer << " seconds." <<  endl;

@@ -31,14 +31,13 @@ int main(int argc, char *argv[]) {
     tmpdir = argv[2];
     findir = argv[3];
   } 
-  string loadfilename;
+  string loadfilename = "";
   int scale = 0;
   if (isdigit(argv[1][0]))
     scale = atoi(argv[1]);
   else
     loadfilename = argv[1];
 
-  string filename = "fund_" + string(argv[1]);
 
 
   #pragma omp parallel for schedule(static,1)
@@ -50,26 +49,47 @@ int main(int argc, char *argv[]) {
   mkdir(tmpdir.c_str(), 0777 );
   mkdir(findir.c_str() , 0777);
 
+  FCubeTSet<TFullSet<3>> *set = nullptr;
+  // if load from file, do that first
+  if (!loadfilename.empty()) 
+  {
+    cout << endl << endl << "Loading data file: " << loadfilename << endl <<endl;
+    try {
+      set = new FCubeTSet<TFullSet<3>>(loadfilename,false);
+    } catch( std::runtime_error e) {
+      cerr << "Error: " << e.what() << endl;
+      return 0;
+    }
+    scale = set->_scale;
+  }
 
   // Redirect output
-  //ofstream outfile(logdir + filename + ".log", ios::app);
-  //auto coutbuf = cout.rdbuf(outfile.rdbuf());
-  FCubeTSet<TFullSet<3>> *set;
-  if  (scale) {
+  string filename = "fund_" + string(to_string(scale));
+  ofstream outfile(logdir + filename + ".log", ios::app);
+  auto coutbuf = cout.rdbuf(outfile.rdbuf());
+
+  if  (!set) {
     cout << endl << endl << "Gathering results for scale = " << scale << endl<<endl << endl;
     double init_start = omp_get_wtime();
     set = new FCubeTSet<TFullSet<3>>(scale,true);
     cout << "Initalisation took " << omp_get_wtime() - init_start << " seconds" << endl << endl;
   } else {
-    cout << endl << endl << "Loading data file: " << loadfilename << endl <<endl;
-    set = new FCubeTSet<TFullSet<3>>(loadfilename, true);
+    cout << endl << endl << endl << "Loaded data from file: " << loadfilename << endl;
+    cout << "Continue with data set for scale = " << scale << endl << endl;
   }
 
   TriangleFilter<FCubeTSet<TFullSet<3>>> filter(*set, findir + filename +".fund" , tmpdir + filename + ".tmp.fund", 60*60);
   filter.filter();
+  /*
+  set->print();
+  set->toFile("/tmp/bla1.fund",true);
+  filter.sweep();
+  set->print();
+  set->toFile("/tmp/bla2.fund",true);
+  */
 
   // remove objects
   delete set;
-  //cout.rdbuf(coutbuf);
+  cout.rdbuf(coutbuf);
   return 0;
 }

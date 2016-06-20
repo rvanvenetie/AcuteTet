@@ -14,14 +14,14 @@ tempS CubeTSet<S>::CubeTSet(std::string filename) : _domain(0)
   int scale;
 
   ifstream file(filename, ios::binary);
-  if (!file.good()) throw std::runtime_error("Failed to load");
+  if (!file.good()) throw std::runtime_error("Failed to open file");
   file >> classname >>  scale;
   // read until end of line
   file.ignore(123456, '\n');
-  if (classname != "CubeTSet") throw std::runtime_error("Failed to load");
+  if (classname != "CubeTSet") throw std::runtime_error("File contains invalid class");
   _domain = Cube(scale);
-  this->init({_domain.size(), _domain.size(), _domain.size()});
-  this->_name = "CubeTSet";
+  S::init({_domain.size(), _domain.size(), _domain.size()});
+  S::_name = "CubeTSet";
 }
 
 /**
@@ -36,7 +36,6 @@ tempS void FCubeTSet<S>::init(byte scale)
   _index.assign(_cubesize, numeric_limits<vindex>::max());
   _symindex.reserve(_cubesize);
   _sympt.reserve(_cubesize * 48);
-  this->_name = "FCubeTSet";
 
   int cnt = 0;
   // create index array, first the fundamental domain
@@ -73,6 +72,7 @@ tempS FCubeTSet<S>::FCubeTSet(byte scale, bool set) : _domain(scale), _fund(scal
 { 
   init(scale);
   S::init({{(vindex)_fundsize, (vindex) _cubesize, _cubesize}}, scale, set);
+  S::_name = "FCubeTSet";
 }
 
 tempS FCubeTSet<S>::FCubeTSet(const std::string &filename, bool legacy) :
@@ -84,11 +84,12 @@ tempS FCubeTSet<S>::FCubeTSet(const std::string &filename, bool legacy) :
   int scale;
 
   ifstream file(filename, ios::binary);
-  if (!file.good()) throw std::runtime_error("Failed loading");
+  if (!file.good()) throw std::runtime_error("Failed opening file");
   file >> classname >> scale;
   // read until end of line
   file.ignore(123456, '\n');
-  if (classname != "FCubeTSet") throw std::runtime_error("Failed loading");
+  if (classname != "FCubeTSet" && classname != "FundcubeTriangleSet")
+    throw std::runtime_error("File contains wrong classtype");
   _domain = Cube(scale);
   _fund   = Fundcube(scale);
   // init the values
