@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <fstream>
 #include <limits>
 #include "cubeset.h"
