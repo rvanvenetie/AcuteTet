@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <iostream>
 #include <sys/stat.h>
 #include <fstream>
@@ -52,8 +53,10 @@ int main(int argc, char *argv[]) {
   FCubeTSet<TFullSet<3>> *set = nullptr;
   // if load from file, do that first
   if (!loadfilename.empty()) 
+
   {
     cout << endl << endl << "Loading data file: " << loadfilename << endl <<endl;
+
     try {
       set = new FCubeTSet<TFullSet<3>>(loadfilename,false);
     } catch( std::runtime_error e) {

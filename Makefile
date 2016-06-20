@@ -3,7 +3,7 @@ CXX      = g++
 ifeq ($(UNAME), raymond)
 CXXFLAGS = -g  -march=native -fopenmp -std=c++14 -Wall -Ofast    -Winline
 else
-CXXFLAGS = -g  -march=haswell -fopenmp -std=c++14 -Wall -Ofast    -Winline
+CXXFLAGS = -g -march=haswell  -fopenmp -std=c++14 -Wall -Ofast    -Winline
 endif
 LDFLAGS  =
 

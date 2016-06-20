@@ -124,7 +124,7 @@ bool TriangleFilter<T>::sweep()
   double time_start = omp_get_wtime(), time_save = _interval;
   
 
-  //#pragma omp parallel for schedule(dynamic) 
+  #pragma omp parallel for schedule(dynamic) 
   for (vindex i = 0; i < _set.size(); i++) {
     for (vindex j = 0; j < _set.size(i); j++) {
       for (vindex k = 0; k < _set.size(i,j); k++)

@@ -17,7 +17,7 @@ class TriangleFilter {
     T &_set;
     
     // reference to the domain
-    const decltype(((T*) nullptr)->domain()) &_domain;
+    decltype(((T*) nullptr)->domain()) &_domain;
 
     // store file name
     std::string _filename;
