@@ -1,5 +1,5 @@
-#include <omp.h>
 #include <cstdio>
+#include "parallel.h"
 #include "vector.h"
 #include "filter.h"
 #include "domain.h"
@@ -91,20 +91,20 @@ inline bool TriangleFilter<SquareTSet>::valid(const Triangle<2> &triangle) const
   for (size_t e = 0; e < 3; e++)
     if (orientation[e] > 0) {
       side_d[e] = -side_d[e];
-      edge_normals[e] = Vector<2> {0,0} -edge_normals[e];
+      edge_normals[e] = Vector<2> {{0,0}} -edge_normals[e];
     }
 
   for (size_t e = 0; e < 3; e++) { // for each edge
     bool acute = false;
     Simplex<2,2> edge;
-    if      (e == 0) edge = {triangle[0], triangle[1]};
-    else if (e == 1) edge = {triangle[0], triangle[2]};
-    else if (e == 2) edge = {triangle[1], triangle[2]};
+    if      (e == 0) edge = {{triangle[0], triangle[1]}};
+    else if (e == 1) edge = {{triangle[0], triangle[2]}};
+    else if (e == 2) edge = {{triangle[1], triangle[2]}};
     if  (_domain.boundary(edge)) continue;
 
     for (size_t i = 0; i < _domain.size(); i++) // for each point 
       if (dot(_domain[i], edge_normals[e]) > side_d[e] && // correct side 
-          Triangle<2> {{edge[0], edge[1], _domain[i]}}.acute() && // acute
+          Triangle<2>{{edge[0], edge[1], _domain[i]}}.acute() && // acute
           _set.contains(edge[0], edge[1], _domain[i]))
       {
         acute = true;
@@ -123,8 +123,9 @@ bool TriangleFilter<T>::sweep()
   bool changed = 0;
   double time_start = omp_get_wtime(), time_save = _interval;
   
-
+#ifdef USE_OMP
   #pragma omp parallel for schedule(dynamic) 
+#endif
   for (vindex i = 0; i < _set.size(); i++) {
     for (vindex j = 0; j < _set.size(i); j++) {
       for (vindex k = 0; k < _set.size(i,j); k++)
@@ -162,7 +163,9 @@ bool TriangleFilter<SquareTSet>::sweep()
   bool changed = 0;
   const Square &square = _domain;
   const auto &set = _set;
+#ifdef USE_OMP
   #pragma omp parallel for schedule(dynamic) 
+#endif
   for (vindex i = 0; i < set.size(); i++) {
     for (vindex j = 0; j < set.size(i); j++) {
       for (vindex k = 0; k < set.size(i,j); k++)
@@ -225,4 +228,5 @@ SquareTSet TriangleFilter<T>::boundaryfacets(byte axis, byte pt) const
   return result;
 }
 
-template class TriangleFilter<FCubeTSet<TFullSet<3>>>;
+template class TriangleFilter<FCubeTSetFull>;
+template class TriangleFilter<FCubeTSetSparse>;

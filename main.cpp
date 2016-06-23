@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <vector>
-#include <omp.h>
+#include "parallel.h"
 #include "vector.h"
 #include "domain.h"
 #include "timer.h"
@@ -13,91 +13,131 @@
 #include "cubeset.h"
 #include "squareset.h"
 #include "filter.h"
+
 using namespace std;
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
+  int scale;
+  string tmpdir; //= "/local/rvveneti/";
+  string findir; //= "/var/scratch/rvveneti/";
+  string logdir; //= "log/";
+  string file;
+  string domain;
+  bool sparse=false;
+
+
   // option description
   po::options_description desc("Options");
   desc.add_options()
-    ("help", "display this message")
-    ("scale", po::value<int>(), "set scale");
+    ("help,h", "display this message")
+    ("scale,s", po::value<int>(&scale)->default_value(0), "set scale")
+    ("domain,d", po::value<std::string>(&domain)->default_value("fund"), "domain")
+    ("sparse,sp", "use sparse instead of full storage")
+    ("file,f",  po::value<std::string>(&file)->default_value(""), "load from this file")
+    ("legacy", "load using old file format")
+    ("tdir",  po::value<std::string>(&tmpdir)->default_value("/local/rvveneti/"),
+                "directory for temporary files")
+    ("fdir",  po::value<std::string>(&findir)->default_value("/var/scratch/rvveneti/"),
+               "directory for the final files")
+    ("ldir",  po::value<std::string>(&logdir)->default_value("log/"),
+                "directory for log files");
+
+
+  po::positional_options_description p;
+  p.add("scale", 1);
 
   // store the options
   po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc),vm);
+  po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
   po::notify(vm);
 
-  return 0;
 
-  std::string tmpdir = "/local/rvveneti/";
-  std::string findir = "/var/scratch/rvveneti/";
-  std::string logdir = "log/";
-  cout << argc << endl;
-  if (!(argc == 4 || argc == 2))
-  {
-    cout << "Illegal parameters. " << endl;
-    cout << "\t <scale>" << endl;
-    cout << "\t <filename>" << endl;
-    cout << "\t <scale> <tmpdir> <finaldir>" << endl;
-    cout << "\t <filename> <tmpdir> <finaldir>" << endl;
-    return 0;
+  // check if help is set
+  if (vm.count("help")) {
+    cout << desc<< endl;
+    return 1;
   }
-  if (argc == 4) {
-    tmpdir = argv[2];
-    findir = argv[3];
-  } 
-  string loadfilename = "";
-  int scale = 0;
-  if (isdigit(argv[1][0]))
-    scale = atoi(argv[1]);
-  else
-    loadfilename = argv[1];
 
 
+  if (scale ==0 && file.empty())
+  {
+    cout << desc << endl;
+    cout << "Specify the scale for which we should gather or the filename from which we should continue" << endl;
+    return 1;
+  }
 
+  // check if we should use sparse dataset instead
+  sparse = (vm.count("sparse") > 0);
+
+  // print settings
+  cout << scale << endl << sparse << endl << file << endl << tmpdir << endl << findir << endl << logdir << endl << endl;
+
+#ifdef USE_OMP
   #pragma omp parallel for schedule(static,1)
   for (int i = 0; i < 70; i++)
     printf("(%d,%d)", omp_get_thread_num(),omp_get_num_threads());
   cout << endl;
+#endif
 
   mkdir(logdir.c_str(), 0777);
   mkdir(tmpdir.c_str(), 0777 );
-  mkdir(findir.c_str() , 0777);
+  mkdir(findir.c_str(), 0777);
 
-  FCubeTSet<TFullSet<3>> *set = nullptr;
+
+  FCubeTSetFull *FCubeFull = nullptr;
+  FCubeTSetSparse *FCubeSparse = nullptr;
+
   // if load from file, do that first
-  if (!loadfilename.empty()) 
-
+  if (!file.empty()) 
   {
-    cout << endl << endl << "Loading data file: " << loadfilename << endl <<endl;
-
+    cout << endl << endl << "Loading data file: " << file << endl <<endl;
     try {
-      set = new FCubeTSet<TFullSet<3>>(loadfilename,false);
+      if (sparse)
+        FCubeSparse = new FCubeTSetSparse(file,vm.count("legacy"));
+      else
+        FCubeFull = new FCubeTSetFull(file,vm.count("legacy"));
     } catch( std::runtime_error e) {
       cerr << "Error: " << e.what() << endl;
       return 0;
     }
-    scale = set->_scale;
+    scale = FCubeFull ? FCubeFull->scale() : FCubeSparse->scale();
   }
 
   // Redirect output
-  string filename = "fund_" + string(to_string(scale));
+  string filename = "";
+  if (sparse)
+    filename = to_string(scale) + ".FCubeTSetSparse";
+  else
+    filename = to_string(scale) + ".FCubeTSetFull";
+
   ofstream outfile(logdir + filename + ".log", ios::app);
   auto coutbuf = cout.rdbuf(outfile.rdbuf());
 
-  if  (!set) {
+  if  (file.empty()) {
     cout << endl << endl << "Gathering results for scale = " << scale << endl<<endl << endl;
     double init_start = omp_get_wtime();
-    set = new FCubeTSet<TFullSet<3>>(scale,true);
+    if (vm.count("sparse"))
+      FCubeSparse = new FCubeTSetSparse(scale,true);
+    else
+      FCubeFull = new FCubeTSetFull(scale,true);
+
     cout << "Initalisation took " << omp_get_wtime() - init_start << " seconds" << endl << endl;
   } else {
-    cout << endl << endl << endl << "Loaded data from file: " << loadfilename << endl;
+    cout << endl << endl << endl << "Loaded data from file: " << file << endl;
     cout << "Continue with data set for scale = " << scale << endl << endl;
   }
 
-  TriangleFilter<FCubeTSet<TFullSet<3>>> filter(*set, findir + filename +".fund" , tmpdir + filename + ".tmp.fund", 60*60);
-  filter.filter();
+  if (FCubeFull) 
+  {
+    TriangleFilter<FCubeTSetFull> filter(*FCubeFull, findir + filename , tmpdir + filename + ".tmp", 60*60);
+    filter.filter();
+  }
+  else
+  {
+    TriangleFilter<FCubeTSetSparse> filter(*FCubeSparse, findir + filename, tmpdir + filename + ".tmp", 60*60);
+    filter.filter();
+  }
   /*
   set->print();
   set->toFile("/tmp/bla1.fund",true);
@@ -107,7 +147,11 @@ int main(int argc, char *argv[]) {
   */
 
   // remove objects
-  delete set;
+  if (FCubeFull)
+    delete FCubeFull;
+  else
+    delete FCubeSparse;
+
   cout.rdbuf(coutbuf);
   return 0;
 }

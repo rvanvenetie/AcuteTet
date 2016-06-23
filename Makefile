@@ -1,9 +1,17 @@
 UNAME = $(shell echo $$USER)
 CXX      = g++
-ifeq ($(UNAME), raymond)
-CXXFLAGS = -g  -march=native -fopenmp -std=c++14 -Wall -Ofast    -Winline
+
+OMP_ENABLE = 0
+ifeq ($(OMP_ENABLE), 1)
+OMP_FLAGS = -fopenmp -DUSE_OMP
 else
-CXXFLAGS = -g -march=haswell  -fopenmp -std=c++14 -Wall -Ofast    -Winline
+OMP_FLAGS =
+endif
+
+ifeq ($(UNAME), raymond)
+CXXFLAGS = -g  -march=native $(OMP_FLAGS)  -std=c++14 -Wall -Ofast    -Winline
+else
+CXXFLAGS = -g -march=haswell  $(OMP_FLAGS) -std=c++14 -Wall -Ofast    -Winline
 endif
 LDFLAGS  = -lboost_program_options
 
@@ -20,7 +28,7 @@ DEPS   = $(SRCS:.cpp=.depends)
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJS) -o $(TARGET)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS) 
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(IDIR) -c $< -o $@
