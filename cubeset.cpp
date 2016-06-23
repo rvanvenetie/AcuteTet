@@ -142,3 +142,4 @@ tempS void FCubeTSet<S>::legacyload(const std::string &filename)
 }
 
 template class FCubeTSet<TFullSet<3>>;
+template class FCubeTSet<TSparseSet<3>>;

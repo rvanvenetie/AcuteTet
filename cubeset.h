@@ -141,3 +141,7 @@ class FCubeTSet : public S {
     // define the fund
     inline const Cube &domain() const { return _domain; }
 };
+
+// Introduce some shorter notation
+using FCubeTSetFull =    FCubeTSet<TFullSet<3>>;
+using FCubeTSetSparse =  FCubeTSet<TSparseSet<3>>;

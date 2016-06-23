@@ -5,7 +5,9 @@ CXXFLAGS = -g  -march=native -fopenmp -std=c++14 -Wall -Ofast    -Winline
 else
 CXXFLAGS = -g -march=haswell  -fopenmp -std=c++14 -Wall -Ofast    -Winline
 endif
-LDFLAGS  =
+LDFLAGS  = -lboost_program_options
+
+# srun -v -p fatq -t 500:00:00 -N 1 main '/local/rvveneti/fund_33.19_jun.fund'
 
 TARGET = main
 IDIR   = #-I/usr/lib/gcc/x86_64-linux-gnu/5/include

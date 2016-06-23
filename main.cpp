@@ -1,3 +1,4 @@
+#include <boost/program_options.hpp>
 #include <stdexcept>
 #include <iostream>
 #include <sys/stat.h>
@@ -13,8 +14,22 @@
 #include "squareset.h"
 #include "filter.h"
 using namespace std;
+namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
+  // option description
+  po::options_description desc("Options");
+  desc.add_options()
+    ("help", "display this message")
+    ("scale", po::value<int>(), "set scale");
+
+  // store the options
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc),vm);
+  po::notify(vm);
+
+  return 0;
+
   std::string tmpdir = "/local/rvveneti/";
   std::string findir = "/var/scratch/rvveneti/";
   std::string logdir = "log/";

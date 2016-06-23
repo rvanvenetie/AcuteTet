@@ -114,9 +114,11 @@ class TFullSet : public TSet<TFullSet<D>, D> {
     // deconstructor
     ~TFullSet();
 
+    // helper functions from parent
     using S::contains;
     using S::set;
     using S::reset;
+
     /**
      *  Necessary implementations
      */
@@ -140,24 +142,56 @@ template <byte D>
 class TSparseSet : public TSet<TSparseSet<D>, D> {
   private:
     tindex _size;                    //Axis sizes
+
+    using S=TSet<TSparseSet<D>,D>;     //Alias to super
+  protected:
+    // hidden constructor
+    TSparseSet() {};
+
+    // Hidden initalization method
+    void init(tindex size, byte scale, bool set);
+    // constructor from file
+    void init(ifstream &file, tindex size, byte scale);
+
   public:
+    using S::_name;
+    using S::_scale;
     byte  *** _data = nullptr;         //Actual data array
 
+    // implicit move constructor
+    TSparseSet(TSparseSet &&) = default;
+
     // constructor
-    TSparseSet(vindex sizex, vindex sizey, vindex sizez);
+    TSparseSet(tindex size, byte scale, bool set) { init(size, scale, set); }
+
+    // constructor from file
+    TSparseSet(ifstream &file, tindex size, byte scale) { init(file, size, scale); }
 
     // deconstructor
     ~TSparseSet();
 
     // checks whether the axies [a][b] exists
-    inline bool exist(vindex a, vindex b) const { return _data[a][b]; }
+    inline bool exist(vindex a, vindex b) const { return _data[a][b] != nullptr; }
 
     // creates the axis [a][b] if needed
     inline void create(vindex a, vindex b) { 
       if(exist(a,b)) return;
-      _data[a][b] = (byte *) calloc( (_size[2]-a-b)/8 + 1, sizeof(byte));
+      _data[a][b] = (byte *) calloc( size(a,b)/8 + 1, sizeof(byte));
     }
 
+    // destruct the axis [a][b] 
+    inline void destruct(vindex a, vindex b)
+    {
+      if (!exist(a,b)) return;
+      free(_data[a][b]);
+      _data[a][b] = nullptr;
+    }
+
+
+    // helper functions from parent
+    using S::contains;
+    using S::set;
+    using S::reset;
 
     /**
      *  Necessary implementations
@@ -170,8 +204,10 @@ class TSparseSet : public TSet<TSparseSet<D>, D> {
     inline vindex size(vindex a) const { return _size[1] - a; }
     inline vindex size(vindex a, vindex b) const { return _size[2] - a - b; } 
 
+    // helper functions for every set
     size_t count(vindex i, vindex j) const;
     bool empty(vindex i, vindex j) const;
+    bool toFile(const std::string &filename, bool sparse = false) const;
 
     // delete all empty rows
     void compress();
