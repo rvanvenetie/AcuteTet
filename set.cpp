@@ -19,20 +19,6 @@ tempTD size_t TSet<T,D>::count() const
   return result;
 }
 
-// count memory
-tempTD size_t TSet<T,D>::memory() const
-{
-  size_t result = 0;
-  result += size() * sizeof(byte **); // first dimension
-  for (size_t i = 0; i <size(); i++) 
-  {
-    result += size(i) * sizeof(byte *);
-    for (size_t j =0 ; j < size(i); j++)
-      result += (size(i,j)/ 8 + 1) * sizeof(byte);
-  }
-  return result;  
-}
-
 // debug
 tempTD size_t TSet<T,D>::print() const
 { 
@@ -115,6 +101,20 @@ tempD bool TFullSet<D>::empty(vindex i, vindex j) const
   for (vindex k =0; k < (_size[2]-i-j) / 8 + 1; k++)
     if(_data[i][j][k]) return false;
   return true;
+}
+
+// count memory
+tempD size_t TFullSet<D>::memory() const
+{
+  size_t result = 0;
+  result += size() * sizeof(byte **); // first dimension
+  for (size_t i = 0; i <size(); i++) 
+  {
+    result += size(i) * sizeof(byte *);
+    for (size_t j =0 ; j < size(i); j++)
+      result += (size(i,j)/ 8 + 1) * sizeof(byte);
+  }
+  return result;  
 }
 
 // to file
@@ -201,6 +201,15 @@ tempD TSparseSet<D>::~TSparseSet()
   free(_data);
 }
 
+// delete all empty rows
+tempD void TSparseSet<D>::compress() 
+{
+  for (size_t i = 0;i < size(); i++) 
+    for (size_t j =0; j < size(i); j++)  
+      if (exist(i,j) &&empty(i,j))
+        destruct(i,j);
+}
+
 // count the number of triangles for index i,j
 tempD size_t TSparseSet<D>::count(vindex i, vindex j) const
 {
@@ -218,6 +227,21 @@ tempD bool TSparseSet<D>::empty(vindex i, vindex j) const
   for (vindex k =0; k < (_size[2]-i-j) / 8 + 1; k++)
     if(_data[i][j][k]) return false;
   return true;
+}
+
+// count memory
+tempD size_t TSparseSet<D>::memory() const
+{
+  size_t result = 0;
+  result += size() * sizeof(byte **); // first dimension
+  for (size_t i = 0; i <size(); i++) 
+  {
+    result += size(i) * sizeof(byte *);
+    for (size_t j =0 ; j < size(i); j++) 
+      if (exist(i,j))
+        result += (size(i,j)/ 8 + 1) * sizeof(byte);
+  }
+  return result;  
 }
 
 // to file

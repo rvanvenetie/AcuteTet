@@ -70,7 +70,7 @@ class TSet
     size_t count() const;
 
     // returns the memory used
-    size_t memory() const;
+    size_t memory() const { return super()->memory(); }
     
     // outputs debug information, returns the number of triangles
     size_t print() const;
@@ -132,6 +132,7 @@ class TFullSet : public TSet<TFullSet<D>, D> {
 
     size_t count(vindex i, vindex j) const;
     bool empty(vindex i, vindex j) const;
+    size_t memory() const;
     bool toFile(const std::string &filename, bool sparse = false) const;
 };
 
@@ -187,6 +188,8 @@ class TSparseSet : public TSet<TSparseSet<D>, D> {
       _data[a][b] = nullptr;
     }
 
+    // delete all empty rows
+    void compress();
 
     // helper functions from parent
     using S::contains;
@@ -207,8 +210,6 @@ class TSparseSet : public TSet<TSparseSet<D>, D> {
     // helper functions for every set
     size_t count(vindex i, vindex j) const;
     bool empty(vindex i, vindex j) const;
+    size_t memory() const;
     bool toFile(const std::string &filename, bool sparse = false) const;
-
-    // delete all empty rows
-    void compress();
 };
