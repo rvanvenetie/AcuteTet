@@ -69,6 +69,9 @@ class TSet
     // returns the amount of set triangles
     size_t count() const;
 
+    // compress the dataset, only works if implemented
+    void compress() { super()->compress(); }
+
     // returns the memory used
     size_t memory() const { return super()->memory(); }
     
@@ -130,6 +133,7 @@ class TFullSet : public TSet<TFullSet<D>, D> {
     inline vindex size(vindex a) const { return _size[1] - a; }
     inline vindex size(vindex a, vindex b) const { return _size[2] - a - b; } 
 
+    void compres() { };
     size_t count(vindex i, vindex j) const;
     bool empty(vindex i, vindex j) const;
     size_t memory() const;
@@ -212,4 +216,5 @@ class TSparseSet : public TSet<TSparseSet<D>, D> {
     bool empty(vindex i, vindex j) const;
     size_t memory() const;
     bool toFile(const std::string &filename, bool sparse = false) const;
+
 };

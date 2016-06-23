@@ -201,6 +201,9 @@ inline bool TriangleFilter<T>::filter()
     double timer = omp_get_wtime();
     changed = sweep();
     cout << "Sweep took " << omp_get_wtime() - timer << " seconds." <<  endl;
+
+    // compress the dataset, only works if this is implemented
+    _set.compress();
   }
   cout << endl << endl <<  "Done filtering. Took " << omp_get_wtime() - ftimer << " seconds." << endl;
   _set.print();
