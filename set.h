@@ -133,7 +133,7 @@ class TFullSet : public TSet<TFullSet<D>, D> {
     inline vindex size(vindex a) const { return _size[1] - a; }
     inline vindex size(vindex a, vindex b) const { return _size[2] - a - b; } 
 
-    void compres() { };
+    void compress() { };
     size_t count(vindex i, vindex j) const;
     bool empty(vindex i, vindex j) const;
     size_t memory() const;

@@ -182,10 +182,31 @@ bool TriangleFilter<SquareTSet>::sweep()
   return changed;
 }
 
+template<>
+bool TriangleFilter<SquareTSet>::filter()
+{
+  cout << "\tFiltering " << _set.name() << " of scale " << (int) _domain._scale << " (p=" << _domain._scale - 1 << ")" << endl;
+  double ftimer = omp_get_wtime();
+  bool changed = true;
+  size_t number = 0;
+  while (changed) 
+  {
+    cout << "\t";
+    number = _set.print();
+    if (number == 0) break;
+
+    double timer = omp_get_wtime();
+    changed = sweep();
+    cout << "\tSweep took " << omp_get_wtime() - timer << " seconds." <<  endl;
+  }
+  cout <<  "\tDone filtering. Took " << omp_get_wtime() - ftimer << " seconds." << endl;
+  return (number > 0);
+}
+
 template<typename T>
 inline bool TriangleFilter<T>::filter()
 {
-  cout << "Filtering a triangle set of scale " << (int) _domain._scale << " (p=" << _domain._scale - 1 << ")" << endl << endl;
+  cout << "Filtering " << _set.name() << " of scale " << (int) _domain._scale << " (p=" << _domain._scale - 1 << ")" << endl << endl;
   double ftimer = omp_get_wtime();
   size_t number = 0;
   bool changed = true;
@@ -193,17 +214,20 @@ inline bool TriangleFilter<T>::filter()
   {
     number = _set.print();
     if (number == 0) break;
-    /*
-    auto bdrtriangles = boundaryfacets();
-    bdrtriangles.print();
-    cout << endl;
-    */
+    cout << endl << "Gather and filter boundary facets for side 0" << endl;
+    auto bdrtriangles = boundaryfacets(0);
+    TriangleFilter<decltype(bdrtriangles)> bdrfilter(bdrtriangles);
+    bdrfilter.filter();
+    cout << endl << "Done filtering the triangle set, removing all non triangles from cube" << endl;
+
+    cout << endl << "Sweeping the entire set" << endl;
     double timer = omp_get_wtime();
     changed = sweep();
     cout << "Sweep took " << omp_get_wtime() - timer << " seconds." <<  endl;
 
     // compress the dataset, only works if this is implemented
     _set.compress();
+    cout << "End of compressing" << endl;
   }
   cout << endl << endl <<  "Done filtering. Took " << omp_get_wtime() - ftimer << " seconds." << endl;
   _set.print();
