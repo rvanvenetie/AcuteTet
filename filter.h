@@ -45,13 +45,23 @@ class TriangleFilter {
 
     // boundary facets, works for all 3D-dimensional sets
     //   intersects with a plane perpendicular to axis at height point, and returns all such points
-    SquareTSet boundaryfacets(byte axis, byte point) const;
+    SquareTSet getboundaryfacets(byte axis, byte point) const;
     // intersects with one of the 6 sides
-    SquareTSet boundaryfacets(byte side) const {
+    SquareTSet getboundaryfacets(byte side) const {
       int axis[] = {0,1,2,0,1,2};
       int pt[]   = {0,0,0, _set.scale()-1,_set.scale()-1, _set.scale()-1};
-      return boundaryfacets(axis[side], pt[side]);
+      return getboundaryfacets(axis[side], pt[side]);
     }
 
-    SquareTSet boundaryfacets() const { return boundaryfacets(0); }
+    SquareTSet getboundaryfacets() const { return getboundaryfacets(0); }
+
+    void setboundaryfacets(const SquareTSet &facets, byte axis, byte pt);
+
+    // set boundary facets
+    void setboundaryfacets(const SquareTSet &facets, byte side) {
+      int axis[] = {0,1,2,0,1,2};
+      int pt[]   = {0,0,0, _set.scale()-1,_set.scale()-1, _set.scale()-1};
+      return setboundaryfacets(facets, axis[side], pt[side]);
+    }
+
 };

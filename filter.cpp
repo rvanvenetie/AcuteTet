@@ -215,12 +215,18 @@ inline bool TriangleFilter<T>::filter()
     number = _set.print();
     if (number == 0) break;
     cout << endl << "Gather and filter boundary facets for side 0" << endl;
-    auto bdrtriangles = boundaryfacets(0);
+    auto bdrtriangles = getboundaryfacets(0);
     TriangleFilter<decltype(bdrtriangles)> bdrfilter(bdrtriangles);
-    bdrfilter.filter();
-    cout << endl << "Done filtering the triangle set, removing all non triangles from cube" << endl;
+    bool removedbdr = bdrfilter.filter();
 
-    cout << endl << "Sweeping the entire set" << endl;
+    if (removedbdr) {
+      cout << endl << "\tRemove non-cosy boundary triangles" << endl; 
+      setboundaryfacets(bdrtriangles, 0);
+      cout << "\t";
+      _set.print();
+    }
+
+    cout << endl << "Done filtering the boundaries, sweep entire set " << endl;
     double timer = omp_get_wtime();
     changed = sweep();
     cout << "Sweep took " << omp_get_wtime() - timer << " seconds." <<  endl;
@@ -236,7 +242,25 @@ inline bool TriangleFilter<T>::filter()
 }
 
 template<typename T>
-SquareTSet TriangleFilter<T>::boundaryfacets(byte axis, byte pt) const
+void TriangleFilter<T>::setboundaryfacets(const SquareTSet &facets, byte axis, byte pt)
+{
+  if (facets.scale() != _set.scale()) return;
+
+  const Square &square = facets.domain();
+
+  // loop over every triangle in this square
+  for(vindex i = 0; i < square.size(); i++)
+    for (vindex j =i+1; j < square.size(); j++) 
+      for(vindex k = j+1; k < square.size(); k++)
+      {
+        // if this triangle is not set in the facet set, remove the lifted version from the cube set
+        if (!facets.contains(i,j-i,k-j)) 
+          _set.reset(Triangle<3>{{square[i].lift(axis, pt), square[j].lift(axis,pt), square[k].lift(axis,pt)}});
+      }
+}
+
+template<typename T>
+SquareTSet TriangleFilter<T>::getboundaryfacets(byte axis, byte pt) const
 {
   Square square(_set.scale());
   SquareTSet result(_set.scale(), false);

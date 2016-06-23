@@ -205,7 +205,7 @@ class TSparseSet : public TSet<TSparseSet<D>, D> {
      */
     inline bool contains(vindex a, vindex b, vindex c) const { return exist(a,b) && _data[a][b][c/ 8] & (1 << (c % 8)); }
     inline void set(vindex a, vindex b, vindex c) { create(a,b);  _data[a][b][c/8] |= 1 << (c % 8); }
-    inline void reset(vindex a, vindex b, vindex c) { create(a,b);  _data[a][b][c/8] &= ~(1 << (c%8)); }
+    inline void reset(vindex a, vindex b, vindex c) { if (exist(a,b)) {  _data[a][b][c/8] &= ~(1 << (c%8)); } }
 
     inline vindex size() const { return _size[0]; } 
     inline vindex size(vindex a) const { return _size[1] - a; }
